@@ -26,8 +26,12 @@ WEEKLY_DIR = DATA_DIR / "weekly-reports"
 ACTIVITY_PATH = DATA_DIR / "activity.json"
 STATIC_DIR = ROOT / "static"
 HOST = "127.0.0.1"
-VERSION = "0.9.0"
+VERSION = "0.10.0"
 REVIEW_PAGE_CHARACTERS = 5000
+DOMAIN_LABELS = {"medicine": "医学", "politics": "政治", "english": "英语"}
+VALID_DOMAINS = set(DOMAIN_LABELS)
+RESOURCE_TYPE_LABELS = {"book": "教材", "lecture": "讲义", "question_bank": "题库", "reference": "参考资料"}
+VALID_RESOURCE_TYPES = set(RESOURCE_TYPE_LABELS)
 FIRST_CHAPTER_TITLE = re.compile(
     r"^\s*(?:第[0-9０-９一二三四五六七八九十百千万零〇两]+章(?:\s|$)|"
     r"chapter\s*(?:1|one)\b)",
@@ -42,6 +46,16 @@ CATALOG_CACHE: dict = {
     "books": [],
     "sections": {},
 }
+
+
+def safe_domain(value: object) -> str:
+    domain = str(value or "medicine").strip().lower()
+    return domain if domain in VALID_DOMAINS else "medicine"
+
+
+def safe_resource_type(value: object) -> str:
+    resource_type = str(value or "book").strip().lower()
+    return resource_type if resource_type in VALID_RESOURCE_TYPES else "book"
 
 
 def stable_id(relative_path: str, offset: int) -> str:
@@ -116,10 +130,16 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", book_id):
             return None
 
+        book_title = str(book_meta["title"])
         book = {
             "id": book_id,
-            "title": str(book_meta["title"]),
+            "title": book_title,
             "edition": str(book_meta.get("edition") or ""),
+            "domain": safe_domain(book_meta.get("domain")),
+            "domain_label": DOMAIN_LABELS[safe_domain(book_meta.get("domain"))],
+            "subject": str(book_meta.get("subject") or "").strip() or book_title,
+            "resource_type": safe_resource_type(book_meta.get("resource_type")),
+            "resource_type_label": RESOURCE_TYPE_LABELS[safe_resource_type(book_meta.get("resource_type"))],
             "sections": [],
             "toc": [],
             "source_files": 0,
@@ -224,7 +244,17 @@ def build_catalog() -> tuple[list[dict], dict[str, dict]]:
         book_key = relative.parts[0] if len(relative.parts) > 1 else path.stem
         book = books.setdefault(
             book_key,
-            {"id": book_key, "title": book_key, "sections": [], "source_files": 0},
+            {
+                "id": book_key,
+                "title": book_key,
+                "domain": "medicine",
+                "domain_label": DOMAIN_LABELS["medicine"],
+                "subject": book_key,
+                "resource_type": "book",
+                "resource_type_label": RESOURCE_TYPE_LABELS["book"],
+                "sections": [],
+                "source_files": 0,
+            },
         )
         book["source_files"] += 1
         entries = sections_for(path)
@@ -634,6 +664,79 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     }
 
 
+def book_learning_summary(book: dict, sections: dict[str, dict]) -> dict:
+    """Per-resource learning facts derived only from local activity and notes.
+
+    Reads stable section ids, activity.json and note filenames, never book content.
+    """
+    book_id = str(book.get("id") or "")
+    section_ids = {str(item.get("id")) for item in book.get("sections", [])}
+    activity = load_activity()
+    raw_days = activity.get("days") if isinstance(activity.get("days"), dict) else {}
+    learned: set[str] = set()
+    reading_seconds = 0
+    last_day = ""
+    last_day_time = ""
+    last_section_id = ""
+    for day, value in raw_days.items():
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(day)) or not isinstance(value, dict):
+            continue
+        day_sections = {str(item) for item in value.get("sections", []) if str(item) in section_ids}
+        day_notes = {str(item) for item in value.get("notes", []) if str(item) in section_ids}
+        learned |= day_sections | day_notes
+        per_section = value.get("section_reading_seconds")
+        if isinstance(per_section, dict):
+            for section_id, seconds in per_section.items():
+                if str(section_id) in section_ids:
+                    reading_seconds += max(0, int(seconds or 0))
+        day_last = str(value.get("last_section_id") or "")
+        day_last_time = str(value.get("last_reading_at") or "")
+        if day_sections or day_notes or day_last in section_ids:
+            if not last_day or day >= last_day:
+                last_day = day
+                last_day_time = day_last_time
+                if day_last in section_ids:
+                    last_section_id = day_last
+    note_count = 0
+    if NOTES_DIR.is_dir():
+        for path in NOTES_DIR.glob("*.md"):
+            if path.stem not in section_ids:
+                continue
+            try:
+                markdown = path.read_text(encoding="utf-8-sig").strip()
+            except OSError:
+                continue
+            if markdown:
+                note_count += 1
+                learned.add(path.stem)
+    if not last_section_id:
+        global_last = str(activity.get("last_section_id") or "")
+        if global_last in section_ids:
+            last_section_id = global_last
+    last_section = None
+    if last_section_id and last_section_id in sections:
+        section = sections[last_section_id]
+        last_section = {
+            "id": last_section_id,
+            "title": str(section.get("title") or ""),
+            "chapter_title": str(section.get("chapter_title") or ""),
+            "chapter_order": int(section.get("chapter_order") or 0),
+            "section_order": int(section.get("section_order") or 0),
+        }
+    section_count = len(book.get("sections", []))
+    return {
+        "book_id": book_id,
+        "last_section": last_section,
+        "last_studied_at": last_day_time,
+        "last_studied_day": last_day,
+        "learned_section_count": len(learned),
+        "section_count": section_count,
+        "note_count": note_count,
+        "reading_seconds": reading_seconds,
+        "progress": round(len(learned) / section_count * 100, 1) if section_count else 0.0,
+    }
+
+
 def split_review_markdown(markdown: str, limit: int = REVIEW_PAGE_CHARACTERS) -> list[str]:
     """Split a long note at Markdown paragraph boundaries where possible."""
     text = markdown.strip()
@@ -975,6 +1078,14 @@ class ReaderHandler(BaseHTTPRequestHandler):
                     "content_dir": str(CONTENT_DIR),
                 }
             )
+            return
+        if path.startswith("/api/resource/"):
+            resource_id = path.rsplit("/", 1)[-1]
+            book = next((item for item in books if item["id"] == resource_id), None)
+            if not book:
+                self.send_json({"error": "resource not found"}, HTTPStatus.NOT_FOUND)
+                return
+            self.send_json({"book": book, "summary": book_learning_summary(book, sections)})
             return
         if path == "/api/stats":
             self.send_json(learning_stats(books, sections))

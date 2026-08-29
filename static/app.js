@@ -1,4 +1,6 @@
-const state = { books: [], sections: new Map(), current: null, libraryBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null };
+const DOMAIN_LABELS = { medicine: "医学", politics: "政治", english: "英语" };
+const DOMAIN_ORDER = ["medicine", "politics", "english"];
+const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
 const READING_FLUSH_SECONDS = 15;
@@ -127,11 +129,12 @@ function setHomeMode() {
 
 function setLibraryMode() {
   state.openRequest += 1; stopReadingTimer();
-  $("libraryWorkspace").classList.remove("reader-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
   setActiveView("library"); closeNotePopover(); window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function setReaderMode() {
+  $("libraryWorkspace").classList.remove("resource-open");
   $("libraryWorkspace").classList.add("reader-open"); $("readerContent").classList.remove("hidden"); $("sectionNoteFloat").classList.remove("hidden");
   setActiveView("reader"); if (state.current?.id) startReadingTimer(state.current.id);
 }
@@ -210,7 +213,7 @@ function renderHome() {
   const bookLimit = window.matchMedia("(max-width: 760px)").matches ? 3 : Math.max(1, Math.min(6, desktopCapacity));
   const books = [...state.books].sort((a, b) => Number(b.id === recentBookId) - Number(a.id === recentBookId)).slice(0, bookLimit);
   $("homeBookShelf").innerHTML = books.length ? books.map((book) => `<button type="button" class="reader-home-book" data-home-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover"><strong>${bookCoverTitle(book.title)}</strong><em>${escapeHtml(book.edition || "")}</em></span><span><strong>${escapeHtml(book.title)}</strong><small>${book.sections.length} 个小节</small></span></button>`).join("") : `<div class="reader-home-book-empty">书架中还没有可阅读的书籍</div>`;
-  $("homeBookShelf").querySelectorAll("[data-home-book]").forEach((button) => button.addEventListener("click", () => { state.libraryBookId = button.dataset.homeBook; setLibraryMode(); renderBooks(); }));
+  $("homeBookShelf").querySelectorAll("[data-home-book]").forEach((button) => button.addEventListener("click", () => openResource(button.dataset.homeBook)));
   refreshIcons();
 }
 
@@ -253,7 +256,7 @@ function renderStats() {
   const distribution = stats.book_distribution || [];
   const maximum = Math.max(1, ...distribution.map((item) => item.note_count));
   $("bookDistribution").innerHTML = distribution.length ? distribution.map((item) => `<button type="button" class="reader-distribution-row" data-stats-book="${escapeHtml(item.book_id)}"><span><strong>${escapeHtml(item.title)}</strong><small>${item.note_count} / ${item.section_count} 节</small></span><span class="reader-distribution-track"><i style="--reader-progress:${Math.round(item.note_count / maximum * 100)}%"></i></span><em>${item.section_count ? Math.round(item.note_count / item.section_count * 100) : 0}%</em></button>`).join("") : `<div class="reader-home-book-empty">暂无书目数据</div>`;
-  $("bookDistribution").querySelectorAll("[data-stats-book]").forEach((button) => button.addEventListener("click", () => { state.libraryBookId = button.dataset.statsBook; setLibraryMode(); renderBooks(); }));
+  $("bookDistribution").querySelectorAll("[data-stats-book]").forEach((button) => button.addEventListener("click", () => openResource(button.dataset.statsBook)));
   refreshIcons();
 }
 
@@ -298,7 +301,7 @@ function openReviewSubject(bookId) {
   const subject = state.review?.subjects?.find((item) => item.book_id === bookId); if (!subject) return;
   state.reviewSubjectId = bookId; $("reviewSubjectTitle").textContent = subject.title; $("reviewSubjectMeta").textContent = `${subject.note_count} 条笔记 · ${formatInteger(subject.character_count)} 字 · ${subject.time_tracked ? formatDuration(subject.reading_seconds) : "暂无分科学习时长"}`;
   $("reviewSubjectNotes").innerHTML = subject.notes.map((item) => `<section class="review-note-entry"><header><div><small>${escapeHtml(item.chapter_title || subject.title)}</small><h3>${escapeHtml(item.section_title)}</h3></div><button class="icon-button" type="button" data-review-section="${escapeHtml(item.section_id)}" aria-label="打开原章节"><i data-lucide="arrow-up-right"></i></button></header><div class="knowledge-article note-stream">${renderMarkdown(item.markdown)}</div></section>`).join("");
-  $("reviewSubjectNotes").querySelectorAll("[data-review-section]").forEach((button) => button.addEventListener("click", () => openSection(button.dataset.reviewSection)));
+  $("reviewSubjectNotes").querySelectorAll("[data-review-section]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = null; openSection(button.dataset.reviewSection); }));
   $("reviewSubjectResult").value = subject.result || ""; $("reviewSubjectSaved").textContent = subject.completed ? "已保存 · 待办完成" : "粘贴后自动保存并完成待办";
   setReviewPanel("subject"); refreshIcons(); window.scrollTo({ top: 0, behavior: "auto" });
 }
@@ -358,38 +361,145 @@ function scheduleWeeklySave() {
   if (!state.weekly) return; const content = $("weeklySummary").value; $("weeklySaved").textContent = "保存中…"; window.clearTimeout(state.weeklySaveTimer); state.weeklySaveTimer = window.setTimeout(async () => { try { const response = await fetch("/api/weekly-summary", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: state.weekly.week, content }) }); if (!response.ok) throw new Error("save failed"); const result = await response.json(); $("weeklySaved").textContent = content.trim() ? "已保存为独立周报" : "周报已清空"; $("weeklyObsidianLink").href = result.obsidian_uri || "obsidian://open"; const logsResponse = await fetch("/api/logs", { cache: "no-store" }); if (logsResponse.ok) state.logs = await logsResponse.json(); } catch { $("weeklySaved").textContent = "保存失败，请稍后重试"; } }, 420);
 }
 
-function renderBooks(filter = "") {
-  const query = filter.trim().toLowerCase(); const tree = $("bookTree");
-  const matchedBooks = state.books.filter((book) => !query || `${book.title} ${book.id} ${bookToc(book).map((chapter) => `${chapter.title} ${chapter.sections.map((section) => section.title).join(" ")}`).join(" ")}`.toLowerCase().includes(query));
-  if (!matchedBooks.length) { tree.innerHTML = `<div class="knowledge-index-empty"><i data-lucide="search-x"></i><strong>没有找到匹配内容</strong><span>换一个书名或章节关键词试试。</span></div>`; refreshIcons(); return; }
-  const selectedBookId = matchedBooks.some((book) => book.id === state.libraryBookId) ? state.libraryBookId : (query ? matchedBooks[0].id : null);
-  const bookViews = matchedBooks.map((book) => {
-    const chapters = bookToc(book).map((chapter) => ({ ...chapter, sections: chapter.sections.filter((section) => !query || `${book.title} ${chapter.title} ${section.title}`.toLowerCase().includes(query)) })).filter((chapter) => chapter.sections.length);
-    const chapterCount = book.toc?.length || chapters.length;
-    return { book, chapters, chapterCount, bookIndex: state.books.findIndex((item) => item.id === book.id) + 1 };
+function searchableBook(book) {
+  return `${book.title} ${book.id} ${bookToc(book).map((chapter) => `${chapter.title} ${chapter.sections.map((section) => section.title).join(" ")}`).join(" ")}`.toLowerCase();
+}
+
+function domainBooks() {
+  return state.books.filter((book) => (book.domain || "medicine") === state.libraryDomain);
+}
+
+function renderDomainTabs() {
+  const counts = {};
+  DOMAIN_ORDER.forEach((domain) => { counts[domain] = state.books.filter((book) => (book.domain || "medicine") === domain).length; });
+  document.querySelectorAll("[data-domain]").forEach((button) => {
+    const domain = button.dataset.domain;
+    button.classList.toggle("active", domain === state.libraryDomain);
+    const badge = button.querySelector("em");
+    if (badge) badge.textContent = String(counts[domain] || 0);
   });
-  const covers = bookViews.map(({ book }) => `<button class="reader-book-overview ${book.id === selectedBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》目录" aria-label="打开《${escapeHtml(book.title)}》目录" aria-expanded="${book.id === selectedBookId}"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book.title)}</strong><em>${escapeHtml(book.edition || "")}</em></span></button>`).join("");
-  const selected = bookViews.find(({ book }) => book.id === selectedBookId);
-  const directory = selected ? (() => {
-    const { book, chapters, chapterCount, bookIndex } = selected;
-    return `<section class="reader-directory" data-book-group="${escapeHtml(book.id)}">
-        <header class="reader-directory-heading"><div><small>BOOK ${String(bookIndex).padStart(2, "0")} · ${escapeHtml(book.edition || "本地书籍")}</small><strong>${escapeHtml(book.title)}</strong></div><span>${chapterCount} 章 · ${book.sections.length} 个学习小节</span></header>
-        <div class="reader-chapter-list">${chapters.map((chapter) => {
-          const chapterOpen = Boolean(query) || chapter.id === state.current?.chapter_id || chapter.order === 1;
-          return `<details class="reader-chapter-group" data-chapter-id="${escapeHtml(chapter.id)}" ${chapterOpen ? "open" : ""}>
-            <summary><span>${String(chapter.order).padStart(2, "0")}</span><strong>${escapeHtml(chapter.title)}</strong><em>${chapter.sections.length} 节</em><i data-lucide="chevron-right"></i></summary>
-            <div class="reader-section-list">${chapter.sections.map((section) => `<button class="reader-section-entry ${section.id === state.current?.id ? "active" : ""}" type="button" data-section-id="${escapeHtml(section.id)}"><span>${String(section.section_order || 1).padStart(2, "0")}</span><span><strong>${escapeHtml(section.title)}</strong><small>${formatCharacters(section.character_count) || "阅读小节"}</small></span><i data-lucide="arrow-up-right"></i></button>`).join("")}</div>
-          </details>`;
-        }).join("")}</div>
+}
+
+function sectionEntryHtml(section) {
+  return `<button class="reader-section-entry ${section.id === state.current?.id ? "active" : ""}" type="button" data-section-id="${escapeHtml(section.id)}"><span>${String(section.section_order || 1).padStart(2, "0")}</span><span><strong>${escapeHtml(section.title)}</strong><small>${formatCharacters(section.character_count) || "阅读小节"}</small></span><i data-lucide="arrow-up-right"></i></button>`;
+}
+
+function chapterListHtml(book, chapters, { openAll = false } = {}) {
+  return `<div class="reader-chapter-list">${chapters.map((chapter) => {
+    const chapterOpen = openAll ? true : (chapter.id === state.current?.chapter_id || chapter.order === 1);
+    return `<details class="reader-chapter-group" data-chapter-id="${escapeHtml(chapter.id)}" ${chapterOpen ? "open" : ""}>
+      <summary><span>${String(chapter.order).padStart(2, "0")}</span><strong>${escapeHtml(chapter.title)}</strong><em>${chapter.sections.length} 节</em><i data-lucide="chevron-right"></i></summary>
+      <div class="reader-section-list">${chapter.sections.map((section) => sectionEntryHtml(section)).join("")}</div>
+    </details>`;
+  }).join("")}</div>`;
+}
+
+function renderBooks(filter = "") {
+  renderDomainTabs();
+  const query = filter.trim().toLowerCase(); const tree = $("bookTree");
+  const matchedBooks = domainBooks().filter((book) => !query || searchableBook(book).includes(query));
+  if (!matchedBooks.length) {
+    tree.innerHTML = query
+      ? `<div class="knowledge-index-empty"><i data-lucide="search-x"></i><strong>没有找到匹配内容</strong><span>换一个书名或章节关键词试试。</span></div>`
+      : `<div class="knowledge-index-empty"><i data-lucide="library"></i><strong>${escapeHtml(DOMAIN_LABELS[state.libraryDomain] || "医学")}书架还是空的</strong><span>这个领域还没有正式资料，放入书架后刷新页面。</span></div>`;
+    refreshIcons(); return;
+  }
+  const covers = matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book.title)}</strong><em>${escapeHtml(book.edition || "")}</em></span></button>`).join("");
+  let directory = "";
+  if (query) {
+    const selectedBookId = matchedBooks.some((book) => book.id === state.inlineBookId) ? state.inlineBookId : matchedBooks[0].id;
+    const selected = matchedBooks.find((book) => book.id === selectedBookId);
+    const chapters = bookToc(selected).map((chapter) => ({ ...chapter, sections: chapter.sections.filter((section) => `${selected.title} ${chapter.title} ${section.title}`.toLowerCase().includes(query)) })).filter((chapter) => chapter.sections.length);
+    const bookIndex = state.books.findIndex((item) => item.id === selected.id) + 1;
+    directory = `<section class="reader-directory" data-book-group="${escapeHtml(selected.id)}">
+        <header class="reader-directory-heading"><div><small>BOOK ${String(bookIndex).padStart(2, "0")} · ${escapeHtml(selected.edition || "本地书籍")}</small><strong>${escapeHtml(selected.title)}</strong></div><span>${(selected.toc?.length || chapters.length)} 章 · ${selected.sections.length} 个学习小节</span></header>
+        ${chapterListHtml(selected, chapters, { openAll: true })}
       </section>`;
-  })() : "";
+  }
   tree.innerHTML = `<div class="reader-cover-shelf" aria-label="图书列表">${covers}</div>${directory}`;
   tree.querySelectorAll("[data-library-book]").forEach((button) => button.addEventListener("click", () => {
-    state.libraryBookId = state.libraryBookId === button.dataset.libraryBook ? null : button.dataset.libraryBook;
-    renderBooks($("librarySearch").value);
+    const bookId = button.dataset.libraryBook;
+    if (query) { state.inlineBookId = state.inlineBookId === bookId ? null : bookId; renderBooks($("librarySearch").value); }
+    else openResource(bookId);
   }));
-  tree.querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => openSection(button.dataset.sectionId)));
+  tree.querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = null; openSection(button.dataset.sectionId); }));
   refreshIcons();
+}
+
+function formatDateTime(value) {
+  const parsed = new Date(String(value || ""));
+  if (Number.isNaN(parsed.getTime())) return String(value || "");
+  const day = parsed.toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
+  const clock = parsed.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  return `${day} ${clock}`;
+}
+
+function renderResource() {
+  const payload = state.resource; const book = payload?.book; const summary = payload?.summary || {};
+  if (!book) { $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`; return; }
+  $("resourceDomainLabel").textContent = `${book.domain_label || DOMAIN_LABELS[book.domain] || "医学"} · ${book.resource_type_label || book.resource_type || "教材"}`;
+  $("resourceTitle").textContent = book.title;
+  $("resourceMeta").textContent = `${book.edition ? `${book.edition} · ` : ""}${book.subject}`;
+  const lastSection = summary.last_section;
+  const lastText = lastSection ? `${lastSection.chapter_title}　${lastSection.title}` : "还没有学习记录";
+  const progress = Number(summary.progress || 0);
+  const progressText = `${progress.toFixed(progress % 1 ? 1 : 0)}%`;
+  $("resourceProgressBar").style.width = `${Math.min(100, Math.max(0, progress))}%`;
+  $("resourceProgressTrack").title = `阅读进度 ${progressText}（已学习小节 / 全部小节）`;
+  const learnedCount = Number(summary.learned_section_count || 0);
+  const totalCount = Number(summary.section_count || 0);
+  const noteCount = Number(summary.note_count || 0);
+  const readingSeconds = Number(summary.reading_seconds || 0);
+  const studiedAt = summary.last_studied_at ? formatDateTime(summary.last_studied_at) : "暂无记录";
+  $("resourceFacts").innerHTML =
+    `<div class="resource-fact-location"><span>上次学习位置</span><strong class="resource-location">${escapeHtml(lastText)}</strong></div>`
+    + `<div><span>阅读进度</span><strong class="resource-value">${progressText}</strong><em>${learnedCount} / ${totalCount} 小节</em></div>`
+    + `<div><span>已学习小节</span><strong class="resource-value">${formatInteger(learnedCount)}</strong><em>${noteCount ? `${formatInteger(noteCount)} 节笔记` : "暂无章节笔记"}</em></div>`
+    + `<div><span>最近学习时间</span><strong class="resource-location">${escapeHtml(studiedAt)}</strong><em>${readingSeconds ? `阅读 ${formatDuration(readingSeconds)}` : "暂无阅读时长"}</em></div>`;
+  $("resourceContinueTitle").textContent = lastSection ? `${lastSection.title} · ${lastSection.chapter_title}` : `从 ${book.sections[0] ? book.sections[0].title : "第一章"} 开始阅读`;
+  $("resourceContinue").dataset.sectionId = lastSection?.id || book.sections[0]?.id || "";
+  const chapters = bookToc(book).filter((chapter) => chapter.sections.length);
+  $("resourceDirectory").innerHTML =
+    `<header class="resource-directory-heading"><div><p class="eyebrow">分层目录</p><h3>${escapeHtml(book.title)}</h3></div><span>${book.toc?.length || chapters.length} 章 · ${book.sections.length} 个学习小节</span></header>`
+    + `<section class="reader-directory resource-directory-list">${chapterListHtml(book, chapters)}</section>`;
+  $("resourceDirectory").querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = state.resourceBookId; openSection(button.dataset.sectionId); }));
+  refreshIcons();
+}
+
+async function openResource(bookId) {
+  if (!bookId) return;
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  $("libraryWorkspace").classList.remove("reader-open");
+  $("libraryWorkspace").classList.add("resource-open");
+  $("readerContent").classList.add("hidden");
+  $("sectionNoteFloat").classList.add("hidden");
+  setActiveView("library");
+  state.resourceBookId = bookId;
+  try {
+    const response = await fetch(`/api/resource/${encodeURIComponent(bookId)}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("resource unavailable");
+    const payload = await response.json();
+    if (state.resourceBookId !== bookId) return;
+    state.resource = payload; renderResource();
+  } catch {
+    if (state.resourceBookId !== bookId) return;
+    $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`;
+  }
+  renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function returnFromResource() {
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open");
+  $("readerContent").classList.add("hidden");
+  $("sectionNoteFloat").classList.add("hidden");
+  setActiveView("library"); window.scrollTo({ top: 0, behavior: "auto" });
+  renderBooks($("librarySearch").value);
+}
+
+function returnFromReader() {
+  if (state.readerOriginBookId) openResource(state.readerOriginBookId);
+  else setLibraryMode();
 }
 
 function renderSectionMenu() {
@@ -473,14 +583,17 @@ function scheduleNoteSave() {
 function bindNavigation() {
   document.querySelectorAll("[data-dashboard]").forEach((button) => button.addEventListener("click", setHomeMode));
   $("libraryNav").addEventListener("click", setLibraryMode); $("mobileLibrary").addEventListener("click", setLibraryMode);
+  document.querySelectorAll("[data-domain]").forEach((button) => button.addEventListener("click", () => { state.libraryDomain = button.dataset.domain; state.inlineBookId = null; renderBooks($("librarySearch").value); }));
+  $("resourceBack").addEventListener("click", returnFromResource);
+  $("resourceContinue").addEventListener("click", () => { const sectionId = $("resourceContinue").dataset.sectionId; if (sectionId) { state.readerOriginBookId = state.resourceBookId; state.inlineBookId = null; openSection(sectionId); } });
   $("reviewNav").addEventListener("click", openReview); $("mobileReview").addEventListener("click", openReview);
   $("logsNav").addEventListener("click", openLogs); $("mobileLogs").addEventListener("click", openLogs);
   $("statsNav").addEventListener("click", openStats); $("mobileStats").addEventListener("click", openStats);
   $("homeOpenLibrary").addEventListener("click", setLibraryMode); $("homeAllBooks").addEventListener("click", setLibraryMode); $("homeOpenReview").addEventListener("click", openReview); $("homeOpenStats").addEventListener("click", openStats);
-  $("homeContinue").addEventListener("click", () => { const sectionId = $("homeContinue").dataset.sectionId; if (sectionId) openSection(sectionId); else setLibraryMode(); });
+  $("homeContinue").addEventListener("click", () => { const sectionId = $("homeContinue").dataset.sectionId; state.readerOriginBookId = null; if (sectionId) openSection(sectionId); else setLibraryMode(); });
   window.addEventListener("resize", () => { window.clearTimeout(state.homeResizeTimer); state.homeResizeTimer = window.setTimeout(() => { if ($("homeView").classList.contains("active")) renderHome(); }, 120); });
   $("sidebar").addEventListener("mouseenter", () => $("sidebar").classList.add("is-expanded")); $("sidebar").addEventListener("mouseleave", () => $("sidebar").classList.remove("is-expanded"));
-  $("readerBack").addEventListener("click", setLibraryMode); $("readerBook").addEventListener("click", setLibraryMode);
+  $("readerBack").addEventListener("click", returnFromReader); $("readerBook").addEventListener("click", returnFromReader);
   $("readerSectionPicker").addEventListener("click", () => { const menu = $("readerCrumbMenu"); const willOpen = menu.classList.contains("hidden"); if (willOpen) { renderSectionMenu(); menu.classList.remove("hidden"); $("readerSectionPicker").classList.add("active"); $("readerSectionPicker").setAttribute("aria-expanded", "true"); } else closeSectionMenu(); });
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => button.addEventListener("click", () => navigateSection(-1))); [$("readerNextSection"), $("nextSectionLink")].forEach((button) => button.addEventListener("click", () => navigateSection(1)));
   $("toggleSectionNoteDock").addEventListener("click", (event) => state.noteOpen ? closeNotePopover() : openNotePopover(event.currentTarget)); $("closeSectionNote").addEventListener("click", () => closeNotePopover({ restoreFocus: true })); $("sectionNote").addEventListener("input", scheduleNoteSave);

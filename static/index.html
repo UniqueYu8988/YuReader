@@ -55,11 +55,22 @@
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="书架">
             <header class="knowledge-index-header reader-library-header">
-              <div class="knowledge-index-heading"><h2>我的书架</h2></div>
+              <div class="knowledge-index-heading"><h2>我的书架</h2><nav class="reader-domain-tabs" id="domainTabs" aria-label="学习领域"><button class="active" type="button" data-domain="medicine">医学<em id="domainCountMedicine">0</em></button><button type="button" data-domain="politics">政治<em id="domainCountPolitics">0</em></button><button type="button" data-domain="english">英语<em id="domainCountEnglish">0</em></button></nav></div>
               <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
             </header>
             <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>书架还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+          </section>
+
+          <section class="knowledge-resource" id="resourcePanel" aria-label="资料学习主页">
+            <button class="review-back-link" id="resourceBack" type="button"><i data-lucide="arrow-left"></i> 返回书架</button>
+            <header class="resource-heading" id="resourceHeading">
+              <div class="resource-heading-copy"><p class="eyebrow" id="resourceDomainLabel">医学 · 教材</p><h2 id="resourceTitle"></h2><p id="resourceMeta"></p></div>
+            </header>
+            <div class="resource-progress-track" id="resourceProgressTrack" aria-hidden="true"><i id="resourceProgressBar"></i></div>
+            <section class="resource-facts" id="resourceFacts" aria-label="学习摘要"></section>
+            <button class="resource-continue" id="resourceContinue" type="button"><span><small>继续学习</small><strong id="resourceContinueTitle"></strong></span><i data-lucide="arrow-right"></i></button>
+            <section class="resource-directory" id="resourceDirectory" aria-label="完整分层目录"></section>
           </section>
 
           <article class="knowledge-reader" id="readerView" aria-label="章节阅读">
