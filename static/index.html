@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" id="themeColor" content="#f5f4ed">
+  <title>YuReader · 本地阅读空间</title>
+  <link rel="icon" type="image/png" href="/assets/brand-mark.png">
+  <script>
+    (() => {
+      const media = matchMedia("(prefers-color-scheme: dark)");
+      document.documentElement.dataset.theme = media.matches ? "dark" : "light";
+      media.addEventListener?.("change", (event) => {
+        document.documentElement.dataset.theme = event.matches ? "dark" : "light";
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/reader.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="主导航" aria-expanded="false">
+      <button class="brand" id="brandButton" type="button" data-dashboard title="返回首页">
+        <span class="brand-mark"><img src="/assets/brand-mark.png" alt=""></span>
+        <span><strong>YuReader</strong><small>本地阅读空间</small></span>
+      </button>
+      <nav class="side-nav" aria-label="主导航">
+        <button class="nav-item active" type="button" data-dashboard title="首页"><i data-lucide="house"></i><span>首页</span></button>
+        <button class="nav-item" type="button" id="libraryNav" title="书架"><i data-lucide="library"></i><span>书架</span></button>
+        <button class="nav-item" type="button" id="reviewNav" title="昨日复习"><i data-lucide="history"></i><span>复习</span></button>
+        <button class="nav-item" type="button" id="logsNav" title="学习日志"><i data-lucide="mails"></i><span>日志</span></button>
+      </nav>
+      <nav class="side-nav side-nav-bottom" aria-label="学习统计"><button class="nav-item" type="button" id="statsNav" title="统计"><i data-lucide="chart-no-axes-column-increasing"></i><span>统计</span></button></nav>
+    </aside>
+
+    <main class="main-content wide-layout">
+      <header class="topbar">
+        <h1 class="reader-page-title" id="pageTitle">今日学习</h1>
+        <div class="topbar-actions"><span class="reader-local-state" id="syncState"><i data-lucide="circle-check"></i> 本地</span></div>
+      </header>
+
+      <section class="view active" id="homeView" data-view="home">
+        <div class="reader-home">
+          <section class="reader-home-lead">
+            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText">书架已经准备好，选择一节继续阅读。</p><button class="reader-home-primary" id="homeContinue" type="button"><span><small>继续阅读</small><strong id="homeContinueTitle">打开书架选择章节</strong></span><i data-lucide="arrow-right"></i></button></div>
+            <div class="reader-home-today"><span>今日阅读</span><strong id="homeTodayDuration">0分</strong><small>有效学习时长</small><div><span id="homeTodaySections">0 个小节</span><span id="homeTodayNotes">0 节笔记</span></div></div>
+          </section>
+          <nav class="reader-home-actions" aria-label="快捷学习"><button type="button" id="homeOpenLibrary"><span class="reader-action-icon"><i data-lucide="library"></i></span><span><strong>浏览书架</strong><small>按原书目录选择小节</small></span><i data-lucide="arrow-right"></i></button><button type="button" id="homeOpenReview"><span class="reader-action-icon review"><i data-lucide="history"></i></span><span><strong>昨日复习</strong><small id="homeReviewHint">读取昨天的章节笔记</small></span><i data-lucide="arrow-right"></i></button><button type="button" id="homeOpenStats"><span class="reader-action-icon stats"><i data-lucide="chart-no-axes-column-increasing"></i></span><span><strong>学习统计</strong><small>查看近期学习轨迹</small></span><i data-lucide="arrow-right"></i></button><a id="homeOpenObsidian" href="obsidian://open"><span class="reader-action-icon obsidian"><img src="/assets/obsidian.svg" alt=""></span><span><strong>Obsidian</strong><small>打开个人笔记本</small></span><i data-lucide="arrow-up-right"></i></a></nav>
+          <section class="reader-home-books"><header><div><p class="eyebrow">快速进入</p><h3>最近的书</h3></div><button type="button" id="homeAllBooks">全部书籍 <i data-lucide="arrow-right"></i></button></header><div id="homeBookShelf"></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="libraryView" data-view="library">
+        <div class="knowledge-workspace" id="libraryWorkspace">
+          <section class="knowledge-browser" id="libraryBrowser" aria-label="书架">
+            <header class="knowledge-index-header reader-library-header">
+              <div class="knowledge-index-heading"><h2>我的书架</h2></div>
+              <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
+            </header>
+            <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
+            <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>书架还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+          </section>
+
+          <article class="knowledge-reader" id="readerView" aria-label="章节阅读">
+            <div class="reader-content hidden" id="readerContent">
+              <div class="reader-toolbar">
+                <button class="icon-button reader-back" id="readerBack" type="button" title="返回书架" aria-label="返回书架"><i data-lucide="panel-left"></i></button>
+                <div class="reader-breadcrumb">
+                  <button class="reader-crumb-link" id="readerBook" type="button" title="返回本书目录"></button>
+                  <button class="reader-crumb-picker" id="readerSectionPicker" type="button" title="选择同书章节" aria-label="选择同书章节" aria-expanded="false"><i data-lucide="chevron-right"></i><span id="readerChapter">目录</span><i data-lucide="chevron-down"></i></button>
+                  <strong class="reader-location" id="readerLocation"></strong>
+                </div>
+                <div class="reader-section-nav" aria-label="切换章节">
+                  <button class="icon-button" id="readerPreviousSection" type="button" title="上一节" aria-label="上一节"><i data-lucide="chevron-left"></i></button>
+                  <button class="icon-button" id="readerNextSection" type="button" title="下一节" aria-label="下一节"><i data-lucide="chevron-right"></i></button>
+                </div>
+                <nav class="reader-crumb-menu hidden" id="readerCrumbMenu" aria-label="同书章节"></nav>
+              </div>
+
+              <header class="reader-heading">
+                <p class="reader-source" id="readerSectionNumber">章节</p>
+                <div class="reader-title-row"><div><h2 id="readerTitle"></h2><div class="reader-metrics"><span id="readerBookMeta">清洗正文</span><span id="readerNoteMeta">暂无笔记</span></div></div></div>
+              </header>
+
+              <div class="knowledge-article" id="knowledgeArticle"></div>
+              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="reviewView" data-view="review">
+        <div class="review-workspace">
+          <header class="review-heading">
+            <div><p class="eyebrow">昨日待办</p><h2 id="reviewTitle">复习</h2><p id="reviewSummary">正在整理前一天保存的章节笔记…</p></div>
+            <div class="review-page-state"><strong id="reviewProgressText">0 / 0</strong><span>已完成</span></div>
+          </header>
+          <div class="review-empty hidden" id="reviewEmpty"><i data-lucide="coffee"></i><strong>昨天没有可复习的笔记</strong><span>这里仅收集昨天实际保存过的章节笔记，不会混入原书正文。</span></div>
+          <section class="review-task-list" id="reviewTaskList" aria-label="昨日复习待办"></section>
+          <section class="review-subject-detail hidden" id="reviewSubjectDetail"><header><button class="review-back-link" id="reviewSubjectBack" type="button"><i data-lucide="arrow-left"></i> 返回待办</button><div><p class="eyebrow" id="reviewSubjectMeta">学科复习</p><h2 id="reviewSubjectTitle"></h2></div></header><article class="review-paper" id="reviewSubjectNotes" aria-label="该学科昨日笔记"></article><section class="review-result-editor"><header><div><strong>侧边栏复习成果</strong><small id="reviewSubjectSaved">粘贴后自动保存并完成待办</small></div></header><textarea id="reviewSubjectResult" rows="12" placeholder="将 Gemini 针对本学科昨日笔记生成的复习成果粘贴到这里"></textarea></section></section>
+          <button class="review-report-entry hidden" id="reviewReportEntry" type="button"><span><i data-lucide="file-check-2"></i><strong>生成昨日报告</strong><small>所有学科待办已完成，进入合并 Markdown</small></span><i data-lucide="arrow-right"></i></button>
+          <section class="review-report-panel hidden" id="reviewReportPanel"><header><button class="review-back-link" id="reviewReportBack" type="button"><i data-lucide="arrow-left"></i> 返回待办</button><div><p class="eyebrow">合并文档</p><h2>昨日报告</h2><p>下方按学科自动分界，可直接交给侧边栏生成一段总结性介绍。</p></div></header><article class="knowledge-article note-stream review-combined-document" id="reviewCombinedDocument"></article><section class="review-result-editor"><header><div><strong>昨日日志总述</strong><small id="reviewSummarySaved">粘贴后自动保存到文档开头</small></div><a class="note-icon-button" id="reviewLogObsidian" href="obsidian://open" aria-label="在 Obsidian 中打开昨日日志"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="reviewDailySummary" rows="9" placeholder="粘贴侧边栏生成的总结性昨日报告，例如学习了哪些主题、建立了哪些联系"></textarea></section></section>
+        </div>
+      </section>
+
+      <section class="view" id="logsView" data-view="logs"><div class="logs-workspace"><header class="logs-heading"><div><p class="eyebrow">本地归档</p><h2>学习日志</h2><p>每日复习成果与总述按学习日保存，每天只有一封。</p></div><button id="openWeeklyReport" type="button"><i data-lucide="calendar-range"></i><span>生成周报</span></button></header><section class="logs-list" id="logsList"></section><section class="logs-detail hidden" id="logsDetail"><button class="review-back-link" id="logsBack" type="button"><i data-lucide="arrow-left"></i> 返回日志</button><article class="knowledge-article note-stream" id="logsArticle"></article><a class="note-icon-button" id="logsObsidianLink" href="obsidian://open" aria-label="在 Obsidian 中打开日志"><img src="/assets/obsidian.svg" alt=""></a></section><section class="weekly-report hidden" id="weeklyReport"><button class="review-back-link" id="weeklyBack" type="button"><i data-lucide="arrow-left"></i> 返回日志</button><header><p class="eyebrow">阶段归档</p><h2 id="weeklyTitle">周报</h2><p id="weeklyMeta"></p></header><article class="knowledge-article note-stream" id="weeklySource"></article><section class="review-result-editor"><header><div><strong>阶段总结</strong><small id="weeklySaved">粘贴后自动保存为独立周报</small></div><a class="note-icon-button" id="weeklyObsidianLink" href="obsidian://open" aria-label="在 Obsidian 中打开周报"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="weeklySummary" rows="10" placeholder="将侧边栏根据本周每日总结生成的阶段性复习档案粘贴到这里"></textarea></section></section></div></section>
+
+      <section class="view" id="statsView" data-view="stats">
+        <div class="reader-stats-dashboard">
+          <header class="reader-stats-lead"><div><p class="eyebrow">笔记覆盖</p><strong id="statsCoverage">0%</strong><span>以已保存章节笔记计算，不代表读完进度</span></div></header>
+          <section class="reader-stats-facts" aria-label="学习数据"><div><span>今日阅读</span><strong id="statsTodayDuration">0分</strong></div><div><span>累计阅读</span><strong id="statsTotalDuration">0分</strong></div><div><span>笔记小节</span><strong id="statsNoted">0</strong></div><div><span>笔记文字</span><strong id="statsCharacters">0</strong></div><div><span>活跃天数</span><strong id="statsActiveDays">0</strong></div><div><span>连续学习</span><strong id="statsStreak">0 天</strong></div></section>
+          <section class="reader-activity-panel" aria-label="每日学习活动"><header><div><strong>每日学习</strong><span id="activitySummary">近 12 周</span></div><div class="reader-activity-legend" aria-hidden="true"><span>少</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>多</span></div></header><div class="reader-activity-scroll"><div class="reader-activity-chart"><div class="reader-activity-months" id="activityMonths" aria-hidden="true"></div><div class="reader-activity-weekdays" aria-hidden="true"><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span>日</span></div><div class="reader-activity-grid" id="activityGrid"></div></div></div></section>
+          <section class="reader-book-distribution"><header><div><p class="eyebrow">书目分布</p><h3>章节笔记</h3></div><span>当前本地记录</span></header><div id="bookDistribution"></div></section>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="移动端导航"><button class="active" type="button" data-dashboard><i data-lucide="house"></i><span>首页</span></button><button type="button" id="mobileLibrary"><i data-lucide="library"></i><span>书架</span></button><button type="button" id="mobileReview"><i data-lucide="history"></i><span>复习</span></button><button type="button" id="mobileLogs"><i data-lucide="mails"></i><span>日志</span></button><button type="button" id="mobileStats"><i data-lucide="chart-no-axes-column-increasing"></i><span>统计</span></button></nav>
+  </div>
+
+  <div class="section-note-float hidden" id="sectionNoteFloat">
+    <nav class="reader-material-float" aria-label="阅读内容切换">
+      <button class="reader-material-tab active" type="button" data-section-material="cleaned" title="原文" aria-label="原文" aria-pressed="true"><i data-lucide="align-left"></i></button>
+      <button class="reader-material-tab" type="button" data-section-material="note" title="笔记" aria-label="笔记" aria-pressed="false"><i data-lucide="notebook"></i></button>
+    </nav>
+    <section class="section-note-popover" id="sectionNotePopover" role="dialog" aria-hidden="true" aria-label="本节笔记">
+      <header class="section-note-heading"><div><p class="eyebrow">本节笔记</p><span id="noteSavedText">输入后自动保存</span></div><div class="section-note-actions"><a class="note-icon-button" id="openObsidian" href="obsidian://open" title="打开 Obsidian" aria-label="打开 Obsidian"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a><button class="note-icon-button" id="closeSectionNote" type="button" title="收起笔记" aria-label="收起笔记"><i data-lucide="x"></i></button></div></header>
+      <textarea id="sectionNote" rows="9" placeholder="粘贴侧边栏 AI 的整理结果，或记录自己的理解"></textarea>
+      <footer class="section-note-footer"><span>Markdown · 自动保存</span></footer>
+    </section>
+    <button class="section-note-launcher" id="toggleSectionNoteDock" type="button" aria-label="打开本节笔记" aria-controls="sectionNotePopover" aria-expanded="false" title="本节笔记"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="/vendor/lucide.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

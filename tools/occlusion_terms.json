@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "character": "𬌗",
+  "principle": "以标准完整术语识别𬌗的OCR替代形态；缺字形态只在上下文充分时自动补字。",
+  "confusions": {
+    "single_character_substitutions": ["验", "骑", "矜", "雅", "酷"],
+    "multi_character_substitutions": ["牙合", "体验"],
+    "preserve_as_written": [
+      "实验", "试验", "检验", "经验", "验证", "化验", "体验", "体检",
+      "骑跨", "骑师", "优雅", "文雅", "高雅", "儒雅", "雅致", "酷似", "酷爱", "酷暑", "咬合"
+    ]
+  },
+  "canonical_groups": [
+    {
+      "id": "core",
+      "name": "基础概念与功能",
+      "terms": [
+        "𬌗学", "𬌗关系", "𬌗位", "𬌗运动", "𬌗功能", "𬌗接触", "𬌗干扰",
+        "𬌗创伤", "创伤𬌗", "𬌗重建", "调𬌗", "建𬌗", "蜡𬌗",
+        "𬌗的建立", "𬌗的形成", "𬌗的生长发育", "𬌗的接触状况", "𬌗的关键",
+        "𬌗的效能", "𬌗的调整过程", "𬌗因素", "𬌗分离", "𬌗平衡", "𬌗运循环",
+        "𬌗单位", "𬌗程序", "𬌗的垂直距离", "𬌗颌位", "侧𬌗颌位", "切𬌗颌位",
+        "𬌗、颌、面", "颅面、𬌗发育"
+      ]
+    },
+    {
+      "id": "morphology",
+      "name": "牙体形态、方向与空间",
+      "terms": [
+        "𬌗面", "𬌗面观", "𬌗缘", "𬌗边缘嵴", "𬌗外展隙", "𬌗方", "𬌗向",
+        "𬌗龈", "𬌗龈距", "𬌗龈距离", "𬌗龈高度", "𬌗龈间隙", "𬌗间隙",
+        "𬌗平面", "𬌗平面角", "𬌗曲线", "横𬌗曲线", "纵𬌗曲线", "矢状𬌗曲线",
+        "𬌗型", "𬌗面形态", "𬌗面预备", "𬌗面磨除", "𬌗向聚合度", "𬌗向脱位",
+        "𬌗角", "𬌗楔状隙", "𬌗颈径", "𬌗颈高度", "𬌗端", "𬌗1/3", "𬌗边缘",
+        "𬌗交界线", "舌𬌗交界线", "颊𬌗线", "𬌗叉"
+      ]
+    },
+    {
+      "id": "cavity_preparation",
+      "name": "窝洞预备与邻𬌗面术语",
+      "terms": [
+        "𬌗壁", "𬌗轴线角", "邻𬌗洞", "邻𬌗邻洞", "邻𬌗面洞",
+        "邻颊𬌗洞", "邻舌𬌗洞", "颊𬌗洞", "颊(腭)𬌗洞", "颊(腭)𬌗面"
+      ]
+    },
+    {
+      "id": "devices",
+      "name": "记录、测量与修复器械",
+      "terms": [
+        "𬌗力", "𬌗力计", "𬌗架", "平均值𬌗架", "半可调𬌗架", "全可调𬌗架", "虚拟𬌗架",
+        "上𬌗架", "𬌗托", "𬌗堤", "𬌗支托", "𬌗支托凹", "联合𬌗支托",
+        "𬌗记录", "𬌗关系记录", "𬌗位记录", "𬌗垫", "𬌗板", "双𬌗垫",
+        "平面式𬌗垫", "解剖式𬌗垫", "𬌗嵌体", "邻𬌗嵌体"
+      ]
+    },
+    {
+      "id": "functional_patterns",
+      "name": "咬合位置与功能型",
+      "terms": [
+        "牙尖交错𬌗", "正中𬌗", "前伸𬌗", "侧方𬌗", "平衡𬌗", "正中平衡𬌗",
+        "前伸平衡𬌗", "侧方平衡𬌗", "双侧平衡𬌗", "尖牙保护𬌗", "组牙功能𬌗",
+        "相互保护𬌗", "舌侧集中𬌗", "舌向集中𬌗", "线性𬌗", "平面𬌗", "解剖式𬌗", "非解剖式𬌗",
+        "对刃𬌗", "前伸𬌗颌位"
+      ]
+    },
+    {
+      "id": "orthodontics",
+      "name": "正畸关系与错𬌗类型",
+      "terms": [
+        "正常𬌗", "理想𬌗", "错𬌗", "𬌗畸形", "错𬌗畸形", "牙性错𬌗", "骨性错𬌗", "功能性错𬌗",
+        "中性𬌗", "近中𬌗", "远中𬌗", "近中错𬌗", "远中错𬌗", "覆𬌗", "深覆𬌗",
+        "浅覆𬌗", "反覆𬌗", "开𬌗", "前牙开𬌗", "后牙开𬌗", "反𬌗", "前牙反𬌗",
+        "后牙反𬌗", "锁𬌗", "后牙锁𬌗", "反锁𬌗", "𬌗发育", "𬌗的特征",
+        "𬌗紊乱", "𬌗过度磨耗"
+      ]
+    },
+    {
+      "id": "dentition",
+      "name": "牙列发育与对颌关系",
+      "terms": [
+        "乳牙𬌗", "替牙𬌗", "恒牙𬌗", "牙𬌗", "牙𬌗发育", "对𬌗牙", "𬌗间矫治"
+      ]
+    }
+  ],
+  "explicit_aliases": [
+    {"from": "合轴面线角", "to": "𬌗轴面线角", "confidence": "high", "reason": "修复学固定术语中的𬌗字被直接识别为合"},
+    {"from": "牙列、验与颌位", "to": "牙列、𬌗与颌位", "confidence": "high", "reason": "口解第三章标题中的固定专业词"},
+    {"from": "第二节验", "to": "第二节𬌗", "confidence": "high", "reason": "口解第三章目录标题中的固定专业词"},
+    {"from": "第四节验的类型", "to": "第四节𬌗的类型", "confidence": "high", "reason": "口解第三章目录标题中的固定专业词"},
+    {"from": "骑的发育", "to": "𬌗的发育", "confidence": "high", "reason": "口解正文固定短语，骑为𬌗的上下文替代形"},
+    {"from": "验的发育", "to": "𬌗的发育", "confidence": "high", "reason": "口解正文固定短语，验为𬌗的上下文替代形"},
+    {"from": "验的类型", "to": "𬌗的类型", "confidence": "high", "reason": "口解正文固定短语，验为𬌗的上下文替代形"},
+    {"from": "矜泛指", "to": "𬌗泛指", "confidence": "high", "reason": "口解第三章𬌗定义句中的固定起始词"},
+    {"from": "骑是", "to": "𬌗是", "confidence": "high", "reason": "口解第三章𬌗定义句中的主语"},
+    {"from": "雅动力平衡", "to": "𬌗动力平衡", "confidence": "high", "reason": "口解第三章上下方向动力平衡术语"},
+    {"from": "矜动力平衡", "to": "𬌗动力平衡", "confidence": "high", "reason": "口解第三章上下方向动力平衡术语"},
+    {"from": "骑的动力平衡", "to": "𬌗的动力平衡", "confidence": "high", "reason": "口解第三章图注固定短语"},
+    {"from": "矜调整", "to": "𬌗调整", "confidence": "high", "reason": "口解第三章替牙期咬合调整术语"},
+    {"from": "酷需调整", "to": "𬌗需调整", "confidence": "high", "reason": "口解第三章替牙期图注固定短语"},
+    {"from": "矜调整过程", "to": "𬌗调整过程", "confidence": "high", "reason": "口解第三章咬合调整术语"},
+    {"from": "骑 1/3", "to": "𬌗1/3", "confidence": "high", "reason": "口解实验教程中𬌗侧三分之一定位"},
+    {"from": "纵验", "to": "纵𬌗", "confidence": "high", "reason": "牙列曲线的纵𬌗固定术语"},
+    {"from": "舌验线", "to": "舌𬌗线", "confidence": "high", "reason": "后牙舌𬌗线固定术语"},
+    {"from": "验分为", "to": "𬌗分为", "confidence": "high", "reason": "𬌗类型分类句中的固定动词结构"},
+    {"from": "组牙保护验", "to": "组牙保护𬌗", "confidence": "high", "reason": "口解图注中的功能𬌗型术语"},
+    {"from": "验的形态特征", "to": "𬌗的形态特征", "confidence": "high", "reason": "口颌系统肌链章节固定术语"},
+    {"from": "与验的协同作用", "to": "与𬌗的协同作用", "confidence": "high", "reason": "下颌运动章节固定术语"},
+    {"from": "类型验", "to": "类型𬌗", "confidence": "high", "reason": "咀嚼功能章节固定的𬌗型表述"},
+    {"from": "保持验的最好效能", "to": "保持𬌗的最好效能", "confidence": "high", "reason": "口腔与呼吸章节固定短语"},
+    {"from": "舌面验", "to": "舌面𬌗", "confidence": "high", "reason": "实验教程牙体表面定位短语"},
+    {"from": "牙体解剖、验", "to": "牙体解剖、𬌗", "confidence": "high", "reason": "第一章学术史中的固定并列术语"},
+    {"from": "验以及", "to": "𬌗以及", "confidence": "high", "reason": "学术史并列术语中的𬌗缺字"},
+    {"from": "验等", "to": "𬌗等", "confidence": "high", "reason": "学术史并列术语中的𬌗缺字"}
+  ],
+  "missing_character_patterns": [
+    {
+      "id": "complete_denture_balanced_occlusion",
+      "pattern": "全口义齿的平衡(?!𬌗)(?=\\s*(?:[（(]balanced\\s*occlusion|\\r?\\n))",
+      "replacement": "全口义齿的平衡𬌗",
+      "action": "automatic",
+      "reason": "全口义齿章节固定标题，目录或英文 balanced occlusion 可直接互证"
+    },
+    {
+      "id": "centric_balanced_occlusion_english",
+      "pattern": "正中平衡(?!𬌗)(?=\\s*[（(]?\\s*centric\\s*balanced\\s*occlusion)",
+      "replacement": "正中平衡𬌗",
+      "action": "automatic",
+      "reason": "英文 centric balanced occlusion 明确对应正中平衡𬌗"
+    },
+    {
+      "id": "eccentric_balanced_occlusion_english",
+      "pattern": "非正中平衡(?!𬌗)(?=\\s*[（(]?\\s*eccentric\\s*balanced\\s*occlusion)",
+      "replacement": "非正中平衡𬌗",
+      "action": "automatic",
+      "reason": "英文 eccentric balanced occlusion 明确对应非正中平衡𬌗"
+    },
+    {
+      "id": "protrusive_balanced_occlusion_english",
+      "pattern": "前伸平衡(?!𬌗)(?=\\s*[（(]?\\s*protrusive\\s*balanced\\s*occlusion)",
+      "replacement": "前伸平衡𬌗",
+      "action": "automatic",
+      "reason": "英文 protrusive balanced occlusion 明确对应前伸平衡𬌗"
+    },
+    {
+      "id": "lateral_balanced_occlusion_english",
+      "pattern": "侧方平衡(?!𬌗)(?=\\s*[（(]?\\s*lateral\\s*balanced\\s*occlusion)",
+      "replacement": "侧方平衡𬌗",
+      "action": "automatic",
+      "reason": "英文 lateral balanced occlusion 明确对应侧方平衡𬌗"
+    },
+    {
+      "id": "lingualized_occlusion_english",
+      "pattern": "舌向集中(?!𬌗)(?=\\s*[（(]?\\s*lingualized\\s*occlusion)",
+      "replacement": "舌向集中𬌗",
+      "action": "automatic",
+      "reason": "英文 lingualized occlusion 明确对应舌向集中𬌗"
+    },
+    {
+      "id": "monoplane_occlusion_english",
+      "pattern": "平面(?!𬌗)(?=\\s*[（(]?\\s*mon-?oplane\\s*occlusion)",
+      "replacement": "平面𬌗",
+      "action": "automatic",
+      "reason": "英文 monoplane occlusion 明确对应平面𬌗"
+    },
+    {
+      "id": "occlusion_relation_disorder_complication",
+      "pattern": "如关系紊乱(?=、牙松动、牙移位)",
+      "replacement": "如𬌗关系紊乱",
+      "action": "automatic",
+      "reason": "牙列缺损并发症固定列举中，关系紊乱缺少𬌗字且后续牙松动、牙移位可互证"
+    },
+    {
+      "id": "malocclusion_deformity",
+      "pattern": "错畸形",
+      "replacement": "错𬌗畸形",
+      "action": "automatic",
+      "reason": "固定疾病名称，缺字后不构成合法术语"
+    },
+    {
+      "id": "deep_overbite",
+      "pattern": "深覆(?![𬌗盖])",
+      "replacement": "深覆𬌗",
+      "action": "automatic",
+      "reason": "排除深覆盖后，教材中的固定术语"
+    },
+    {
+      "id": "shallow_overbite",
+      "pattern": "浅覆(?![𬌗盖])",
+      "replacement": "浅覆𬌗",
+      "action": "automatic",
+      "reason": "排除浅覆盖后，教材中的固定术语"
+    },
+    {
+      "id": "reverse_overbite",
+      "pattern": "反覆(?![𬌗盖])",
+      "replacement": "反覆𬌗",
+      "action": "detect_only",
+      "reason": "反覆也可能是反复的异体写法，不能脱离上下文自动改写"
+    },
+    {
+      "id": "overbite_before_overjet",
+      "pattern": "覆(?=覆盖)",
+      "replacement": "覆𬌗",
+      "action": "automatic",
+      "reason": "覆𬌗覆盖是成对描述垂直与水平关系的固定结构"
+    },
+    {
+      "id": "overbite_before_and_overjet",
+      "pattern": "覆(?=及覆盖)",
+      "replacement": "覆𬌗",
+      "action": "automatic",
+      "reason": "覆𬌗及覆盖是成对描述垂直与水平关系的固定结构"
+    },
+    {
+      "id": "isolated_overbite",
+      "pattern": "(?<![深浅反被包披倾])覆(?=的程度|程度|正常|过深|过浅|、深覆|、开𬌗)",
+      "replacement": "覆𬌗",
+      "action": "detect_only",
+      "reason": "孤立的覆可能丢失𬌗，也可能属于普通动词或其他构词"
+    },
+    {
+      "id": "anterior_open_bite",
+      "pattern": "前牙开(?=畸形|患者|矫治|程度|形成|关系|倾向|示意图|无法|严重|减轻|的|等)",
+      "replacement": "前牙开𬌗",
+      "action": "detect_only",
+      "reason": "可能是前牙开𬌗，也可能跨越普通语句边界"
+    },
+    {
+      "id": "posterior_open_bite",
+      "pattern": "后牙开(?=畸形|患者|矫治|程度|形成|关系|的|等)",
+      "replacement": "后牙开𬌗",
+      "action": "detect_only",
+      "reason": "可能是后牙开𬌗，需完整上下文支持"
+    },
+    {
+      "id": "anterior_cross_bite",
+      "pattern": "前牙反(?=畸形|患者|矫治|程度|形成|关系|病例|解除|复发|的|等)",
+      "replacement": "前牙反𬌗",
+      "action": "detect_only",
+      "reason": "排除反颌等合法近义写法后才可补字"
+    },
+    {
+      "id": "posterior_cross_bite",
+      "pattern": "后牙反(?=畸形|患者|矫治|程度|形成|关系|诊断|的|等)",
+      "replacement": "后牙反𬌗",
+      "action": "detect_only",
+      "reason": "排除反颌、反锁等合法写法后才可补字"
+    },
+    {
+      "id": "mesial_malocclusion",
+      "pattern": "近中错(?=关系|畸形|患者|的|等)",
+      "replacement": "近中错𬌗",
+      "action": "detect_only",
+      "reason": "必须排除近中错位"
+    },
+    {
+      "id": "distal_malocclusion",
+      "pattern": "远中错(?=关系|畸形|患者|的|等)",
+      "replacement": "远中错𬌗",
+      "action": "detect_only",
+      "reason": "必须排除远中错位"
+    },
+    {
+      "id": "posterior_scissors_bite",
+      "pattern": "后牙锁(?=畸形|患者|矫治|诊断|关系|的|等)",
+      "replacement": "后牙锁𬌗",
+      "action": "detect_only",
+      "reason": "可能是后牙锁𬌗，不对孤立的锁字自动补字"
+    },
+    {
+      "id": "group_function_occlusion",
+      "pattern": "组牙功能(?!𬌗)",
+      "replacement": "组牙功能𬌗",
+      "action": "detect_only",
+      "reason": "部分教材允许省称组牙功能，不强制改写"
+    },
+    {
+      "id": "isolated_malocclusion",
+      "pattern": "错(?=分类法|三类|关系|患者|病例)",
+      "replacement": "错𬌗",
+      "action": "detect_only",
+      "reason": "可能是错𬌗的缺字形态，需排除错位、错误等普通词"
+    },
+    {
+      "id": "malocclusion_before_overbite_list",
+      "pattern": "错(?=[。.]覆(?:𬌗)?及覆盖)",
+      "replacement": "错𬌗",
+      "action": "automatic",
+      "reason": "牙排列检查中错𬌗、覆𬌗及覆盖是连续固定检查项目"
+    },
+    {
+      "id": "malocclusion_before_bruxism",
+      "pattern": "错(?=、难以消除的夜磨牙)",
+      "replacement": "错𬌗",
+      "action": "automatic",
+      "reason": "预后因素并列项中的固定术语为严重错𬌗"
+    },
+    {
+      "id": "intercuspal_occlusion_before_english",
+      "pattern": "牙尖交错(?=[（(]intercuspal occlusion)",
+      "replacement": "牙尖交错𬌗",
+      "action": "automatic",
+      "reason": "英文 intercuspal occlusion 明确对应牙尖交错𬌗"
+    },
+    {
+      "id": "open_bite_in_mobility_list",
+      "pattern": "开(?=、牙松动)",
+      "replacement": "开𬌗",
+      "action": "automatic",
+      "reason": "牙间隙、开𬌗、牙松动是牙周与错𬌗语境中的固定并列项"
+    },
+    {
+      "id": "edge_to_edge_before_scissors_bite",
+      "pattern": "对刃(?=、锁[𬌗验骑雅酷矜])",
+      "replacement": "对刃𬌗",
+      "action": "automatic",
+      "reason": "对刃𬌗与锁𬌗是咬合检查中的固定并列类型"
+    },
+    {
+      "id": "isolated_crossbite_in_list",
+      "pattern": "反(?=、深覆|、开𬌗|或锁𬌗)",
+      "replacement": "反𬌗",
+      "action": "detect_only",
+      "reason": "并列牙𬌗类型中可能丢字，不对一般的反字自动处理"
+    },
+    {
+      "id": "opposing_tooth_short_form",
+      "pattern": "对牙(?=的|伸长|缺失|情况|颜色|关系)",
+      "replacement": "对𬌗牙",
+      "action": "detect_only",
+      "reason": "可能是对𬌗牙，也可能是作者采用的简称"
+    },
+    {
+      "id": "bare_he_occlusal_surface",
+      "pattern": "(?<![咬复聚结吻缝贴黏混整配综])合面",
+      "replacement": "𬌗面",
+      "action": "detect_only",
+      "reason": "合可能来自𬌗或咬合的残片，也可能跨越复合面等普通词边界"
+    },
+    {
+      "id": "bare_he_occlusal_device",
+      "pattern": "(?<![咬组复聚结整配综])合(?=架|垫|板|托|堤|支托)",
+      "replacement": "𬌗",
+      "action": "detect_only",
+      "reason": "合可能是𬌗的残片，但组合架、复合板等词必须排除"
+    },
+    {
+      "id": "bare_he_occlusal_relation",
+      "pattern": "(?<![咬结复聚整配综吻])合(?=接触|干扰|关系|平面|曲线|重建)",
+      "replacement": "𬌗",
+      "action": "detect_only",
+      "reason": "可能是𬌗或咬合丢失一个字后的残片，只作上下文提示"
+    },
+    {
+      "id": "bare_bite_occlusal_fragment",
+      "pattern": "咬(?=面|接触|关系|平面|曲线|干扰)",
+      "replacement": "𬌗",
+      "action": "detect_only",
+      "reason": "可能是咬合一词丢失合，也可能是𬌗的OCR残片"
+    },
+    {
+      "id": "occlusion_establishment_impact",
+      "pattern": "影响建(?=。|，)",
+      "replacement": "影响𬌗的建立",
+      "action": "automatic",
+      "reason": "口解第三章固定句式，影响建后仅可能指影响𬌗的建立"
+    },
+    {
+      "id": "occlusion_establishment_key_factor",
+      "pattern": "影响建的关键因素",
+      "replacement": "影响𬌗建立的关键因素",
+      "action": "automatic",
+      "reason": "口解第三章固定句式，影响建的关键因素缺失𬌗与建立中的立"
+    },
+    {
+      "id": "occlusion_establishment_after_emergence",
+      "pattern": "萌出建(?=，|。)",
+      "replacement": "萌出建𬌗",
+      "action": "automatic",
+      "reason": "恒磨牙萌出建𬌗是口解第三章固定术语"
+    },
+    {
+      "id": "primary_occlusion_establishment",
+      "pattern": "乳牙建(?=约在|和颌骨)",
+      "replacement": "乳牙𬌗建立",
+      "action": "automatic",
+      "reason": "乳牙𬌗建立是口解第三章固定发育术语"
+    },
+    {
+      "id": "occlusion_establishment_initial_stage",
+      "pattern": "在建初期为偏远中关系",
+      "replacement": "在建𬌗初期为偏远中关系",
+      "action": "automatic",
+      "reason": "恒磨牙建𬌗初期的固定描述"
+    },
+    {
+      "id": "permanent_occlusion_establishment_early",
+      "pattern": "恒牙𬌗建早期",
+      "replacement": "恒牙𬌗建立早期",
+      "action": "automatic",
+      "reason": "恒牙𬌗建立早期是口解第三章固定发育术语"
+    },
+    {
+      "id": "occlusion_after_occlusal_surface",
+      "pattern": "建后易于维持",
+      "replacement": "建𬌗后易于维持",
+      "action": "automatic",
+      "reason": "第一恒磨牙建𬌗后是固定咬合描述"
+    },
+    {
+      "id": "occlusion_establishment_reference",
+      "pattern": "正中关系建(?=。)",
+      "replacement": "正中关系建𬌗",
+      "action": "automatic",
+      "reason": "咬合重建语境中的正中关系建𬌗"
+    },
+    {
+      "id": "teeth_occlusion_establishment_initial",
+      "pattern": "上下颌牙建的初期",
+      "replacement": "上下颌牙𬌗建立的初期",
+      "action": "automatic",
+      "reason": "口腔功能章节固定描述，牙建的初期缺失𬌗建立"
+    }
+  ]
+}

@@ -1,0 +1,442 @@
+{
+  "schema_version": 1,
+  "book_id": "dental-pulp-5e",
+  "chapters": [
+    {
+      "title": "绪论",
+      "artifact": "00-绪论.md",
+      "source_line_start": 626,
+      "source_heading": "绪论",
+      "sections": [
+        {"title": "一、龋病学的发展", "heading": "龋病学的发展"},
+        {"title": "二、牙髓病学的发展", "heading": "、牙髓病学的发展"},
+        {"title": "三、保存牙科学的主要内容", "heading": "三、保存牙科学的主要内容"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第一章 龋病学概论",
+      "artifact": "01-龋病学概论.md",
+      "source_line_start": 724,
+      "source_heading": "第一章",
+      "sections": [
+        {"title": "第一节 龋病的定义", "heading": "第一节 龋病的定义"},
+        {"title": "第二节 龋病的流行病学", "heading": "第二节 龋病的流行病学"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二章 龋病病因与发病机制",
+      "artifact": "02-龋病病因与发病机制.md",
+      "source_line_start": 854,
+      "source_heading": "第二章 龋病病因与发病机制",
+      "sections": [
+        {"title": "第一节 龋病发生的微生物因素", "heading": "第一节 龋病发生的微生物因素"},
+        {"title": "第一节 · 口腔微生物", "heading": "一、口腔微生物"},
+        {"title": "第一节 · 口腔微生态", "heading": "二、口腔微生态"},
+        {"title": "第一节 · 牙菌斑生物膜", "heading": "三、牙菌斑生物膜"},
+        {"title": "第二节 龋病发生的宿主因素", "heading": "第二节 龋病发生的宿主因素"},
+        {"title": "第三节 龋病发生的食物因素", "heading": "第三节 龋病发生的食物因素"},
+        {"title": "第四节 影响龋病发生和发展的其他因素", "heading": "第四节 影响龋病发生和发展的其他因素"},
+        {"title": "第五节 龋病病因学说", "heading": "第五节 龋病病因学说"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第三章 临床表现与诊断",
+      "artifact": "03-临床表现与诊断.md",
+      "source_line_start": 1338,
+      "source_heading": "第三章 临床表现与诊断",
+      "sections": [
+        {"title": "第一节 龋病的病理过程", "heading": "第一节 龋病的病理过程"},
+        {"title": "第二节 龋病的临床表现及分类", "heading": "第二节 龋病的临床表现及分类"},
+        {"title": "第三节 龋病的诊断", "heading": "第三节 龋病的诊断"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第四章 龋病的治疗计划",
+      "artifact": "04-龋病的治疗计划.md",
+      "source_line_start": 1632,
+      "source_heading": "第四章",
+      "sections": [
+        {"title": "第一节 龋病综合治疗的理念", "heading": "第一节龋病综合治疗的理念"},
+        {"title": "第二节 龋病风险评估与管理", "heading": "第二节 龋病风险评估与管理"},
+        {"title": "第三节 非手术治疗", "heading": "第三节非手术治疗"},
+        {"title": "第四节 牙体修复与材料选择的原则", "heading": "第四节 牙体修复与材料选择的原则"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第五章 牙发育异常和着色牙",
+      "artifact": "05-牙发育异常和着色牙.md",
+      "source_line_start": 1926,
+      "source_heading": "第五章",
+      "sections": [
+        {"title": "第一节 牙发育异常和结构异常", "heading": "第一节牙发育异常和结构异常"},
+        {"title": "第二节 着色牙", "heading": "第二节着色牙"},
+        {"title": "第二节 · 氟牙症", "heading": "一、氟牙症"},
+        {"title": "第二节 · 四环素牙", "heading": "二、四环素牙"},
+        {"title": "第三节 牙形态异常", "heading": "第三节 牙形态异常"},
+        {"title": "第四节 牙数目异常", "heading": "第四节 牙数目异常"},
+        {"title": "第五节 牙萌出异常", "heading": "第五节 牙萌出异常"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第六章 牙外伤",
+      "artifact": "06-牙外伤.md",
+      "source_line_start": 2455,
+      "source_heading": "第六章 牙外伤",
+      "sections": [
+        {"title": "第一节 牙外伤的病史采集和临床检查", "heading": "第一节牙外伤的病史采集和临床检查"},
+        {"title": "第二节 牙外伤的诊断和治疗", "heading": "第二节牙外伤的诊断和治疗"},
+        {"title": "第三节 牙外伤伴发的支持组织损伤", "heading": "第三节牙外伤伴发的支持组织损伤"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第七章 牙慢性损伤",
+      "artifact": "07-牙慢性损伤.md",
+      "source_line_start": 2766,
+      "source_heading": "第七章 牙慢性损伤",
+      "sections": [
+        {"title": "第一节 磨损", "heading": "第一节磨损"},
+        {"title": "第二节 牙酸蚀症", "heading": "第二节牙酸蚀症"},
+        {"title": "第三节 楔状缺损", "heading": "第三节楔状缺损"},
+        {"title": "第四节 牙隐裂", "heading": "第四节牙隐裂"},
+        {"title": "第五节 牙根纵裂", "heading": "第五节牙根纵裂"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第八章 牙本质敏感症",
+      "artifact": "08-牙本质敏感症.md",
+      "source_line_start": 3065,
+      "source_heading": "第八章",
+      "sections": [
+        {"title": "一、概述", "heading": "一、概述"},
+        {"title": "二、危险因素", "heading": "二、危险因素"},
+        {"title": "三、发生机制", "heading": "三、发生机制"},
+        {"title": "四、临床表现和诊断", "heading": "四、临床表现和诊断"},
+        {"title": "五、治疗原则和方法", "heading": "五、治疗原则和方法"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第九章 牙体修复治疗术",
+      "artifact": "09-牙体修复治疗术.md",
+      "source_line_start": 3205,
+      "source_heading": "第九章",
+      "sections": [
+        {"title": "第一节 牙体修复治疗术概述", "heading": "第一节牙体修复治疗术概述"},
+        {"title": "第二节 牙体修复治疗的生物学基础", "heading": "第二节 牙体修复治疗的生物学基础"},
+        {"title": "第三节 牙体直接修复术的适应证", "heading": "第三节牙体直接修复术的适应证"},
+        {"title": "第四节 牙体直接修复术的疗效与评价标准", "heading": "第四节 牙体直接修复术的疗效与评价标准"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十章 牙体预备与银汞合金充填",
+      "artifact": "10-牙体预备与银汞合金充填.md",
+      "source_line_start": 3387,
+      "source_heading": "第十章",
+      "sections": [
+        {"title": "第一节 窝洞的分类与结构", "heading": "第一节 窝洞的分类与结构"},
+        {"title": "第二节 窝洞预备的基本原则", "heading": "第二节窝洞预备的基本原则"},
+        {"title": "第三节 窝洞预备的基本步骤", "heading": "第三节 窝洞预备的基本步骤"},
+        {"title": "第四节 各类窝洞的预备要点", "heading": "第四节 各类窝洞的预备要点"},
+        {"title": "第五节 银汞合金充填术", "heading": "第五节 银汞合金充填术"},
+        {"title": "第六节 并发症及处理", "heading": "第六节 并发症及处理"},
+        {"title": "思考题", "heading": "思考题"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十一章 牙体修复材料及粘接材料的应用基础",
+      "artifact": "11-牙体修复材料及粘接材料的应用基础.md",
+      "source_line_start": 4011,
+      "source_heading": "第十一章",
+      "sections": [
+        {"title": "第一节 牙色材料与牙体修复", "heading": "第一节牙色材料与牙体修复"},
+        {"title": "第一节 · 复合树脂", "heading": "一、复合树脂"},
+        {"title": "第一节 · 玻璃离子水门汀", "heading": "二、玻璃离子水门汀"},
+        {"title": "第一节 · 复合体", "heading": "三、复合体"},
+        {"title": "第二节 牙体粘接材料与技术", "heading": "第二节牙体粘接材料与技术"},
+        {"title": "第二节 · 牙釉质粘接", "heading": "牙釉质粘接"},
+        {"title": "第二节 · 牙本质粘接", "heading": "二、牙本质粘接"},
+        {"title": "第二节 · 影响牙体粘接成功的临床因素", "heading": "三、影响牙体粘接成功的临床因素"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十二章 牙体粘接修复术",
+      "artifact": "12-牙体粘接修复术.md",
+      "source_line_start": 4417,
+      "source_heading": "第十二章 牙体粘接修复术",
+      "sections": [
+        {"title": "第一节 · 术前准备", "heading": "二、术前准备"},
+        {"title": "第一节 · 牙体预备与牙髓保护", "heading": "三、牙体预备与牙髓保护"},
+        {"title": "第一节 · 成形片的放置", "heading": "四、成形片的放置"},
+        {"title": "第一节 · 粘接", "heading": "五、粘接"},
+        {"title": "第一节 · 复合树脂的充填", "heading": "六、复合树脂的充填"},
+        {"title": "第一节 · 复合树脂的固化", "heading": "七、复合树脂的固化"},
+        {"title": "第一节 · 修复体的修形和抛光", "heading": "八、修复体的修形和抛光"},
+        {"title": "第二节 前牙复合树脂直接修复术", "heading": "第二节 前牙复合树脂直接修复术"},
+        {"title": "第三节 后牙复合树脂直接修复术", "heading": "第三节 后牙复合树脂直接修复术"},
+        {"title": "第四节 V类洞直接修复术", "heading": "第四节V类洞直接修复术"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十三章 深龋治疗与盖髓术",
+      "artifact": "13-深龋治疗与盖髓术.md",
+      "source_line_start": 5082,
+      "source_heading": "第十三章 深龋治疗与盖髓术",
+      "sections": [
+        {"title": "第一节 深龋的治疗", "heading": "第一节深龋的治疗"},
+        {"title": "第二节 盖髓术", "heading": "第二节盖髓 术"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十四章 牙髓根尖周病治疗的生物学基础",
+      "artifact": "14-牙髓根尖周病治疗的生物学基础.md",
+      "source_line_start": 5271,
+      "source_heading": "第十四章",
+      "sections": [
+        {"title": "第一节 牙髓形态及组织结构", "heading": "第一节牙髓形态及组织结构"},
+        {"title": "第二节 牙髓的生物学功能", "heading": "第二节牙髓的生物学功能"},
+        {"title": "第三节 牙髓增龄性变化", "heading": "第三节 牙髓增龄性变化"},
+        {"title": "第四节 根尖周组织生理学特点", "heading": "第四节 根尖周组织生理学特点"},
+        {"title": "第五节 牙髓根尖周病治疗的生物学基础", "heading": "第五节 牙髓根尖周病治疗的生物学基础"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十五章 牙髓根尖周病的病因及发病机制",
+      "artifact": "15-牙髓根尖周病的病因及发病机制.md",
+      "source_line_start": 5534,
+      "source_heading": "第十五章",
+      "sections": [
+        {"title": "第一节 微生物因素", "heading": "第一节 微生物因素"},
+        {"title": "第二节 物理因素", "heading": "第二节 物理因素"},
+        {"title": "第三节 化学因素", "heading": "第三节化学因素"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十六章 牙髓病的临床表现及诊断",
+      "artifact": "16-牙髓病的临床表现及诊断.md",
+      "source_line_start": 5790,
+      "source_heading": "第十六章",
+      "sections": [
+        {"title": "第一节 分类", "heading": "第一节分类"},
+        {"title": "第二节 牙髓病的临床诊断程序", "heading": "第二节牙髓病的临床诊断程序"},
+        {"title": "第三节 各型牙髓病的临床表现及诊断要点", "heading": "第三节 各型牙髓病的临床表现及诊断要点"},
+        {"title": "第三节 · 不可复性牙髓炎", "heading": "二、不可复性牙髓炎"},
+        {"title": "第三节 · 牙髓坏死", "heading": "三、牙髓坏死"},
+        {"title": "第三节 · 牙髓钙化", "heading": "四、牙髓钙化"},
+        {"title": "第三节 · 牙内吸收", "heading": "五、牙内吸收"},
+        {"title": "第四节 非牙源性牙痛的鉴别诊断", "heading": "第四节 非牙源性牙痛的鉴别诊断"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十七章 根尖周病的临床表现及诊断",
+      "artifact": "17-根尖周病的临床表现及诊断.md",
+      "source_line_start": 6303,
+      "source_heading": "第十七章 根尖周病的临床表现及诊断",
+      "sections": [
+        {"title": "第一节 急性根尖周炎", "heading": "第一节 急性根尖周炎"},
+        {"title": "第一节 · 急性浆液性根尖周炎", "heading": "一、急性浆液性根尖周炎"},
+        {"title": "第一节 · 急性化脓性根尖周炎", "heading": "二、急性化脓性根尖周炎"},
+        {"title": "第二节 慢性根尖周炎", "heading": "第二节 慢性根尖周炎"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十八章 牙髓根尖周病的治疗计划",
+      "artifact": "18-牙髓根尖周病的治疗计划.md",
+      "source_line_start": 6586,
+      "source_heading": "第十八章 牙髓根尖周病的治疗计划",
+      "sections": [
+        {"title": "第一节 治疗原则和治疗计划", "heading": "第一节治疗原则和治疗计划"},
+        {"title": "第二节 患者和患牙状态", "heading": "第二节 患者和患牙状态"},
+        {"title": "第三节 术前感染控制", "heading": "第三节术前感染控制"},
+        {"title": "第四节 疼痛控制", "heading": "第四节疼痛控制"},
+        {"title": "第五节 应急处理", "heading": "第五节应急处理"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第十九章 根管治疗术",
+      "artifact": "19-根管治疗术.md",
+      "source_line_start": 6977,
+      "source_heading": "第十九章 根管治疗术",
+      "sections": [
+        {"title": "第一节 根管治疗术的发展概况", "heading": "第一节根管治疗术的发展概况"},
+        {"title": "第二节 根管治疗术的原理", "heading": "第二节 根管治疗术的原理"},
+        {"title": "第三节 根管治疗术的病例选择", "heading": "第三节根管治疗术的病例选择"},
+        {"title": "第四节 根管治疗术的操作原则", "heading": "第四节 根管治疗术的操作原则"},
+        {"title": "第五节 根管治疗的疗效及评价标准", "heading": "第五节 根管治疗的疗效及评价标准"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十章 髓腔应用解剖与开髓",
+      "artifact": "20-髓腔应用解剖与开髓.md",
+      "source_line_start": 7237,
+      "source_heading": "第二十章 髓腔应用解剖与开髓",
+      "sections": [
+        {"title": "第一节 髓腔应用解剖", "heading": "第一节 髓腔应用解剖"},
+        {"title": "第二节 开髓", "heading": "第二节开 髓"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十一章 根管预备与消毒",
+      "artifact": "21-根管预备与消毒.md",
+      "source_line_start": 7413,
+      "source_heading": "第二十一章 根管预备与消毒",
+      "sections": [
+        {"title": "第一节 · 常用的根管预备器械", "heading": "一、常用的根管预备器械"},
+        {"title": "第一节 · 根管预备方法", "heading": "二、根管预备方法"},
+        {"title": "第一节 · 根管冲洗", "heading": "三、根管冲洗"},
+        {"title": "第二节 根管消毒", "heading": "第二节根管消毒"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十二章 根管充填",
+      "artifact": "22-根管充填.md",
+      "source_line_start": 7843,
+      "source_heading": "第二十二章 根管充填",
+      "sections": [
+        {"title": "第一节 根管充填的目的", "heading": "第一节根管充填的目的"},
+        {"title": "第二节 根管充填的时机", "heading": "第二节根管充填的时机"},
+        {"title": "第三节 根管充填材料", "heading": "第三节 根管充填材料"},
+        {"title": "第四节 根管充填技术", "heading": "第四节 根管充填技术"},
+        {"title": "第五节 根管充填质量的评价", "heading": "第五节 根管充填质量的评价"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十三章 根尖诱导成形术与根尖屏障术",
+      "artifact": "23-根尖诱导成形术与根尖屏障术.md",
+      "source_line_start": 8147,
+      "source_heading": "第二十三章",
+      "sections": [
+        {"title": "第一节 根尖诱导成形术", "heading": "第一节根尖诱导成形术"},
+        {"title": "第二节 根尖屏障术", "heading": "第二节 根尖屏障术"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十四章 显微根管治疗与根尖手术",
+      "artifact": "24-显微根管治疗与根尖手术.md",
+      "source_line_start": 8351,
+      "source_heading": "第二十四章 显微根管治疗与根尖手术",
+      "sections": [
+        {"title": "第一节 显微根管治疗", "heading": "第一节 显微根管治疗"},
+        {"title": "第二节 根尖手术", "heading": "第二节根尖手术"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十五章 根管治疗并发症及根管再治疗",
+      "artifact": "25-根管治疗并发症及根管再治疗.md",
+      "source_line_start": 8707,
+      "source_heading": "第二十五章",
+      "sections": [
+        {"title": "第一节 根管治疗并发症", "heading": "第一节根管治疗并发症"},
+        {"title": "第一节 · 根管治疗后疼痛与诊间急症", "heading": "一、根管治疗后疼痛与诊间急症"},
+        {"title": "第一节 · 根管治疗中的器械分离", "heading": "二、根管治疗中的器械分离"},
+        {"title": "第一节 · 髓腔壁穿孔", "heading": "三、髓腔壁穿孔"},
+        {"title": "第一节 · 口腔软硬组织损伤", "heading": "四、口腔软硬组织损伤"},
+        {"title": "第一节 · 其他并发症", "heading": "五、其他并发症"},
+        {"title": "第二节 根管再治疗", "heading": "第二节 根管再治疗"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十六章 根管治疗后的牙体修复",
+      "artifact": "26-根管治疗后的牙体修复.md",
+      "source_line_start": 9142,
+      "source_heading": "第二十六章 根管治疗后的牙体修复",
+      "sections": [
+        {"title": "第一节 根管治疗后牙齿的变化", "heading": "第一节根管治疗后牙齿的变化"},
+        {"title": "第二节 牙体修复前分析与处理", "heading": "第二节 牙体修复前分析与处理"},
+        {"title": "第三节 根管治疗后牙齿的直接修复", "heading": "第三节 根管治疗后牙齿的直接修复"},
+        {"title": "第四节 根管治疗后牙齿的间接修复", "heading": "第四节 根管治疗后牙齿的间接修复"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十七章 病史采集与临床检查",
+      "artifact": "27-病史采集与临床检查.md",
+      "source_line_start": 9426,
+      "source_heading": "第二十七章 病史采集与临床检查",
+      "sections": [
+        {"title": "第一节 临床检查前准备", "heading": "第一节临床检查前准备"},
+        {"title": "第二节 病史采集", "heading": "第二节 病史采集"},
+        {"title": "第三节 · 一般检查", "heading": "一、一般检查"},
+        {"title": "第三节 · 特殊检查", "heading": "二、特殊检查"},
+        {"title": "第四节 影像学检查", "heading": "第四节 影像学检查"},
+        {"title": "第五节 实验室检查", "heading": "第五节 实验室检查"},
+        {"title": "第六节 病历记录", "heading": "第六节病历记录"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十八章 术区隔离",
+      "artifact": "28-术区隔离.md",
+      "source_line_start": 10175,
+      "source_heading": "第二十八章 术区隔离",
+      "sections": [
+        {"title": "第一节 术区隔离的方法", "heading": "第一节术区隔离的方法"},
+        {"title": "第二节 橡皮障的组成、辅助器械和材料", "heading": "第二节 橡皮障的组成、辅助器械和材料"},
+        {"title": "第三节 橡皮障隔离术", "heading": "第三节 橡皮障隔离术"},
+        {"title": "第四节 橡皮障使用注意事项", "heading": "第四节 橡皮障使用注意事项"},
+        {"title": "参考文献", "heading": "参考文献"}
+      ]
+    },
+    {
+      "title": "第二十九章 牙体牙髓病学实习教程",
+      "artifact": "29-牙体牙髓病学实习教程.md",
+      "source_line_start": 10417,
+      "source_heading": "第二十九章 牙体牙髓病学实习教程",
+      "sections": [
+        {"title": "实习一 · 口镜与前置准备", "heading": "2.探针(explorer）"},
+        {"title": "实习一 · 牙体修复治疗常用器械", "heading": "（二）牙体修复治疗常用器械及其使用"},
+        {"title": "实习一 · 根管治疗常用器械", "heading": "五、根管治疗常用器械及其使用"},
+        {"title": "实习二 口腔科医师的术式、支点与钻针切割硬物练习", "heading": "实习二口腔科医师的术式、支点与钻针切割硬物练习"},
+        {"title": "实习三 橡皮障隔离术", "heading": "实习三 橡皮障隔离术"},
+        {"title": "实习四 窝洞的结构、分类及石膏牙备洞", "heading": "实习四窝洞的结构、分类及石膏牙备洞"},
+        {"title": "实习五 仿头模上合成树脂标准牙窝洞制备", "heading": "实习五仿头模上合成树脂标准牙窝洞制备"},
+        {"title": "实习六 银汞合金充填术", "heading": "实习六 银汞合金充填术"},
+        {"title": "实习七 粘接修复术", "heading": "实习七粘接修复术"},
+        {"title": "实习八 盖髓术", "heading": "实习八盖髓 术"},
+        {"title": "实习九 开髓术", "heading": "实习九 开 髓术"},
+        {"title": "实习十 根管治疗术", "heading": "实习十根管治疗术"},
+        {"title": "实习十 · 根管预备", "heading": "（三）根管预备"},
+        {"title": "实习十 · 根管充填", "heading": "五、根管充填"},
+        {"title": "实习十一 根尖手术", "heading": "实习十一根尖手术"},
+        {"title": "实习十二 手术显微镜在牙髓病治疗中的应用", "heading": "实习十二 手术显微镜在牙髓病治疗中的应用"}
+      ]
+    },
+    {
+      "title": "附录 中英文名词对照索引",
+      "artifact": "30-中英文名词对照索引.md",
+      "source_line_start": 12119,
+      "source_heading": "中英文名词对照索引",
+      "sections": [
+        {"title": "索引正文", "heading": null},
+        {"title": "J", "heading": "J"},
+        {"title": "K", "heading": "K"},
+        {"title": "L", "heading": "L"},
+        {"title": "Z", "heading": "Z"}
+      ]
+    }
+  ]
+}
