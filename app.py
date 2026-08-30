@@ -1559,8 +1559,8 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
         books, sections = catalog()
-        question_banks = question_bank_catalog()
         if path == "/api/bootstrap":
+            question_banks = question_bank_catalog()
             self.send_json(
                 {
                     "books": books,
@@ -1572,6 +1572,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/question-banks":
+            question_banks = question_bank_catalog()
             self.send_json({"banks": question_banks, "count": len(question_banks)})
             return
         if path == "/api/practice/availability":

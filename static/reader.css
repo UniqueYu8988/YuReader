@@ -125,6 +125,7 @@
 .resource-heading p:last-child { margin: 9px 0 0; color: var(--text-soft); font-size: 10px; }
 .resource-progress-track { height: 3px; overflow: hidden; background: var(--line); }
 .resource-progress-track i { display: block; height: 100%; width: 0; background: var(--primary); transition: width 260ms var(--ease-out); }
+.resource-progress-track.is-loading i { width: 34% !important; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 72%, transparent), transparent); animation: resource-progress-loading 1.25s ease-in-out infinite; }
 .resource-facts { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line-strong); }
 .resource-facts > div { display: grid; min-width: 0; gap: 7px; padding: 19px 18px 21px 0; }
 .resource-facts > div + div { padding-left: 18px; border-left: 1px solid var(--line); }
@@ -132,6 +133,15 @@
 .resource-facts strong { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .resource-facts strong.resource-location { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
 .resource-facts em { color: var(--text-soft); font-size: 9px; font-style: normal; font-weight: 400; }
+.resource-loading-line { display: block; width: 72%; height: 12px; border-radius: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 20%, color-mix(in srgb, var(--text) 11%, transparent) 48%, color-mix(in srgb, var(--text) 5%, transparent) 76%); background-size: 220% 100%; animation: resource-skeleton-loading 1.35s ease-in-out infinite; }
+.resource-loading-line.wide { width: 92%; }
+.resource-loading-line.short { width: 44%; height: 7px; }
+@keyframes resource-progress-loading { from { transform: translateX(-110%); } to { transform: translateX(300%); } }
+@keyframes resource-skeleton-loading { from { background-position: 105% 0; } to { background-position: -105% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .resource-progress-track.is-loading i,
+  .resource-loading-line { animation: none; }
+}
 .resource-continue { display: flex; width: min(560px, 100%); align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
 .resource-continue > span { display: grid; gap: 3px; }
 .resource-continue small { color: var(--primary); font-size: 9px; }

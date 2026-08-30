@@ -18,7 +18,7 @@ const BOOK_COVER_LABELS = {
   "politics-modern-history": "史纲",
   "politics-xi": "习中特",
 };
-const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
+const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, resourceCache: new Map(), resourceLoads: new Map(), readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
 const READING_FLUSH_SECONDS = 15;
@@ -324,7 +324,11 @@ function renderHome() {
   const bookLimit = window.matchMedia("(max-width: 760px)").matches ? 3 : Math.max(1, Math.min(6, desktopCapacity));
   const books = [...state.books].sort((a, b) => Number(b.id === recentBookId) - Number(a.id === recentBookId)).slice(0, bookLimit);
   $("homeBookShelf").innerHTML = books.length ? books.map((book) => `<button type="button" class="reader-home-book" data-home-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover"><strong>${bookCoverTitle(book)}</strong><em>${escapeHtml(book.edition || "")}</em></span><span><strong>${escapeHtml(book.title)}</strong><small>${book.sections.length} 个小节</small></span></button>`).join("") : `<div class="reader-home-book-empty">书架中还没有可阅读的书籍</div>`;
-  $("homeBookShelf").querySelectorAll("[data-home-book]").forEach((button) => button.addEventListener("click", () => openResource(button.dataset.homeBook)));
+  $("homeBookShelf").querySelectorAll("[data-home-book]").forEach((button) => {
+    button.addEventListener("click", () => openResource(button.dataset.homeBook));
+    button.addEventListener("pointerenter", () => prefetchResource(button.dataset.homeBook), { once: true });
+    button.addEventListener("focus", () => prefetchResource(button.dataset.homeBook), { once: true });
+  });
   refreshIcons();
 }
 
@@ -533,6 +537,10 @@ function renderBooks(filter = "") {
     if (query) { state.inlineBookId = state.inlineBookId === bookId ? null : bookId; renderBooks($("librarySearch").value); }
     else openResource(bookId);
   }));
+  tree.querySelectorAll("[data-library-book]").forEach((button) => {
+    button.addEventListener("pointerenter", () => prefetchResource(button.dataset.libraryBook), { once: true });
+    button.addEventListener("focus", () => prefetchResource(button.dataset.libraryBook), { once: true });
+  });
   tree.querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = null; openSection(button.dataset.sectionId); }));
   refreshIcons();
 }
@@ -548,6 +556,9 @@ function formatDateTime(value) {
 function renderResource() {
   const payload = state.resource; const book = payload?.book; const summary = payload?.summary || {};
   if (!book) { $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`; return; }
+  $("resourcePanel").classList.remove("is-loading");
+  $("resourceFacts").classList.remove("is-loading"); $("resourceFacts").removeAttribute("aria-busy"); $("resourceFacts").removeAttribute("aria-label");
+  $("resourceProgressTrack").classList.remove("is-loading");
   $("resourceDomainLabel").textContent = `${book.domain_label || DOMAIN_LABELS[book.domain] || "医学"} · ${book.resource_type_label || book.resource_type || "教材"}`;
   $("resourceTitle").textContent = book.title;
   $("resourceMeta").textContent = `${book.edition ? `${book.edition} · ` : ""}${book.subject}`;
@@ -577,9 +588,43 @@ function renderResource() {
   refreshIcons();
 }
 
+function renderResourceLoading(book) {
+  state.resource = { book, summary: {} };
+  renderResource();
+  $("resourcePanel").classList.add("is-loading");
+  $("resourceProgressTrack").classList.add("is-loading");
+  $("resourceProgressTrack").title = "正在读取本地学习记录";
+  $("resourceFacts").classList.add("is-loading");
+  $("resourceFacts").setAttribute("aria-busy", "true");
+  $("resourceFacts").setAttribute("aria-label", "正在读取本地学习记录");
+  $("resourceFacts").innerHTML = ["上次学习位置", "阅读进度", "已学习小节", "最近学习时间"].map((label, index) => `<div${index === 0 ? ' class="resource-fact-location"' : ""}><span>${label}</span><i class="resource-loading-line ${index === 0 ? "wide" : ""}" aria-hidden="true"></i><i class="resource-loading-line short" aria-hidden="true"></i></div>`).join("");
+}
+
+function fetchResource(bookId, force = false) {
+  const cached = state.resourceCache.get(bookId);
+  if (!force && cached && Date.now() - cached.fetchedAt < 15000) return Promise.resolve(cached.payload);
+  if (state.resourceLoads.has(bookId)) return state.resourceLoads.get(bookId);
+  const request = fetch(`/api/resource/${encodeURIComponent(bookId)}`, { cache: "no-store" })
+    .then((response) => { if (!response.ok) throw new Error("resource unavailable"); return response.json(); })
+    .then((payload) => { state.resourceCache.set(bookId, { payload, fetchedAt: Date.now() }); return payload; })
+    .finally(() => state.resourceLoads.delete(bookId));
+  state.resourceLoads.set(bookId, request);
+  return request;
+}
+
+function prefetchResource(bookId) {
+  if (!bookId || state.resourceCache.has(bookId)) return;
+  fetchResource(bookId).catch(() => {});
+}
+
 async function openResource(bookId) {
   if (!bookId) return;
   state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  const book = state.books.find((item) => item.id === bookId);
+  if (!book) return;
+  const cached = state.resourceCache.get(bookId);
+  if (cached) { state.resource = cached.payload; renderResource(); }
+  else renderResourceLoading(book);
   $("libraryWorkspace").classList.remove("reader-open");
   $("libraryWorkspace").classList.add("resource-open");
   $("readerContent").classList.add("hidden");
@@ -587,14 +632,16 @@ async function openResource(bookId) {
   setActiveView("library");
   state.resourceBookId = bookId;
   try {
-    const response = await fetch(`/api/resource/${encodeURIComponent(bookId)}`, { cache: "no-store" });
-    if (!response.ok) throw new Error("resource unavailable");
-    const payload = await response.json();
+    const payload = await fetchResource(bookId);
     if (state.resourceBookId !== bookId) return;
     state.resource = payload; renderResource(); loadResourcePractice(bookId);
   } catch {
     if (state.resourceBookId !== bookId) return;
-    $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`;
+    if (cached) { state.resource = cached.payload; renderResource(); }
+    else {
+      $("resourcePanel").classList.remove("is-loading"); $("resourceProgressTrack").classList.remove("is-loading"); $("resourceFacts").classList.remove("is-loading"); $("resourceFacts").removeAttribute("aria-busy");
+      $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`;
+    }
   }
   renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
 }
