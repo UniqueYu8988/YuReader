@@ -219,8 +219,9 @@ function setHomeMode() {
 
 function setLibraryMode() {
   state.openRequest += 1; stopReadingTimer();
+  state.resourceBookId = null;
   $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
-  setActiveView("library"); closeNotePopover(); window.scrollTo({ top: 0, behavior: "auto" });
+  setActiveView("library"); closeNotePopover(); renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function setReaderMode() {
@@ -580,6 +581,7 @@ async function openResource(bookId) {
 
 function returnFromResource() {
   state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  state.resourceBookId = null;
   $("libraryWorkspace").classList.remove("reader-open", "resource-open");
   $("readerContent").classList.add("hidden");
   $("sectionNoteFloat").classList.add("hidden");
