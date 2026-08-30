@@ -17,6 +17,16 @@ import yubook  # noqa: E402
 
 
 class YuBookTests(unittest.TestCase):
+    def test_political_series_header_is_removed_as_a_fixed_watermark(self) -> None:
+        lines = ["# 第一章 例子\n", "## 考研政治核心考案\n", "正文\n"]
+        derived, transformations = yubook.derive_clean_lines(
+            lines,
+            {"content": {"start_line": 1, "end_line": 3}},
+        )
+        self.assertEqual(derived[1], "\n")
+        self.assertEqual(transformations[0]["kind"], "remove_fixed_watermark_line")
+        self.assertEqual(transformations[0]["line"], 2)
+
     def make_project(self, root: Path) -> Path:
         source = root / "sample.md"
         source.write_text(

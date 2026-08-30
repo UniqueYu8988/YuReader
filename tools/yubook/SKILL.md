@@ -25,6 +25,20 @@ If the task asks only for a candidate, an audit, or explicitly says not to impor
 
 When one source volume contains several subjects that users should enter independently, create one bounded workspace and one stable book ID per subject. Keep the source-series title in provenance rather than adding it as a visible navigation layer. Preserve topic and 考点 headings inside their natural section: YuReader generates the page-local guide at runtime, so do not inject a duplicate hand-written contents table into the derived Markdown.
 
+For a multi-subject OCR archive, record the exact source line range and the
+shared archive SHA in every subject workspace. A subject split is a navigation
+and provenance operation, not permission to rewrite prose. If a repeated
+standalone series title is demonstrably a page header (for example, the same
+heading between body text and a page image), remove it only through the
+auditable fixed-watermark mechanism; preserve the source occurrence and report
+the transformation count.
+
+When a question bank spans several books, any generated personal-analysis
+aggregate must be grouped by the individual question's stable subject label
+(or knowledge namespace), never by the first question in the bank. This keeps
+Obsidian backups under the matching subject even when one runtime bank serves
+the whole domain.
+
 ## Required references
 
 - Read [references/outline.md](references/outline.md) while reconstructing hierarchy and writing `outline.json`.

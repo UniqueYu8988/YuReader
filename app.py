@@ -393,12 +393,19 @@ def build_question_bank_catalog() -> list[dict]:
         return []
     banks: list[dict] = []
     for manifest_path in sorted(QUESTION_BANK_DIR.glob("*/manifest.json")):
+        # Atomic question-bank replacement keeps hidden ``.backup-*`` and
+        # ``.import-releases`` artifacts beside the live bank.  They are
+        # recovery/provenance data, never runtime catalog entries.
+        if manifest_path.parent.name.startswith("."):
+            continue
         package_dir = manifest_path.parent.resolve()
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
             bank = manifest.get("bank") if isinstance(manifest.get("bank"), dict) else {}
             bank_id = str(bank.get("id") or "")
             if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", bank_id):
+                continue
+            if manifest_path.parent.name != bank_id:
                 continue
             if str(bank.get("status") or "") != "ready":
                 continue
@@ -637,8 +644,15 @@ def practice_question(bank_id: str, question_id: str) -> dict:
     return {"question": public_question(question, reveal=revealed), "attempt": attempt if revealed else None, "personal_analysis": str(personal.get("content") or "") if isinstance(personal, dict) else ""}
 
 
-def practice_subject_label(bank: dict) -> str:
-    """Prefer the stable learning subject over a source-series title."""
+def practice_subject_label(bank: dict, subject_label: str = "") -> str:
+    """Prefer the stable learning subject over a source-series title.
+
+    A published political bank spans several books.  Callers that are handling
+    one question should pass that question's subject label; falling back to the
+    first question is retained only for bank-level display and compatibility.
+    """
+    if subject_label.strip():
+        return subject_label.strip()
     questions = load_bank_questions(bank["id"])
     for question in questions:
         label = str(question.get("subject_label") or "").strip()
@@ -647,9 +661,9 @@ def practice_subject_label(bank: dict) -> str:
     return str(bank.get("subject") or bank["id"]).strip()
 
 
-def practice_notes_target(bank: dict) -> tuple[Path, str, str]:
+def practice_notes_target(bank: dict, subject_label: str = "") -> tuple[Path, str, str]:
     domain = safe_domain(bank.get("domain"))
-    subject = safe_note_component(practice_subject_label(bank), bank["id"])
+    subject = safe_note_component(practice_subject_label(bank, subject_label), bank["id"])
     local = DATA_DIR / "practice-notes" / domain / f"{subject}.md"
     vault = obsidian_vault()
     if not vault:
@@ -661,25 +675,34 @@ def practice_notes_target(bank: dict) -> tuple[Path, str, str]:
     return target, "obsidian", f"obsidian://open?vault={quote(vault.name)}&file={quote(relative.as_posix())}"
 
 
-def write_practice_notes(bank_id: str) -> tuple[Path, str, str]:
+def write_practice_notes(bank_id: str, subject_label: str = "") -> tuple[Path, str, str]:
     bank = question_bank_by_id(bank_id)
     if not bank:
         raise ValueError("question bank not found")
     analyses = load_practice_store("analyses").get("items", {})
     attempts = load_practice_store("attempts").get("items", {})
-    entries = []
+    grouped: dict[str, list[tuple[dict, dict, dict]]] = {}
     for question in load_bank_questions(bank_id):
         analysis = analyses.get(question["question_id"], {}) if isinstance(analyses, dict) else {}
         if not isinstance(analysis, dict) or not str(analysis.get("content") or "").strip():
             continue
         attempt = attempts.get(question["question_id"], {}) if isinstance(attempts, dict) else {}
-        entries.append((question, analysis, attempt if isinstance(attempt, dict) else {}))
-    lines = [f"# {practice_subject_label(bank)}练习解析", "", "本文件由 YuReader 根据已保存的个人解析原地重建。"]
-    for question, analysis, attempt in entries:
-        lines.extend(["", f"## {question['question_id']}", "", f"> {question.get('stem_md') or ''}", "", f"- 我的答案：{'、'.join(attempt.get('selected_answers') or []) or '未作答'}", f"- 正确答案：{'、'.join(question.get('correct_answers') or [])}", "", "### 我的解析", "", str(analysis["content"]).strip()])
-    target, storage, uri = practice_notes_target(bank)
-    atomic_write(target, "\n".join(lines))
-    return target, storage, uri
+        label = practice_subject_label(bank, str(question.get("subject_label") or ""))
+        grouped.setdefault(label, []).append((question, analysis, attempt if isinstance(attempt, dict) else {}))
+
+    selected_label = practice_subject_label(bank, subject_label)
+    selected: tuple[Path, str, str] | None = None
+    for label, entries in grouped.items():
+        lines = [f"# {label}练习解析", "", "本文件由 YuReader 根据已保存的个人解析原地重建。"]
+        for question, analysis, attempt in entries:
+            lines.extend(["", f"## {question['question_id']}", "", f"> {question.get('stem_md') or ''}", "", f"- 我的答案：{'、'.join(attempt.get('selected_answers') or []) or '未作答'}", f"- 正确答案：{'、'.join(question.get('correct_answers') or [])}", "", "### 我的解析", "", str(analysis["content"]).strip()])
+        target, storage, uri = practice_notes_target(bank, label)
+        atomic_write(target, "\n".join(lines))
+        if label == selected_label:
+            selected = (target, storage, uri)
+    if selected:
+        return selected
+    return practice_notes_target(bank, selected_label)
 
 
 def book_asset_path(book_id: str, asset_path: str) -> Path | None:
@@ -1695,7 +1718,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
                     payload = load_practice_store("analyses")
                     payload.setdefault("items", {})[question_id] = {"bank_id": bank_id, "content": content, "updated_at": datetime.now().astimezone().isoformat(timespec="seconds")}
                     save_practice_store("analyses", payload)
-                    target, storage, uri = write_practice_notes(bank_id)
+                    target, storage, uri = write_practice_notes(bank_id, str(question.get("subject_label") or ""))
                 self.send_json({"ok": True, "saved": bool(content), "path": str(target), "storage": storage, "obsidian_uri": uri})
                 return
             if parsed.path in {"/api/review-subject", "/api/review-summary"}:

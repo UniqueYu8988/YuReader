@@ -268,6 +268,14 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         books, _ = app.build_catalog()
         self.assertEqual([item["id"] for item in books], ["lecture-x"])
 
+    def test_hidden_import_backup_is_not_catalogued(self):
+        # Atomic replacement deliberately keeps a hidden recovery copy beside
+        # the live bank.  Runtime discovery must expose one stable bank ID,
+        # never a duplicate entry from that backup.
+        copy_tree(self.qb_root / "politics-basic-bank", self.qb_root / ".backup-politics-basic-bank-20260830")
+        banks = app.build_question_bank_catalog()
+        self.assertEqual([item["id"] for item in banks], ["politics-basic-bank"])
+
     def test_question_bank_in_content_is_not_misread_as_book(self):
         # A YuPractice bank manifest (schema 1) under content/ must be ignored by
         # the bookshelf scanner; it is not a Markdown book package.
@@ -340,6 +348,33 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         self.assertTrue(target.is_relative_to(vault / "YuReader" / "政治" / "马克思主义基本原理"))
         self.assertEqual(target.name, "练习解析.md")
         self.assertIn("obsidian://open", uri)
+
+    def test_practice_notes_split_one_cross_subject_bank_by_question_subject(self):
+        """A shared politics bank must never put one subject's analysis in another."""
+        original_load = app.load_bank_questions
+        original_bank = app.question_bank_by_id
+        questions = [
+            {"question_id": "q-mao", "subject_label": "毛泽东思想和中国特色社会主义理论体系概论", "stem_md": "毛题", "correct_answers": ["A"]},
+            {"question_id": "q-xi", "subject_label": "习近平新时代中国特色社会主义思想概论", "stem_md": "习题", "correct_answers": ["B"]},
+        ]
+        app.load_bank_questions = lambda _bank_id: questions
+        app.question_bank_by_id = lambda _bank_id: {"id": "politics-basic-bank", "domain": "politics"}
+        try:
+            app.save_practice_store("analyses", {"items": {
+                "q-mao": {"content": "毛解析"},
+                "q-xi": {"content": "习解析"},
+            }})
+            target, storage, _ = app.write_practice_notes("politics-basic-bank", questions[0]["subject_label"])
+            self.assertEqual(storage, "local")
+            mao = app.DATA_DIR / "practice-notes" / "politics" / "毛泽东思想和中国特色社会主义理论体系概论.md"
+            xi = app.DATA_DIR / "practice-notes" / "politics" / "习近平新时代中国特色社会主义思想概论.md"
+            self.assertEqual(target, mao)
+            self.assertIn("毛解析", mao.read_text(encoding="utf-8"))
+            self.assertNotIn("q-xi", mao.read_text(encoding="utf-8"))
+            self.assertIn("习解析", xi.read_text(encoding="utf-8"))
+        finally:
+            app.load_bank_questions = original_load
+            app.question_bank_by_id = original_bank
 
 
 class ImageAssetAccessTests(unittest.TestCase):

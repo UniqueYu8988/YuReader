@@ -28,6 +28,10 @@ WATERMARK_HEADING_PREFIXES = (
     "本资料仅用",
     "关注微信公众号：医考侠",
     "关注微信公众号:医考侠",
+    # The political Core Exam Guide OCR repeats its series title as a page
+    # header.  It is not a subject heading and must not appear in reading
+    # pages; the immutable source still retains every occurrence.
+    "考研政治核心考案",
 )
 
 MARKDOWN_HEADING = re.compile(r"^(#{1,6})\s*(.+?)\s*$")
