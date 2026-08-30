@@ -1,5 +1,23 @@
 const DOMAIN_LABELS = { medicine: "医学", politics: "政治", english: "英语" };
 const DOMAIN_ORDER = ["medicine", "politics", "english"];
+const BOOK_COVER_LABELS = {
+  "dental-pulp-5e": "牙体",
+  "implantology-5e": "种植",
+  "oral-anatomy-8e": "口解",
+  "oral-maxillofacial-imaging-7e": "影像",
+  "oral-maxillofacial-surgery-8e": "口外",
+  "oral-mucosa-diseases-5e": "黏膜",
+  "oral-pathology-8e": "口组",
+  "orthodontics-7e": "正畸",
+  "pediatric-dentistry-5e": "儿牙",
+  "periodontology-5e": "牙周",
+  "prosthodontics-8e": "修复",
+  "politics-core-marxism": "马原",
+  "politics-ethics-law": "思修",
+  "politics-mao": "毛概",
+  "politics-modern-history": "史纲",
+  "politics-xi": "习中特",
+};
 const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
@@ -196,8 +214,10 @@ function formatCharacters(value) {
   return count >= 10000 ? `${(count / 10000).toFixed(1)} 万字` : `${(count / 1000).toFixed(1)} 千字`;
 }
 
-function bookCoverTitle(title) {
-  const text = String(title || "本地书籍").trim();
+function bookCoverTitle(book) {
+  const shortTitle = BOOK_COVER_LABELS[book?.id];
+  if (shortTitle) return escapeHtml(shortTitle);
+  const text = String(book?.title || "本地书籍").trim();
   const splitAt = text.startsWith("口腔") && text.length > 2 ? 2 : Math.ceil(text.length / 2);
   return `${escapeHtml(text.slice(0, splitAt))}<br>${escapeHtml(text.slice(splitAt))}`;
 }
@@ -303,7 +323,7 @@ function renderHome() {
   const desktopCapacity = shelfWidth ? Math.floor((shelfWidth + 18) / 130) : 6;
   const bookLimit = window.matchMedia("(max-width: 760px)").matches ? 3 : Math.max(1, Math.min(6, desktopCapacity));
   const books = [...state.books].sort((a, b) => Number(b.id === recentBookId) - Number(a.id === recentBookId)).slice(0, bookLimit);
-  $("homeBookShelf").innerHTML = books.length ? books.map((book) => `<button type="button" class="reader-home-book" data-home-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover"><strong>${bookCoverTitle(book.title)}</strong><em>${escapeHtml(book.edition || "")}</em></span><span><strong>${escapeHtml(book.title)}</strong><small>${book.sections.length} 个小节</small></span></button>`).join("") : `<div class="reader-home-book-empty">书架中还没有可阅读的书籍</div>`;
+  $("homeBookShelf").innerHTML = books.length ? books.map((book) => `<button type="button" class="reader-home-book" data-home-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover"><strong>${bookCoverTitle(book)}</strong><em>${escapeHtml(book.edition || "")}</em></span><span><strong>${escapeHtml(book.title)}</strong><small>${book.sections.length} 个小节</small></span></button>`).join("") : `<div class="reader-home-book-empty">书架中还没有可阅读的书籍</div>`;
   $("homeBookShelf").querySelectorAll("[data-home-book]").forEach((button) => button.addEventListener("click", () => openResource(button.dataset.homeBook)));
   refreshIcons();
 }
@@ -495,7 +515,7 @@ function renderBooks(filter = "") {
       : `<div class="knowledge-index-empty"><i data-lucide="library"></i><strong>${escapeHtml(DOMAIN_LABELS[state.libraryDomain] || "医学")}书架还是空的</strong><span>这个领域还没有正式资料，放入书架后刷新页面。</span></div>`;
     refreshIcons(); return;
   }
-  const covers = matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book.title)}</strong><em>${escapeHtml(book.edition || "")}</em></span></button>`).join("");
+  const covers = matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong><em>${escapeHtml(book.edition || "")}</em></span></button>`).join("");
   let directory = "";
   if (query) {
     const selectedBookId = matchedBooks.some((book) => book.id === state.inlineBookId) ? state.inlineBookId : matchedBooks[0].id;
