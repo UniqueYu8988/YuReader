@@ -4,6 +4,14 @@
 
 YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已经由主流程亲自完成《口腔种植学》（书内版权证据为第1版，历史文件名与稳定 ID 沿用“5e”）、《口腔解剖生理学》第8版、《口腔组织病理学》第8版、《口腔修复学》第8版、《牙体牙髓病学》第5版、《牙周病学》第5版、《口腔颌面外科学》第8版和《儿童口腔医学》第5版的原始 Markdown 直入闭环；继续沿用 YuQuiz 视觉基线，没有修改 YuQuiz。
 
+## 政治资料运行时发布地基（2026-08-30）
+
+- 《核心考案·马克思主义基本原理》从 `politics-core-marxism-52b1f892` 候选通过 YuBook 原子导入 `content/politics-core-marxism/`：8章、54阅读页、8参考页、97张包内图片；既有医学书、稳定小节 ID、笔记和活动数据不改写。
+- 新增 `tools/import_question_bank.py` 作为 YuReader 层的题库发布适配器。它先运行 YuPractice validator，再以 staging + 原子替换发布最小运行时文件集到 `question-banks/`；同 ID 替换保留 `.backup-*` 与 `.import-releases/`，候选的 scratch、构建脚本和说明文件不进入运行时包。
+- 已发布 `politics-basic-bank`（629正式题、16隔离题、0 blocker/14个已解释 warning）和 `politics-advanced-bank`（630正式题、0 blocker/0 warning）。隔离题永不进入正式运行时索引。
+- 运行时新增只读题库目录索引及 `/api/question-banks`；`/api/bootstrap` 同时返回书籍和真实题库元数据。讲义图片使用 `/api/book-assets/<book_id>/images/<name>`，仅允许 manifest 声明的资产且拒绝路径穿越。
+- 验证：`py_compile`、`node --check`、应用83/83、YuBook24/24、YuPractice53/53全部通过；真实讲义含图页面已验证可访问，桌面/移动端与深浅主题检查无控制台错误。当前尚未实现练习作答、个人解析或题目 Obsidian 归档。
+
 ## 政治资料候选与 YuPractice 基础收尾（2026-08-30）
 
 - 新增 `tools/yupractice/` 题库包契约、验证器、示例与测试；验证题库/题目状态、题型、选项答案、稳定 ID、知识位置、来源块、哈希、隔离区、变换记录和质量声明。畸形 JSON 字段只产生 blocker，不再导致验证器崩溃；正式题中的推广语、二维码残留及无资产契约图片会被阻断。

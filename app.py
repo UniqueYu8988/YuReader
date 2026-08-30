@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 CONTENT_DIR = Path(os.environ.get("YUREADER_CONTENT_DIR", ROOT / "content")).resolve()
+QUESTION_BANK_DIR = Path(os.environ.get("YUREADER_QUESTION_BANK_DIR", ROOT / "question-banks")).resolve()
 DATA_DIR = Path(os.environ.get("YUREADER_DATA_DIR", ROOT / "data")).resolve()
 NOTES_DIR = DATA_DIR / "notes"
 REVIEWS_DIR = DATA_DIR / "reviews"
@@ -46,6 +47,17 @@ CATALOG_CACHE: dict = {
     "books": [],
     "sections": {},
 }
+QUESTION_BANK_LOCK = Lock()
+QUESTION_BANK_CACHE: dict = {
+    "checked_at": 0.0,
+    "signature": None,
+    "banks": [],
+}
+# Read-only image assets are served per published book package.  BOOK_ASSETS
+# records the manifest-declared asset names and SHA-256 file list for each
+# book_id so the /api/book-assets endpoint can only expose files that a
+# published package explicitly declares.  Keys are book ids.
+BOOK_ASSETS: dict[str, dict] = {}
 
 
 def safe_domain(value: object) -> str:
@@ -130,8 +142,42 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", book_id):
             return None
 
+        # Register manifest-declared image assets so /api/book-assets can only
+        # serve files the published package explicitly declares.  Legacy
+        # packages without an assets contract register nothing.
+        asset_names = [str(item) for item in manifest.get("assets") or []]
+        asset_integrity = manifest.get("asset_integrity") if isinstance(manifest.get("asset_integrity"), dict) else {}
+        if asset_names:
+            integrity_files = asset_integrity.get("files")
+            integrity_paths = {
+                str(item.get("path")) for item in integrity_files if isinstance(item, dict) and isinstance(item.get("path"), str)
+            } if isinstance(integrity_files, list) else set()
+            BOOK_ASSETS[book_id] = {
+                "package_dir": str(package_dir),
+                "asset_root": str(manifest.get("assets_root") or "images"),
+                "names": set(asset_names),
+                "integrity_paths": integrity_paths,
+            }
+
+        knowledge_ids: list[str] = []
+        knowledge_map_path = package_dir / "knowledge-map.json"
+        if knowledge_map_path.is_file():
+            try:
+                knowledge_payload = json.loads(knowledge_map_path.read_text(encoding="utf-8-sig"))
+                km_entries = knowledge_payload.get("entries") if isinstance(knowledge_payload, dict) else None
+                if isinstance(km_entries, list):
+                    knowledge_ids = [
+                        str(item.get("knowledge_id"))
+                        for item in km_entries
+                        if isinstance(item, dict) and isinstance(item.get("knowledge_id"), str)
+                    ]
+            except (OSError, json.JSONDecodeError, ValueError):
+                knowledge_ids = []
+
         book_title = str(book_meta["title"])
         book = {
+            "asset_count": len(asset_names),
+            "knowledge_ids": knowledge_ids,
             "id": book_id,
             "title": book_title,
             "edition": str(book_meta.get("edition") or ""),
@@ -219,6 +265,7 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
 
 
 def build_catalog() -> tuple[list[dict], dict[str, dict]]:
+    BOOK_ASSETS.clear()
     books: dict[str, dict] = {}
     sections: dict[str, dict] = {}
     if not CONTENT_DIR.is_dir():
@@ -304,6 +351,170 @@ def catalog() -> tuple[list[dict], dict[str, dict]]:
             sections=sections,
         )
         return books, sections
+
+
+def question_bank_signature() -> tuple[tuple[str, int, int], ...]:
+    """Track published question-bank content cheaply without hashing all questions."""
+    if not QUESTION_BANK_DIR.is_dir():
+        return ()
+    records: list[tuple[str, int, int]] = []
+    for path in QUESTION_BANK_DIR.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            stat = path.stat()
+            records.append((path.relative_to(QUESTION_BANK_DIR).as_posix(), stat.st_size, stat.st_mtime_ns))
+        except OSError:
+            continue
+    return tuple(sorted(records))
+
+
+def build_question_bank_catalog() -> list[dict]:
+    """Build a read-only runtime index of published question banks.
+
+    Only manifest-declared, ready question banks are listed.  The index exposes
+    real metadata (title, domain, subject, counts, knowledge_ids) so the app can
+    distinguish ``lecture`` packages under content/ from ``question_bank``
+    packages under the question-bank runtime root without fuzzy matching.
+    Quarantined questions are never counted as formal questions here.
+    """
+    if not QUESTION_BANK_DIR.is_dir():
+        return []
+    banks: list[dict] = []
+    for manifest_path in sorted(QUESTION_BANK_DIR.glob("*/manifest.json")):
+        package_dir = manifest_path.parent.resolve()
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            bank = manifest.get("bank") if isinstance(manifest.get("bank"), dict) else {}
+            bank_id = str(bank.get("id") or "")
+            if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", bank_id):
+                continue
+            if str(bank.get("status") or "") != "ready":
+                continue
+            if manifest.get("schema_version") != 1:
+                continue
+            quality = manifest.get("quality") if isinstance(manifest.get("quality"), dict) else {}
+            question_count = int(manifest.get("question_count") or 0)
+            quarantined_count = int(manifest.get("quarantined_count") or 0)
+            type_counts = manifest.get("question_type_counts") if isinstance(manifest.get("question_type_counts"), dict) else {}
+            difficulty_counts = manifest.get("difficulty_counts") if isinstance(manifest.get("difficulty_counts"), dict) else {}
+            scope_counts = manifest.get("scope_counts") if isinstance(manifest.get("scope_counts"), dict) else {}
+            questions_decl = manifest.get("questions") if isinstance(manifest.get("questions"), dict) else {}
+            km_decl = manifest.get("knowledge_map") if isinstance(manifest.get("knowledge_map"), dict) else {}
+            source_index_decl = manifest.get("source_index") if isinstance(manifest.get("source_index"), dict) else {}
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            continue
+
+        knowledge_ids: list[str] = []
+        knowledge_map_entries = 0
+        try:
+            km_path = package_dir / str(km_decl.get("path") or "knowledge-map.json")
+            km_payload = json.loads(km_path.read_text(encoding="utf-8-sig"))
+            km_entries = km_payload.get("entries") if isinstance(km_payload, dict) else None
+            if isinstance(km_entries, list):
+                knowledge_map_entries = len(km_entries)
+                knowledge_ids = [
+                    str(item.get("knowledge_id"))
+                    for item in km_entries
+                    if isinstance(item, dict) and isinstance(item.get("knowledge_id"), str)
+                ]
+        except (OSError, json.JSONDecodeError, ValueError):
+            pass
+
+        source_blocks_total = 0
+        try:
+            si_path = package_dir / str(source_index_decl.get("path") or "source-index.json")
+            si_payload = json.loads(si_path.read_text(encoding="utf-8-sig"))
+            for source in (si_payload.get("sources") or []) if isinstance(si_payload, dict) else []:
+                if isinstance(source, dict) and isinstance(source.get("blocks"), list):
+                    source_blocks_total += len(source["blocks"])
+        except (OSError, json.JSONDecodeError, ValueError):
+            pass
+
+        banks.append(
+            {
+                "id": bank_id,
+                "title": str(bank.get("title") or bank_id),
+                "domain": safe_domain(bank.get("domain")),
+                "domain_label": DOMAIN_LABELS[safe_domain(bank.get("domain"))],
+                "subject": str(bank.get("subject") or bank_id),
+                "resource_type": "question_bank",
+                "resource_type_label": RESOURCE_TYPE_LABELS["question_bank"],
+                "status": "ready",
+                "question_count": question_count,
+                "quarantined_count": quarantined_count,
+                "question_type_counts": type_counts,
+                "difficulty_counts": difficulty_counts,
+                "scope_counts": scope_counts,
+                "knowledge_map_entries": knowledge_map_entries,
+                "source_blocks_total": source_blocks_total,
+                "knowledge_ids": knowledge_ids,
+                "sources": [str(item.get("source_id") or "") for item in (manifest.get("sources") or []) if isinstance(item, dict)],
+                "questions_sha256": str(questions_decl.get("sha256") or ""),
+                "knowledge_map_sha256": str(km_decl.get("sha256") or ""),
+                "source_index_sha256": str(source_index_decl.get("sha256") or ""),
+                "quality": {
+                    "status": str(quality.get("status") or "unknown"),
+                    "blocker_count": int(quality.get("blocker_count") or 0),
+                    "warning_count": int(quality.get("warning_count") or 0),
+                },
+                "test_count": manifest.get("test_count") if isinstance(manifest.get("test_count"), int) else None,
+                "generated_at": str(manifest.get("generated_at") or ""),
+                "path": manifest_path.parent.relative_to(QUESTION_BANK_DIR).as_posix(),
+            }
+        )
+    return banks
+
+
+def question_bank_catalog() -> list[dict]:
+    """Reuse the validated question-bank index and invalidate it shortly after changes."""
+    now = time.monotonic()
+    with QUESTION_BANK_LOCK:
+        if QUESTION_BANK_CACHE["signature"] is not None and now - QUESTION_BANK_CACHE["checked_at"] < CATALOG_RECHECK_SECONDS:
+            return QUESTION_BANK_CACHE["banks"]
+        signature = question_bank_signature()
+        if signature == QUESTION_BANK_CACHE["signature"]:
+            QUESTION_BANK_CACHE["checked_at"] = now
+            return QUESTION_BANK_CACHE["banks"]
+        banks = build_question_bank_catalog()
+        QUESTION_BANK_CACHE.update(checked_at=now, signature=signature, banks=banks)
+        return banks
+
+
+def book_asset_path(book_id: str, asset_path: str) -> Path | None:
+    """Resolve one package-declared image asset without allowing traversal.
+
+    Only ``<asset_root>/<declared_name>`` is accepted, the name must be listed in
+    the published manifest ``assets`` (and, when the package carries an integrity
+    list, the exact ``<asset_root>/<name>`` path), and the resolved file must stay
+    inside that book's published package directory.
+    """
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", book_id):
+        return None
+    entry = BOOK_ASSETS.get(book_id)
+    if not entry:
+        return None
+    asset_root = str(entry.get("asset_root") or "images")
+    parts = asset_path.split("/")
+    if len(parts) != 2 or parts[0] != asset_root or not parts[1]:
+        return None
+    name = parts[1]
+    if name != Path(name).name or name in {".", "..", ""}:
+        return None
+    if name not in entry["names"]:
+        return None
+    integrity_paths = entry.get("integrity_paths")
+    if integrity_paths and f"{asset_root}/{name}" not in integrity_paths:
+        return None
+    package_dir = Path(entry["package_dir"]).resolve()
+    candidate = (package_dir / asset_path).resolve()
+    try:
+        candidate.relative_to(package_dir)
+    except ValueError:
+        return None
+    if not candidate.is_file():
+        return None
+    return candidate
 
 
 def note_path(section_id: str) -> Path:
@@ -1070,14 +1281,20 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
         books, sections = catalog()
+        question_banks = question_bank_catalog()
         if path == "/api/bootstrap":
             self.send_json(
                 {
                     "books": books,
+                    "question_banks": question_banks,
+                    "question_bank_count": len(question_banks),
                     "section_count": len(sections),
                     "content_dir": str(CONTENT_DIR),
                 }
             )
+            return
+        if path == "/api/question-banks":
+            self.send_json({"banks": question_banks, "count": len(question_banks)})
             return
         if path.startswith("/api/resource/"):
             resource_id = path.rsplit("/", 1)[-1]
@@ -1111,6 +1328,34 @@ class ReaderHandler(BaseHTTPRequestHandler):
             except ValueError:
                 pass
             self.send_json({**section, "note": current_note})
+            return
+        if path.startswith("/api/book-assets/"):
+            remaining = path[len("/api/book-assets/"):]
+            parts = remaining.split("/", 1)
+            if len(parts) != 2:
+                self.send_json({"error": "invalid asset path"}, HTTPStatus.BAD_REQUEST)
+                return
+            book_id, asset_path = parts
+            asset_file = book_asset_path(book_id, asset_path)
+            if not asset_file:
+                self.send_json({"error": "asset not found"}, HTTPStatus.NOT_FOUND)
+                return
+            content_type = "application/octet-stream"
+            suffix = asset_file.suffix.lower()
+            if suffix in {".jpg", ".jpeg"}:
+                content_type = "image/jpeg"
+            elif suffix == ".png":
+                content_type = "image/png"
+            elif suffix == ".webp":
+                content_type = "image/webp"
+            elif suffix == ".gif":
+                content_type = "image/gif"
+            elif suffix == ".svg":
+                content_type = "image/svg+xml"
+            try:
+                self.send_text(asset_file.read_bytes(), content_type)
+            except OSError:
+                self.send_json({"error": "asset unreadable"}, HTTPStatus.NOT_FOUND)
             return
         if path == "/" or path == "/index.html":
             self.send_text((STATIC_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")

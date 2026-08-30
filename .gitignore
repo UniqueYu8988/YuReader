@@ -20,5 +20,7 @@ tools/launcher/obj/
 tools/launcher/publish*/
 tools/_check_*.py
 tools/_tmp_*
+question-banks/
+test-results/
 Thumbs.db
 .DS_Store
