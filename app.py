@@ -53,6 +53,7 @@ QUESTION_BANK_CACHE: dict = {
     "signature": None,
     "banks": [],
 }
+PRACTICE_LOCK = Lock()
 # Read-only image assets are served per published book package.  BOOK_ASSETS
 # records the manifest-declared asset names and SHA-256 file list for each
 # book_id so the /api/book-assets endpoint can only expose files that a
@@ -160,6 +161,7 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
             }
 
         knowledge_ids: list[str] = []
+        page_knowledge_ids: dict[str, list[str]] = {}
         knowledge_map_path = package_dir / "knowledge-map.json"
         if knowledge_map_path.is_file():
             try:
@@ -171,6 +173,12 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
                         for item in km_entries
                         if isinstance(item, dict) and isinstance(item.get("knowledge_id"), str)
                     ]
+                    for item in km_entries:
+                        if not isinstance(item, dict) or not isinstance(item.get("knowledge_id"), str):
+                            continue
+                        for page_id in item.get("page_ids") or []:
+                            if isinstance(page_id, str):
+                                page_knowledge_ids.setdefault(page_id, []).append(item["knowledge_id"])
             except (OSError, json.JSONDecodeError, ValueError):
                 knowledge_ids = []
 
@@ -214,6 +222,7 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
                 return None
             entry = {
                 "id": section_id,
+                "book_id": book_id,
                 "title": str(chapter["title"]),
                 "level": int(chapter.get("level") or 1),
                 "book_title": book["title"],
@@ -227,6 +236,7 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
                 "chapter_order": int(chapter.get("chapter_order") or 0),
                 "section_order": int(chapter.get("section_order") or chapter.get("order") or 0),
                 "character_count": int(chapter.get("character_count") or len(markdown)),
+                "knowledge_ids": page_knowledge_ids.get(str(chapter.get("key") or ""), []),
             }
             loaded[section_id] = entry
             book["sections"].append(
@@ -240,6 +250,7 @@ def manifest_book(manifest_path: Path) -> tuple[dict, dict[str, dict]] | None:
                     "chapter_order": entry["chapter_order"],
                     "section_order": entry["section_order"],
                     "character_count": entry["character_count"],
+                    "knowledge_ids": entry["knowledge_ids"],
                 }
             )
         section_summaries = {item["id"]: item for item in book["sections"]}
@@ -479,6 +490,186 @@ def question_bank_catalog() -> list[dict]:
         banks = build_question_bank_catalog()
         QUESTION_BANK_CACHE.update(checked_at=now, signature=signature, banks=banks)
         return banks
+
+
+def practice_path(name: str) -> Path:
+    if name not in {"attempts", "analyses"}:
+        raise ValueError("invalid practice store")
+    return DATA_DIR / "practice" / f"{name}.json"
+
+
+def load_practice_store(name: str) -> dict:
+    try:
+        payload = json.loads(practice_path(name).read_text(encoding="utf-8-sig"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_practice_store(name: str, payload: dict) -> None:
+    payload["schema_version"] = 1
+    atomic_write(practice_path(name), json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def question_bank_by_id(bank_id: str) -> dict | None:
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,63}", bank_id):
+        return None
+    return next((bank for bank in question_bank_catalog() if bank["id"] == bank_id), None)
+
+
+def load_bank_questions(bank_id: str) -> list[dict]:
+    """Read only formal questions from a published runtime package.
+
+    Quarantine files are deliberately not opened; a malformed formal line makes
+    the request fail rather than silently displaying an unverified question.
+    """
+    bank = question_bank_by_id(bank_id)
+    if not bank:
+        raise ValueError("question bank not found")
+    target = (QUESTION_BANK_DIR / bank["path"] / "questions.jsonl").resolve()
+    package = (QUESTION_BANK_DIR / bank["path"]).resolve()
+    if package not in target.parents or not target.is_file():
+        raise ValueError("question bank unavailable")
+    questions: list[dict] = []
+    for line in target.read_text(encoding="utf-8-sig").splitlines():
+        if not line.strip():
+            continue
+        item = json.loads(line)
+        if isinstance(item, dict) and item.get("status") == "ready" and isinstance(item.get("question_id"), str):
+            questions.append(item)
+    return questions
+
+
+def public_question(question: dict, reveal: bool = False) -> dict:
+    payload = {
+        "question_id": question["question_id"], "bank_id": question.get("bank_id"),
+        "question_type": question.get("question_type"), "difficulty": question.get("difficulty"),
+        "scope": question.get("scope"), "unit": question.get("unit"), "unit_label": question.get("unit_label"),
+        "local_number": question.get("local_number"), "stem_md": question.get("stem_md") or "",
+        "options": question.get("options") or [], "knowledge_ids": question.get("knowledge_ids") or [],
+    }
+    if reveal:
+        payload.update({"correct_answers": question.get("correct_answers") or [], "source_analysis_md": question.get("source_analysis_md") or ""})
+    return payload
+
+
+def matching_questions(bank_id: str, knowledge_id: str, match_level: str) -> list[dict]:
+    if match_level not in {"section", "chapter", "comprehensive"}:
+        raise ValueError("invalid practice match level")
+    if not re.fullmatch(r"[a-z][a-z0-9.-]{2,120}", knowledge_id):
+        raise ValueError("invalid knowledge id")
+    questions = load_bank_questions(bank_id)
+    if match_level == "comprehensive":
+        return [item for item in questions if item.get("scope") == "comprehensive" and knowledge_id in (item.get("knowledge_ids") or [])]
+    return [item for item in questions if knowledge_id in (item.get("knowledge_ids") or [])]
+
+
+def chapter_knowledge_id(knowledge_id: str) -> str:
+    match = re.match(r"^(.+\.ch\d{2})(?:\.|$)", knowledge_id)
+    return match.group(1) if match else ""
+
+
+def knowledge_namespace(knowledge_id: str) -> str:
+    parts = knowledge_id.split(".")
+    return ".".join(parts[:2]) if len(parts) >= 2 else ""
+
+
+def practice_availability(book_id: str, section_id: str = "") -> dict:
+    books, sections = catalog()
+    book = next((item for item in books if item["id"] == book_id), None)
+    if not book:
+        raise ValueError("book not found")
+    section = sections.get(section_id) if section_id else None
+    if section_id and (not section or section.get("book_id") != book_id):
+        raise ValueError("section not found")
+    exact_ids = list(section.get("knowledge_ids") or []) if section else []
+    chapter_ids = sorted({chapter_knowledge_id(item) for item in exact_ids if chapter_knowledge_id(item)})
+    namespaces = {knowledge_namespace(item) for item in book.get("knowledge_ids") or [] if knowledge_namespace(item)}
+    entries: list[dict] = []
+    for bank in question_bank_catalog():
+        bank_namespaces = {knowledge_namespace(item) for item in bank.get("knowledge_ids") or [] if knowledge_namespace(item)}
+        if bank["domain"] != book["domain"] or not namespaces.intersection(bank_namespaces):
+            continue
+        if section:
+            section_specific_ids = sorted((item for item in exact_ids if ".s" in item), key=len, reverse=True)
+            for knowledge_id in section_specific_ids:
+                count = len(matching_questions(bank["id"], knowledge_id, "section"))
+                if count:
+                    entries.append({"bank_id": bank["id"], "bank_title": bank["title"], "knowledge_id": knowledge_id, "match_level": "section", "question_count": count})
+                    break
+            if not any(item["bank_id"] == bank["id"] for item in entries):
+                for knowledge_id in chapter_ids:
+                    count = len(matching_questions(bank["id"], knowledge_id, "chapter"))
+                    if count:
+                        entries.append({"bank_id": bank["id"], "bank_title": bank["title"], "knowledge_id": knowledge_id, "match_level": "chapter", "question_count": count})
+        else:
+            for knowledge_id in sorted(namespaces):
+                count = len(matching_questions(bank["id"], knowledge_id, "comprehensive"))
+                if count:
+                    entries.append({"bank_id": bank["id"], "bank_title": bank["title"], "knowledge_id": knowledge_id, "match_level": "comprehensive", "question_count": count})
+    return {"book_id": book_id, "section_id": section_id, "entries": entries}
+
+
+def practice_session(bank_id: str, knowledge_id: str, match_level: str) -> dict:
+    bank = question_bank_by_id(bank_id)
+    if not bank:
+        raise ValueError("question bank not found")
+    questions = matching_questions(bank_id, knowledge_id, match_level)
+    attempts = load_practice_store("attempts").get("items", {})
+    items = []
+    for question in questions:
+        attempt = attempts.get(question["question_id"], {}) if isinstance(attempts, dict) else {}
+        items.append({"question_id": question["question_id"], "local_number": question.get("local_number"), "question_type": question.get("question_type"), "answered": bool(attempt), "correct": attempt.get("correct") if isinstance(attempt, dict) else None})
+    return {"bank": {key: bank[key] for key in ("id", "title", "subject", "domain")}, "knowledge_id": knowledge_id, "match_level": match_level, "questions": items, "answered_count": sum(1 for item in items if item["answered"]), "question_count": len(items)}
+
+
+def practice_question(bank_id: str, question_id: str) -> dict:
+    if not re.fullmatch(r"[a-z0-9-]{3,160}", question_id):
+        raise ValueError("invalid question id")
+    question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+    if not question:
+        raise ValueError("question not found")
+    attempts = load_practice_store("attempts").get("items", {})
+    attempt = attempts.get(question_id, {}) if isinstance(attempts, dict) else {}
+    revealed = isinstance(attempt, dict) and bool(attempt)
+    analyses = load_practice_store("analyses").get("items", {})
+    personal = analyses.get(question_id, {}) if isinstance(analyses, dict) else {}
+    return {"question": public_question(question, reveal=revealed), "attempt": attempt if revealed else None, "personal_analysis": str(personal.get("content") or "") if isinstance(personal, dict) else ""}
+
+
+def practice_notes_target(bank: dict) -> tuple[Path, str, str]:
+    domain = safe_domain(bank.get("domain"))
+    subject = re.sub(r"[\\/:*?\"<>|]+", "-", str(bank.get("subject") or bank["id"]).strip()).strip(" .-") or bank["id"]
+    local = DATA_DIR / "practice-notes" / domain / f"{subject}.md"
+    vault = obsidian_vault()
+    if not vault:
+        return local, "local", ""
+    relative = Path("YuReader") / "练习笔记" / DOMAIN_LABELS[domain] / f"{subject}.md"
+    target = (vault / relative).resolve()
+    if vault != target and vault not in target.parents:
+        raise ValueError("practice note path escapes Obsidian vault")
+    return target, "obsidian", f"obsidian://open?vault={quote(vault.name)}&file={quote(relative.as_posix())}"
+
+
+def write_practice_notes(bank_id: str) -> tuple[Path, str, str]:
+    bank = question_bank_by_id(bank_id)
+    if not bank:
+        raise ValueError("question bank not found")
+    analyses = load_practice_store("analyses").get("items", {})
+    attempts = load_practice_store("attempts").get("items", {})
+    entries = []
+    for question in load_bank_questions(bank_id):
+        analysis = analyses.get(question["question_id"], {}) if isinstance(analyses, dict) else {}
+        if not isinstance(analysis, dict) or not str(analysis.get("content") or "").strip():
+            continue
+        attempt = attempts.get(question["question_id"], {}) if isinstance(attempts, dict) else {}
+        entries.append((question, analysis, attempt if isinstance(attempt, dict) else {}))
+    lines = [f"# {bank['subject']}练习笔记", "", "本文件由 YuReader 根据已保存的个人解析原地重建。"]
+    for question, analysis, attempt in entries:
+        lines.extend(["", f"## {question['question_id']}", "", f"> {question.get('stem_md') or ''}", "", f"- 我的答案：{'、'.join(attempt.get('selected_answers') or []) or '未作答'}", f"- 正确答案：{'、'.join(question.get('correct_answers') or [])}", "", "### 我的解析", "", str(analysis["content"]).strip()])
+    target, storage, uri = practice_notes_target(bank)
+    atomic_write(target, "\n".join(lines))
+    return target, storage, uri
 
 
 def book_asset_path(book_id: str, asset_path: str) -> Path | None:
@@ -1296,6 +1487,27 @@ class ReaderHandler(BaseHTTPRequestHandler):
         if path == "/api/question-banks":
             self.send_json({"banks": question_banks, "count": len(question_banks)})
             return
+        if path == "/api/practice/availability":
+            try:
+                query = parse_qs(parsed.query)
+                self.send_json(practice_availability(query.get("book_id", [""])[0], query.get("section_id", [""])[0]))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/practice/session":
+            try:
+                query = parse_qs(parsed.query)
+                self.send_json(practice_session(query.get("bank_id", [""])[0], query.get("knowledge_id", [""])[0], query.get("match_level", [""])[0]))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/practice/question":
+            try:
+                query = parse_qs(parsed.query)
+                self.send_json(practice_question(query.get("bank_id", [""])[0], query.get("question_id", [""])[0]))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
         if path.startswith("/api/resource/"):
             resource_id = path.rsplit("/", 1)[-1]
             book = next((item for item in books if item["id"] == resource_id), None)
@@ -1378,12 +1590,46 @@ class ReaderHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/notes", "/api/review-notes", "/api/review-subject", "/api/review-summary", "/api/weekly-summary", "/api/activity", "/api/reading-time"}:
+        if parsed.path not in {"/api/notes", "/api/review-notes", "/api/review-subject", "/api/review-summary", "/api/weekly-summary", "/api/activity", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis"}:
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
             body = json.loads(self.rfile.read(length).decode("utf-8"))
+            if parsed.path == "/api/practice/answer":
+                bank_id = str(body.get("bank_id") or "")
+                question_id = str(body.get("question_id") or "")
+                selected = body.get("selected_answers")
+                if not isinstance(selected, list) or not selected:
+                    raise ValueError("select at least one answer")
+                question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                if not question:
+                    raise ValueError("question not found")
+                labels = {str(option.get("label")) for option in question.get("options") or [] if isinstance(option, dict)}
+                selected_answers = sorted({str(item).strip() for item in selected if str(item).strip()})
+                if not selected_answers or any(item not in labels for item in selected_answers):
+                    raise ValueError("invalid selected answer")
+                correct_answers = sorted(str(item) for item in question.get("correct_answers") or [])
+                with PRACTICE_LOCK:
+                    payload = load_practice_store("attempts")
+                    payload.setdefault("items", {})[question_id] = {"bank_id": bank_id, "selected_answers": selected_answers, "correct": selected_answers == correct_answers, "answered_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+                    save_practice_store("attempts", payload)
+                self.send_json({"ok": True, "question": public_question(question, reveal=True), "attempt": load_practice_store("attempts")["items"][question_id]})
+                return
+            if parsed.path == "/api/practice/analysis":
+                bank_id = str(body.get("bank_id") or "")
+                question_id = str(body.get("question_id") or "")
+                content = str(body.get("content") or "").replace("\r\n", "\n").strip()
+                question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                if not question:
+                    raise ValueError("question not found")
+                with PRACTICE_LOCK:
+                    payload = load_practice_store("analyses")
+                    payload.setdefault("items", {})[question_id] = {"bank_id": bank_id, "content": content, "updated_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+                    save_practice_store("analyses", payload)
+                    target, storage, uri = write_practice_notes(bank_id)
+                self.send_json({"ok": True, "saved": bool(content), "path": str(target), "storage": storage, "obsidian_uri": uri})
+                return
             if parsed.path in {"/api/review-subject", "/api/review-summary"}:
                 review_day = str(body.get("date") or "")
                 books, sections = catalog()

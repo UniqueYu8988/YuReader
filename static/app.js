@@ -1,6 +1,6 @@
 const DOMAIN_LABELS = { medicine: "医学", politics: "政治", english: "英语" };
 const DOMAIN_ORDER = ["medicine", "politics", "english"];
-const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null };
+const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
 const READING_FLUSH_SECONDS = 15;
@@ -119,13 +119,13 @@ function bookCoverTitle(title) {
 
 function setActiveView(mode) {
   const viewMode = mode === "reader" ? "library" : mode;
-  ["home", "library", "review", "logs", "stats"].forEach((view) => $(`${view}View`).classList.toggle("active", view === viewMode));
+  ["home", "library", "practice", "review", "logs", "stats"].forEach((view) => $(`${view}View`).classList.toggle("active", view === viewMode));
   document.querySelectorAll("[data-dashboard]").forEach((button) => button.classList.toggle("active", mode === "home"));
   $("libraryNav").classList.toggle("active", viewMode === "library"); $("mobileLibrary").classList.toggle("active", viewMode === "library");
   $("reviewNav").classList.toggle("active", mode === "review"); $("mobileReview").classList.toggle("active", mode === "review");
   $("logsNav").classList.toggle("active", mode === "logs"); $("mobileLogs").classList.toggle("active", mode === "logs");
   $("statsNav").classList.toggle("active", mode === "stats"); $("mobileStats").classList.toggle("active", mode === "stats");
-  $("pageTitle").textContent = mode === "home" ? "今日学习" : mode === "reader" ? "阅读" : mode === "library" ? "书架" : mode === "review" ? "复习" : mode === "logs" ? "日志" : "统计";
+  $("pageTitle").textContent = mode === "home" ? "今日学习" : mode === "reader" ? "阅读" : mode === "library" ? "书架" : mode === "practice" ? "练习" : mode === "review" ? "复习" : mode === "logs" ? "日志" : "统计";
 }
 
 function setHomeMode() {
@@ -485,7 +485,7 @@ async function openResource(bookId) {
     if (!response.ok) throw new Error("resource unavailable");
     const payload = await response.json();
     if (state.resourceBookId !== bookId) return;
-    state.resource = payload; renderResource();
+    state.resource = payload; renderResource(); loadResourcePractice(bookId);
   } catch {
     if (state.resourceBookId !== bookId) return;
     $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`;
@@ -536,8 +536,83 @@ async function openSection(sectionId) {
   const materialLabel = section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown";
   const lengthLabel = formatCharacters(section.character_count); $("readerBookMeta").textContent = `${materialLabel}${lengthLabel ? ` · ${lengthLabel}` : ""}`; $("readerBookMeta").title = section.path || materialLabel; $("readerNoteMeta").textContent = section.note?.trim() ? "已有笔记" : "暂无笔记";
   $("sectionNote").value = section.note || ""; $("noteSavedText").textContent = section.note?.trim() ? "已保存到本节" : "输入后自动保存";
-  state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "smooth" });
+  state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks($("librarySearch").value); loadSectionPractice(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
+function practiceEntryLabel(entry) {
+  return entry.match_level === "comprehensive" ? "综合测试" : entry.match_level === "chapter" ? "本章练习" : "本节练习";
+}
+
+async function loadSectionPractice() {
+  const button = $("readerPractice"); button.classList.add("hidden"); button.replaceWith(button.cloneNode(true));
+  const fresh = $("readerPractice");
+  if (!state.current?.book_id || !state.current?.id) return;
+  const sectionId = state.current.id;
+  try {
+    const response = await fetch(`/api/practice/availability?book_id=${encodeURIComponent(state.current.book_id)}&section_id=${encodeURIComponent(state.current.id)}`, { cache: "no-store" });
+    if (!response.ok || state.current?.id !== sectionId) return;
+    const payload = await response.json(); const entry = payload.entries?.[0];
+    if (!entry) return;
+    fresh.classList.remove("hidden"); fresh.querySelector("span").textContent = `${practiceEntryLabel(entry)} · ${entry.question_count}题`;
+    fresh.addEventListener("click", () => openPractice(entry, "reader")); refreshIcons();
+  } catch { /* A missing practice package must not disturb reading. */ }
+}
+
+async function loadResourcePractice(bookId) {
+  const container = $("resourcePractice"); container.classList.add("hidden"); container.innerHTML = "";
+  try {
+    const response = await fetch(`/api/practice/availability?book_id=${encodeURIComponent(bookId)}`, { cache: "no-store" });
+    if (!response.ok || state.resourceBookId !== bookId) return;
+    const payload = await response.json(); const entry = payload.entries?.[0];
+    if (!entry) return;
+    container.classList.remove("hidden"); container.innerHTML = `<button class="resource-continue" type="button"><span><small>真实题库</small><strong>${practiceEntryLabel(entry)} · ${entry.question_count} 题</strong></span><i data-lucide="arrow-right"></i></button>`;
+    container.querySelector("button").addEventListener("click", () => openPractice(entry, "resource")); refreshIcons();
+  } catch { /* The resource page remains usable without a bank. */ }
+}
+
+async function openPractice(entry, returnTo) {
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); state.practiceReturn = returnTo; state.practiceIndex = 0;
+  try {
+    const query = new URLSearchParams({ bank_id: entry.bank_id, knowledge_id: entry.knowledge_id, match_level: entry.match_level });
+    const response = await fetch(`/api/practice/session?${query}`, { cache: "no-store" }); if (!response.ok) throw new Error("practice unavailable");
+    state.practice = { ...(await response.json()), entry }; setActiveView("practice"); renderPracticeQuestion(); window.scrollTo({ top: 0, behavior: "auto" });
+  } catch { showToast("暂时无法读取这组题目"); }
+}
+
+async function renderPracticeQuestion() {
+  const practice = state.practice; const item = practice?.questions?.[state.practiceIndex]; if (!item) return;
+  $("practiceEyebrow").textContent = practice.entry.match_level === "comprehensive" ? "综合测试 · 真实题库" : `${practiceEntryLabel(practice.entry)} · 真实题库`;
+  $("practiceTitle").textContent = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题`;
+  $("practiceProgressText").textContent = `${state.practiceIndex + 1} / ${practice.question_count}`; $("practiceProgressBar").style.setProperty("--practice-progress", `${((state.practiceIndex + 1) / practice.question_count) * 100}%`);
+  $("practiceResult").classList.add("hidden"); $("practiceSubmit").classList.remove("hidden"); $("practiceSubmit").disabled = false; $("practiceSubmit").querySelector("strong").textContent = "查看答案与解析";
+  const query = new URLSearchParams({ bank_id: practice.bank.id, question_id: item.question_id }); const response = await fetch(`/api/practice/question?${query}`, { cache: "no-store" }); if (!response.ok) { showToast("题目读取失败"); return; }
+  const payload = await response.json(); const question = payload.question; state.practice.question = payload;
+  $("practiceQuestionType").textContent = question.question_type === "multiple_choice" ? "多项选择" : "单项选择"; $("practiceQuestionNumber").textContent = `第 ${state.practiceIndex + 1} 题`;
+  $("practiceStem").innerHTML = renderMarkdown(question.stem_md || ""); const prior = payload.attempt?.selected_answers || [];
+  $("practiceOptions").innerHTML = (question.options || []).map((option) => `<label><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${prior.includes(option.label) ? "checked" : ""}><span><strong>${escapeHtml(option.label)}</strong><em>${renderMarkdown(option.text_md || "")}</em></span></label>`).join("");
+  $("practicePrevious").disabled = state.practiceIndex === 0; $("practiceNext").disabled = state.practiceIndex >= practice.question_count - 1;
+  if (payload.attempt) showPracticeResult(payload); refreshIcons();
+}
+
+function showPracticeResult(payload) {
+  const question = payload.question; const attempt = payload.attempt || {}; $("practiceSubmit").classList.add("hidden"); $("practiceResult").classList.remove("hidden");
+  $("practiceResultTitle").textContent = attempt.correct ? "回答正确" : "继续梳理这个知识点"; $("practiceCorrectAnswer").textContent = `正确答案：${(question.correct_answers || []).join("、")}`;
+  $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析"); $("practicePersonalAnalysis").value = payload.personal_analysis || ""; $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"; refreshIcons();
+}
+
+async function submitPracticeAnswer() {
+  const question = state.practice?.question?.question; if (!question) return; const selected = [...document.querySelectorAll('#practiceOptions input:checked')].map((input) => input.value);
+  if (!selected.length) { showToast("请先选择答案"); return; }
+  $("practiceSubmit").disabled = true;
+  try { const response = await fetch("/api/practice/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bank_id: question.bank_id, question_id: question.question_id, selected_answers: selected }) }); if (!response.ok) throw new Error("answer failed"); const result = await response.json(); state.practice.question = { ...state.practice.question, question: result.question, attempt: result.attempt }; showPracticeResult(state.practice.question); state.practice.questions[state.practiceIndex] = { ...state.practice.questions[state.practiceIndex], answered: true, correct: result.attempt.correct }; } catch { $("practiceSubmit").disabled = false; showToast("提交失败，请稍后重试"); }
+}
+
+function schedulePracticeAnalysisSave() {
+  const question = state.practice?.question?.question; if (!question || !state.practice?.question?.attempt) return; const content = $("practicePersonalAnalysis").value; $("practiceAnalysisSaved").textContent = "保存中…"; window.clearTimeout(state.practiceAnalysisSaveTimer);
+  state.practiceAnalysisSaveTimer = window.setTimeout(async () => { try { const response = await fetch("/api/practice/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bank_id: question.bank_id, question_id: question.question_id, content }) }); if (!response.ok) throw new Error("analysis failed"); const result = await response.json(); $("practiceAnalysisSaved").textContent = content.trim() ? "已保存到练习笔记" : "个人解析已清空"; $("practiceObsidian").href = result.obsidian_uri || "obsidian://open"; } catch { $("practiceAnalysisSaved").textContent = "保存失败，请稍后重试"; } }, 420);
+}
+
+function returnFromPractice() { if (state.practiceReturn === "resource" && state.resourceBookId) openResource(state.resourceBookId); else if (state.current?.id) setReaderMode(); else setLibraryMode(); }
 
 function renderMaterial() {
   const article = $("knowledgeArticle"); const source = state.material === "note" ? state.current?.note : state.current?.markdown;
@@ -592,6 +667,7 @@ function bindNavigation() {
   document.querySelectorAll("[data-domain]").forEach((button) => button.addEventListener("click", () => { state.libraryDomain = button.dataset.domain; state.inlineBookId = null; renderBooks($("librarySearch").value); }));
   $("resourceBack").addEventListener("click", returnFromResource);
   $("resourceContinue").addEventListener("click", () => { const sectionId = $("resourceContinue").dataset.sectionId; if (sectionId) { state.readerOriginBookId = state.resourceBookId; state.inlineBookId = null; openSection(sectionId); } });
+  $("practiceBack").addEventListener("click", returnFromPractice); $("practiceSubmit").addEventListener("click", submitPracticeAnswer); $("practicePrevious").addEventListener("click", () => { if (state.practiceIndex > 0) { state.practiceIndex -= 1; renderPracticeQuestion(); } }); $("practiceNext").addEventListener("click", () => { if (state.practiceIndex < (state.practice?.question_count || 1) - 1) { state.practiceIndex += 1; renderPracticeQuestion(); } }); $("practicePersonalAnalysis").addEventListener("input", schedulePracticeAnalysisSave);
   $("reviewNav").addEventListener("click", openReview); $("mobileReview").addEventListener("click", openReview);
   $("logsNav").addEventListener("click", openLogs); $("mobileLogs").addEventListener("click", openLogs);
   $("statsNav").addEventListener("click", openStats); $("mobileStats").addEventListener("click", openStats);

@@ -228,10 +228,11 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         copy_tree(ROOT / "tools" / "yupractice" / "examples" / "minimal-valid", self.qb_root / "politics-basic-bank")
         self.original_globals = {
             name: getattr(app, name)
-            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE")
+            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "DATA_DIR", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE")
         }
         app.CONTENT_DIR = self.content_root
         app.QUESTION_BANK_DIR = self.qb_root
+        app.DATA_DIR = Path(self.temp.name) / "data"
         app.BOOK_ASSETS = {}
         app.CATALOG_CACHE = {"checked_at": 0.0, "signature": None, "books": [], "sections": {}}
         app.QUESTION_BANK_CACHE = {"checked_at": 0.0, "signature": None, "banks": []}
@@ -296,6 +297,37 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         self.assertEqual(legacy["resource_type"], "book")
         self.assertEqual(legacy["subject"], "旧医学书")
         self.assertEqual(legacy["asset_count"], 0)
+
+    def test_practice_does_not_reveal_answers_until_submission(self):
+        question_id = "politics-basic-marxism-ch01-s02-single-001"
+        # The published minimal bank contains stable section positions and a
+        # formal question; quarantine remains out of every practice read path.
+        session = app.practice_session("politics-basic-bank", "politics.marxism.chapter-01.section-02", "section")
+        self.assertEqual(session["question_count"], 1)
+        question_id = session["questions"][0]["question_id"]
+        before = app.practice_question("politics-basic-bank", question_id)
+        self.assertNotIn("correct_answers", before["question"])
+
+        handler = FakeHandler("/api/practice/answer", command="POST")
+        handler.headers = {"Content-Length": ""}
+        options = before["question"]["options"]
+        encoded = json.dumps({"bank_id": "politics-basic-bank", "question_id": question_id, "selected_answers": [options[0]["label"]]}, ensure_ascii=False).encode("utf-8")
+        handler.headers["Content-Length"] = str(len(encoded))
+        handler.rfile = io.BytesIO(encoded)
+        handler.do_POST()
+        self.assertEqual(handler.status, 200)
+        answer = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertIn("correct_answers", answer["question"])
+
+        analysis = FakeHandler("/api/practice/analysis", command="POST")
+        encoded = json.dumps({"bank_id": "politics-basic-bank", "question_id": question_id, "content": "我的判断过程。"}, ensure_ascii=False).encode("utf-8")
+        analysis.headers = {"Content-Length": str(len(encoded))}
+        analysis.rfile = io.BytesIO(encoded)
+        analysis.do_POST()
+        self.assertEqual(analysis.status, 200)
+        saved = json.loads(analysis.wfile.getvalue().decode("utf-8"))
+        self.assertTrue(Path(saved["path"]).is_file())
+        self.assertIn("我的判断过程", Path(saved["path"]).read_text(encoding="utf-8"))
 
 
 class ImageAssetAccessTests(unittest.TestCase):

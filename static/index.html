@@ -70,6 +70,7 @@
             <div class="resource-progress-track" id="resourceProgressTrack" aria-hidden="true"><i id="resourceProgressBar"></i></div>
             <section class="resource-facts" id="resourceFacts" aria-label="学习摘要"></section>
             <button class="resource-continue" id="resourceContinue" type="button"><span><small>继续学习</small><strong id="resourceContinueTitle"></strong></span><i data-lucide="arrow-right"></i></button>
+            <section class="resource-practice hidden" id="resourcePractice" aria-label="综合练习"></section>
             <section class="resource-directory" id="resourceDirectory" aria-label="完整分层目录"></section>
           </section>
 
@@ -91,13 +92,23 @@
 
               <header class="reader-heading">
                 <p class="reader-source" id="readerSectionNumber">章节</p>
-                <div class="reader-title-row"><div><h2 id="readerTitle"></h2><div class="reader-metrics"><span id="readerBookMeta">清洗正文</span><span id="readerNoteMeta">暂无笔记</span></div></div></div>
+                <div class="reader-title-row"><div><h2 id="readerTitle"></h2><div class="reader-metrics"><span id="readerBookMeta">清洗正文</span><span id="readerNoteMeta">暂无笔记</span></div></div><button class="reader-practice-link hidden" id="readerPractice" type="button"><i data-lucide="circle-dot-dashed"></i><span>本节练习</span></button></div>
               </header>
 
               <div class="knowledge-article" id="knowledgeArticle"></div>
               <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section class="view" id="practiceView" data-view="practice">
+        <div class="practice-workspace">
+          <header class="practice-heading"><button class="review-back-link" id="practiceBack" type="button"><i data-lucide="arrow-left"></i> 返回阅读</button><div><p class="eyebrow" id="practiceEyebrow">真实题库</p><h2 id="practiceTitle">练习</h2><p id="practiceMeta">正在读取题目…</p></div></header>
+          <div class="practice-progress"><span id="practiceProgressText">0 / 0</span><i id="practiceProgressBar"></i></div>
+          <article class="practice-paper"><header><span id="practiceQuestionType"></span><strong id="practiceQuestionNumber"></strong></header><div class="knowledge-article practice-stem" id="practiceStem"></div><form class="practice-options" id="practiceOptions"></form><button class="resource-continue practice-submit" id="practiceSubmit" type="button"><span><small>提交作答</small><strong>查看答案与解析</strong></span><i data-lucide="arrow-right"></i></button></article>
+          <section class="practice-result hidden" id="practiceResult"><header><strong id="practiceResultTitle"></strong><span id="practiceCorrectAnswer"></span></header><article class="knowledge-article note-stream" id="practiceSourceAnalysis"></article><section class="review-result-editor"><header><div><strong>个人解析</strong><small id="practiceAnalysisSaved">粘贴侧边栏的分析，自动保存</small></div><a class="note-icon-button" id="practiceObsidian" href="obsidian://open" aria-label="在 Obsidian 中打开练习笔记"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="practicePersonalAnalysis" rows="9" placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程"></textarea></section></section>
+          <nav class="reader-pagination practice-pagination" aria-label="题目切换"><button class="secondary-button" id="practicePrevious" type="button"><i data-lucide="arrow-left"></i><span>上一题</span></button><button class="secondary-button" id="practiceNext" type="button"><span>下一题</span><i data-lucide="arrow-right"></i></button></nav>
         </div>
       </section>
 
