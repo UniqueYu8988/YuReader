@@ -1,0 +1,16 @@
+{
+  "index_version": 1,
+  "bank_id": "politics-basic-bank",
+  "sources": [
+    {
+      "source_id": "youtiku-basic",
+      "filename": "优题库-基础题.md",
+      "display_name": "优题库 基础题",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "primary",
+      "blocks": [
+        {"block_id": "b-0012", "page": "P3", "page_label": "第3页", "start_line": 231, "end_line": 233, "label": "第一章 单选"}
+      ]
+    }
+  ]
+}

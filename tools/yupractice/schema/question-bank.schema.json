@@ -1,0 +1,277 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://yu.reader.local/yupractice/question-bank.schema.json",
+  "title": "YuPractice question bank package contract",
+  "description": "Data contract for a publishable YuReader question-bank package. This file is the human/machine readable contract; tools/yupractice/yupractice.py is the reference validator that enforces the same rules in Python. A package is a directory with manifest.json, questions.jsonl, knowledge-map.json, source-index.json and optional quarantine/ and reports/. User data (personal analysis, answer history, user notes) must never be stored inside the package.",
+  "type": "object",
+  "required": ["schema_version", "bank", "sources", "question_count", "quarantined_count", "question_type_counts", "knowledge_map", "questions", "source_index", "quality", "generated_at", "generator"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "description": "Version of this contract. Must equal 1 for the reference validator.",
+      "type": "integer",
+      "const": 1
+    },
+    "bank": {
+      "type": "object",
+      "required": ["id", "title", "domain", "subject", "resource_type", "status"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stable bank id, e.g. politics-basic-bank." },
+        "title": { "type": "string", "minLength": 1 },
+        "domain": { "type": "string", "enum": ["medicine", "politics", "english"] },
+        "subject": { "type": "string", "minLength": 1 },
+        "resource_type": { "type": "string", "enum": ["book", "lecture", "question_bank", "reference"] },
+        "status": { "type": "string", "enum": ["ready", "draft", "archived"], "description": "Only ready is publishable." }
+      }
+    },
+    "sources": {
+      "description": "Source volumes that together form this bank. Each entry must also exist in source-index.json with matching filename/sha256/role.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "filename", "sha256", "role"],
+        "additionalProperties": true,
+        "properties": {
+          "source_id": { "type": "string", "minLength": 1 },
+          "filename": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "role": { "type": "string", "enum": ["primary", "auxiliary", "reference"] }
+        }
+      }
+    },
+    "question_count": { "type": "integer", "minimum": 0, "description": "Must equal the number of records in questions.jsonl." },
+    "quarantined_count": { "type": "integer", "minimum": 0, "description": "Must equal the number of records in quarantine/questions.jsonl." },
+    "question_type_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 },
+      "description": "Actual per-type counts must match questions.jsonl."
+    },
+    "knowledge_map": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "const": "knowledge-map.json" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "questions": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "const": "questions.jsonl" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "source_index": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "const": "source-index.json" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "quality": {
+      "description": "Generator self-declaration. Must match the actual validation result or the package is rejected.",
+      "type": "object",
+      "required": ["status", "blocker_count", "warning_count"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "warning", "blocked"] },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "warning_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "generated_at": { "type": "string", "description": "ISO-8601 timestamp when the package was generated." },
+    "generator": { "type": "string", "minLength": 1, "description": "Generator identifier, e.g. yupractice/0.2.0." }
+  },
+  "$defs": {
+    "question": {
+      "description": "One line of questions.jsonl (formal) or quarantine/questions.jsonl.",
+      "type": "object",
+      "required": ["question_id", "question_type", "stem_md", "options", "correct_answers", "knowledge_ids", "source_refs", "source_analysis_md", "status", "transformations"],
+      "additionalProperties": true,
+      "properties": {
+        "question_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "Stable, lowercase-kebab-case id, unique across the whole bank."
+        },
+        "bank_id": {
+          "type": "string",
+          "description": "Optional per-record bank identity. If present it must equal manifest.bank.id, otherwise E042 (formal) / E043 (quarantined) blocker."
+        },
+        "question_type": { "type": "string", "enum": ["single_choice", "multiple_choice"] },
+        "difficulty": { "type": "string", "enum": ["basic", "advanced"] },
+        "scope": { "type": "string", "enum": ["chapter", "comprehensive"] },
+        "unit": { "type": "string", "description": "Human label of the question collection (chapter set or comprehensive test)." },
+        "unit_key": { "type": "string", "description": "Stable key of the collection, e.g. marx-ch01." },
+        "local_number": { "type": "integer", "minimum": 1, "description": "Local question number inside its unit. (unit_key, question_type, local_number) must be unique in the bank." },
+        "stem_md": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["label", "text_md"],
+            "properties": {
+              "label": { "type": "string", "pattern": "^[A-Z]$" },
+              "text_md": { "type": "string", "minLength": 1 }
+            }
+          },
+          "description": "Ordered options; labels must be consecutive uppercase letters starting at A and unique."
+        },
+        "correct_answers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Non-empty subset of option labels. single_choice must have exactly one."
+        },
+        "knowledge_ids": {
+          "type": "array",
+          "items": { "type": "string", "description": "Dotted knowledge position, e.g. politics.marxism.chapter-01.section-02; must exist in knowledge-map.json." }
+        },
+        "source_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["source_id", "block_id"],
+            "properties": {
+              "source_id": { "type": "string", "minLength": 1 },
+              "block_id": { "type": "string", "minLength": 1 }
+            },
+            "description": "Must resolve through source-index.json (source_id + block_id)."
+          }
+        },
+        "source_analysis_md": { "type": "string", "minLength": 1, "description": "Immutable original-book/source analysis. Never personal analysis." },
+        "distractor_analysis_md": {
+          "description": "Optional per-distractor explanations keyed by option label.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "status": { "type": "string", "enum": ["ready", "quarantined"], "description": "Formal questions must be ready; quarantine entries must be quarantined." },
+        "transformations": {
+          "type": "array",
+          "description": "Automatic repair records applied to this question.",
+          "items": {
+            "type": "object",
+            "required": ["type", "reason"],
+            "additionalProperties": true,
+            "properties": {
+              "type": { "type": "string", "minLength": 1 },
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "reason": { "type": "string", "minLength": 1 },
+              "source_line": { "type": "integer", "minimum": 1 },
+              "count": { "type": "integer", "minimum": 1 },
+              "verified": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "knowledgeMap": {
+      "description": "Stable knowledge positions. Orphan entries (never referenced by a question) are warnings. map_version must equal 1 and bank_id must match manifest.bank.id, otherwise the reference validator emits a blocker. A single malformed entry never aborts validation; it becomes a blocker/warning per rule.",
+      "type": "object",
+      "required": ["map_version", "bank_id", "entries"],
+      "properties": {
+        "map_version": { "type": "integer", "const": 1, "description": "Must equal the currently supported version (1), otherwise E054 blocker." },
+        "bank_id": { "type": "string", "description": "Must match manifest.bank.id, otherwise E039 blocker." },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["knowledge_id", "label", "path", "kind"],
+            "additionalProperties": true,
+            "properties": {
+              "knowledge_id": { "type": "string" },
+              "label": { "type": "string", "minLength": 1 },
+              "path": { "type": "array", "items": { "type": "string" } },
+              "kind": { "type": "string", "enum": ["section", "chapter", "comprehensive", "topic"] },
+              "source_ref": {
+                "type": ["object", "null"],
+                "properties": {
+                  "source_id": { "type": "string" },
+                  "block_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sourceIndex": {
+      "description": "Block-level traceability for every source volume. index_version must equal 1, bank_id must match manifest.bank.id, source_id must be unique and non-empty, blocks must be an array with unique non-empty block_id, start_line/end_line must be positive with start_line <= end_line; violations are blockers (E038, E040, E044-E053).",
+      "type": "object",
+      "required": ["index_version", "bank_id", "sources"],
+      "properties": {
+        "index_version": { "type": "integer", "const": 1, "description": "Must equal the currently supported version (1), otherwise E038 blocker." },
+        "bank_id": { "type": "string", "description": "Must match manifest.bank.id, otherwise E040 blocker." },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_id", "filename", "display_name", "sha256", "role", "blocks"],
+            "additionalProperties": true,
+            "properties": {
+              "source_id": { "type": "string", "description": "Non-empty and unique across the whole index; duplicates/missing are E045/E046 blockers." },
+              "filename": { "type": "string" },
+              "display_name": { "type": "string" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Must match manifest.sources[].sha256." },
+              "role": { "type": "string", "enum": ["primary", "auxiliary", "reference"] },
+              "blocks": {
+                "type": "array",
+                "description": "Must be an array. Each block needs a non-empty block_id unique within its source; start_line/end_line must be positive integers with start_line <= end_line. Violations are E048-E053 blockers.",
+                "items": {
+                  "type": "object",
+                  "required": ["block_id", "page", "start_line", "end_line"],
+                  "additionalProperties": true,
+                  "properties": {
+                    "block_id": { "type": "string", "description": "Non-empty and unique within the same source; duplicates/missing are E049/E050 blockers." },
+                    "page": { "type": "string", "description": "Source page identifier, e.g. P3. If present it must be a string (E053)." },
+                    "page_label": { "type": "string", "description": "If present it must be a string (E053)." },
+                    "start_line": { "type": "integer", "minimum": 1, "description": "Positive integer; must be <= end_line (E051/E052)." },
+                    "end_line": { "type": "integer", "minimum": 1, "description": "Positive integer; must be >= start_line (E051/E052)." },
+                    "label": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "quarantineReasons": {
+      "description": "Every quarantined question must have one reason entry. bank_id must match manifest.bank.id, otherwise E041 blocker.",
+      "type": "object",
+      "required": ["bank_id", "reasons"],
+      "properties": {
+        "bank_id": { "type": "string", "description": "Must match manifest.bank.id, otherwise E041 blocker." },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["question_id", "reason"],
+            "additionalProperties": true,
+            "properties": {
+              "question_id": { "type": "string" },
+              "reason": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "string" },
+              "source_refs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["source_id", "block_id"],
+                  "properties": {
+                    "source_id": { "type": "string" },
+                    "block_id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

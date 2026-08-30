@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-TOOL_VERSION = "0.3.0"
+TOOL_VERSION = "0.4.1"
+DERIVED_TEXT_HASH_ALGORITHM = "canonical-json-page-set-v1"
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WORKSPACE = ROOT / "workspace"
 DEFAULT_CONTENT_ROOT = Path(__file__).resolve().parents[3] / "content"
@@ -20,6 +21,8 @@ OCCLUSION_TERMS_PATH = ROOT.parent / "occlusion_terms.json"
 
 NODE_KINDS = {"chapter", "section", "topic", "supporting"}
 PAGE_ROLES = {"reading", "reference"}
+VALID_DOMAINS = {"medicine", "politics", "english"}
+VALID_RESOURCE_TYPES = {"book", "lecture", "question_bank", "reference"}
 LONG_READING_WARNING = 30_000
 WATERMARK_HEADING_PREFIXES = (
     "本资料仅用",
@@ -75,6 +78,27 @@ def sha256_file(path: Path) -> str:
 def canonical_hash(payload: object) -> str:
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256_bytes(encoded)
+
+
+def derived_text_hash(items: list[dict]) -> str:
+    """Hash the ordered reading/reference artifact set without duplicating text."""
+    page_set = [
+        {
+            "artifact": item["artifact"],
+            "sha256": item["sha256"],
+            "original_line_start": item["source_map"]["original_line_start"],
+            "original_line_end": item["source_map"]["original_line_end"],
+        }
+        for item in sorted(
+            items,
+            key=lambda item: (
+                item["source_map"]["original_line_start"],
+                item["source_map"]["original_line_end"],
+                item["artifact"],
+            ),
+        )
+    ]
+    return canonical_hash(page_set)
 
 
 def stable_id(*parts: object) -> str:
@@ -397,6 +421,41 @@ def add_problem(target: list[dict], code: str, message: str, **details: object) 
     target.append(item)
 
 
+def book_metadata_errors(book_meta: dict) -> list[dict]:
+    """校验可选的 domain / subject / resource_type 元数据。
+
+    - 旧工作区、旧书包没有这些字段时返回空列表，保持完全兼容；
+    - 非法 domain / resource_type 必须阻断，不能静默写入候选包；
+    - subject 缺失时旧书可安全回退为 title；只有 domain=politics 才要求明确填写；
+    - 显式提供的 subject 必须为字符串（非字符串视为非法）。
+    """
+    problems: list[dict] = []
+    domain = book_meta.get("domain")
+    if domain is not None:
+        if not isinstance(domain, str) or domain.strip().lower() not in VALID_DOMAINS:
+            add_problem(
+                problems,
+                "book_domain_invalid",
+                "book.domain 必须是 medicine / politics / english 之一",
+                domain=domain,
+            )
+    resource_type = book_meta.get("resource_type")
+    if resource_type is not None:
+        if not isinstance(resource_type, str) or resource_type.strip().lower() not in VALID_RESOURCE_TYPES:
+            add_problem(
+                problems,
+                "book_resource_type_invalid",
+                "book.resource_type 必须是 book / lecture / question_bank / reference 之一",
+                resource_type=resource_type,
+            )
+    subject = book_meta.get("subject")
+    if subject is not None and not isinstance(subject, str):
+        add_problem(problems, "book_subject_invalid", "book.subject 必须是字符串", subject=subject)
+    if isinstance(domain, str) and domain.strip().lower() == "politics" and (not isinstance(subject, str) or not subject.strip()):
+        add_problem(problems, "book_subject_required", "政治领域（domain=politics）必须明确填写非空 book.subject", subject=subject)
+    return problems
+
+
 def validate_number_sequence(items: list[tuple[int, str]], code: str, blockers: list[dict], parent_id: str | None) -> None:
     if not items:
         return
@@ -427,6 +486,7 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
                 book_json=project_book.get(field, ""),
                 outline=book.get(field, ""),
             )
+    blockers.extend(book_metadata_errors(project_book))
     source_meta = outline.get("source") if isinstance(outline.get("source"), dict) else {}
     content = outline.get("content") if isinstance(outline.get("content"), dict) else {}
     actual_hash = sha256_file(source)
@@ -742,6 +802,60 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
         if isinstance(issue, dict) and issue.get("status", "open") != "resolved":
             add_problem(blockers, "open_issue", "outline 仍有未解决问题", issue=issue)
 
+    knowledge_map_path = project / "knowledge-map.json"
+    if knowledge_map_path.is_file():
+        try:
+            km_payload = load_json(knowledge_map_path)
+        except YuBookError as exc:
+            add_problem(blockers, "knowledge_map_shape", "knowledge-map.json 无法解析，必须为合法 JSON 对象", error=str(exc))
+            km_payload = None
+        if not isinstance(km_payload, dict):
+            add_problem(blockers, "knowledge_map_shape", "knowledge-map.json 顶层必须为对象")
+        else:
+            if km_payload.get("schema_version") != 1:
+                add_problem(blockers, "knowledge_map_schema", "knowledge-map.schema_version 必须为 1")
+            if km_payload.get("book_id") != project_book.get("id"):
+                add_problem(
+                    blockers,
+                    "knowledge_map_book_id",
+                    "knowledge-map.book_id 与 book.json 不一致",
+                    actual=km_payload.get("book_id"),
+                    expected=project_book.get("id"),
+                )
+            if km_payload.get("input_sha256") is not None and km_payload.get("input_sha256") != actual_hash:
+                add_problem(blockers, "knowledge_map_source_hash", "knowledge-map.input_sha256 与归档源文件不一致")
+            entries = km_payload.get("entries")
+            if entries is not None and not isinstance(entries, list):
+                add_problem(blockers, "knowledge_map_shape", "knowledge-map.json 的 entries 必须是数组")
+            elif isinstance(entries, list):
+                seen_km: set[str] = set()
+                for index, entry in enumerate(entries):
+                    if not isinstance(entry, dict):
+                        add_problem(blockers, "knowledge_map_entry_shape", "knowledge entry 必须是对象", index=index)
+                        continue
+                    knowledge_id = entry.get("knowledge_id")
+                    if not isinstance(knowledge_id, str) or not knowledge_id.strip():
+                        add_problem(blockers, "knowledge_map_entry_shape", "knowledge entry 缺少非空 knowledge_id", index=index)
+                        continue
+                    if knowledge_id in seen_km:
+                        add_problem(blockers, "knowledge_map_duplicate", "knowledge-map 存在重复 knowledge_id", knowledge_id=knowledge_id)
+                    seen_km.add(knowledge_id)
+                    page_ids = entry.get("page_ids")
+                    if page_ids is not None:
+                        if not isinstance(page_ids, list) or any(not isinstance(page_id, str) for page_id in page_ids):
+                            add_problem(blockers, "knowledge_map_page_ids", "knowledge entry.page_ids 必须是字符串数组", knowledge_id=knowledge_id)
+                        else:
+                            known_page_ids = {page.get("id") for page in outline.get("pages", []) if isinstance(page, dict)}
+                            missing_page_ids = sorted(set(page_ids) - known_page_ids)
+                            if missing_page_ids:
+                                add_problem(
+                                    blockers,
+                                    "knowledge_map_page_ids",
+                                    "knowledge entry 引用了不存在的阅读页",
+                                    knowledge_id=knowledge_id,
+                                    page_ids=missing_page_ids,
+                                )
+
     sibling_titles: dict[tuple[str | None, str], list[str]] = defaultdict(list)
     for node in node_map.values():
         sibling_titles[(node.get("parent_id"), node.get("title", "").strip())].append(node.get("id"))
@@ -813,18 +927,69 @@ def command_build(args: argparse.Namespace) -> dict:
     book = outline["book"]
     book_id = book["id"]
     outline_hash = canonical_hash(outline)
+    source = project_source(project, outline)
+    project_book_meta = load_json(project / "book.json")
+    knowledge_map_path = project / "knowledge-map.json"
+    knowledge_map_input_hash = sha256_file(knowledge_map_path) if knowledge_map_path.is_file() else None
+    images_source = project / "pages" / "images"
+    if not images_source.is_dir():
+        images_source = project / "images"
+    asset_inputs = [
+        {"name": path.name, "sha256": sha256_file(path)}
+        for path in sorted(images_source.iterdir())
+        if images_source.is_dir() and path.is_file()
+    ] if images_source.is_dir() else []
     dist_root = project / "dist"
-    package = dist_root / f"{book_id}-{outline_hash[:8]}"
+    build_hash = canonical_hash(
+        {
+            "outline_sha256": outline_hash,
+            "source_sha256": sha256_file(source),
+            "book_json_sha256": canonical_hash(project_book_meta),
+            "knowledge_map_sha256": knowledge_map_input_hash,
+            "assets": asset_inputs,
+            "builder_version": TOOL_VERSION,
+            "derived_text_hash_algorithm": DERIVED_TEXT_HASH_ALGORITHM,
+        }
+    )
+    package = dist_root / f"{book_id}-{build_hash[:8]}"
     if package.exists():
         return {"status": "already_built", "package": str(package), "outline_sha256": outline_hash}
     dist_root.mkdir(parents=True, exist_ok=True)
     staging = dist_root / f".tmp-{uuid.uuid4().hex}"
     staging.mkdir()
     try:
-        source = project_source(project, outline)
         (staging / "original").mkdir()
         shutil.copy2(source, staging / "original" / "source.md")
         write_json(staging / "reports" / "outline.json", outline)
+
+        knowledge_map_decl: dict | None = None
+        if knowledge_map_path.is_file():
+            km_payload = load_json(knowledge_map_path)
+            shutil.copy2(knowledge_map_path, staging / "knowledge-map.json")
+            knowledge_map_decl = {"path": "knowledge-map.json", "sha256": sha256_file(staging / "knowledge-map.json")}
+            if isinstance(km_payload, dict):
+                entries = km_payload.get("entries")
+                if isinstance(entries, list):
+                    knowledge_map_decl["entry_count"] = len(entries)
+                knowledge_positions = km_payload.get("knowledge_positions")
+                if isinstance(knowledge_positions, list):
+                    knowledge_map_decl["knowledge_position_count"] = len(knowledge_positions)
+
+        asset_names: list[str] = []
+        asset_integrity_files: list[dict] = []
+        if images_source.is_dir():
+            images_target = staging / "images"
+            images_target.mkdir(parents=True, exist_ok=True)
+            for image_path in sorted(images_source.iterdir()):
+                if image_path.is_file():
+                    shutil.copy2(image_path, images_target / image_path.name)
+                    asset_names.append(image_path.name)
+                    asset_integrity_files.append(
+                        {
+                            "path": f"images/{image_path.name}",
+                            "sha256": sha256_file(images_target / image_path.name),
+                        }
+                    )
 
         nodes = outline["nodes"]
         node_map = {node["id"]: node for node in nodes}
@@ -956,9 +1121,22 @@ def command_build(args: argparse.Namespace) -> dict:
             },
         )
         source_hash = sha256_file(source)
+        derived_items = [*reading_sections, *references]
+        cleaned_hash = derived_text_hash(derived_items)
+        manifest_book = {
+            "id": book_id,
+            "title": book["title"],
+            "edition": book.get("edition", ""),
+            "status": "ready",
+            "default_material": "cleaned",
+        }
+        for metadata_key in ("domain", "subject", "resource_type"):
+            metadata_value = project_book_meta.get(metadata_key)
+            if metadata_value is not None:
+                manifest_book[metadata_key] = metadata_value
         manifest = {
             "schema_version": 2,
-            "book": {"id": book_id, "title": book["title"], "edition": book.get("edition", ""), "status": "ready", "default_material": "cleaned"},
+            "book": manifest_book,
             "created_at": utc_now(),
             "builder": {"name": "YuBook", "version": TOOL_VERSION, "outline_sha256": outline_hash},
             "provenance": {
@@ -971,7 +1149,10 @@ def command_build(args: argparse.Namespace) -> dict:
                 "cleaned_candidate": {
                     "mode": "line_preserving_derived_text",
                     "source_artifact": "original/source.md",
-                    "sha256": source_hash,
+                    "source_sha256": source_hash,
+                    "sha256": cleaned_hash,
+                    "hash_algorithm": DERIVED_TEXT_HASH_ALGORITHM,
+                    "artifact_count": len(derived_items),
                     "transformation_count": len(transformations),
                     "transformation_report": "reports/transformations.json",
                     "navigation_normalization_count": sum(bool(node.get("title_normalization")) for node in nodes),
@@ -994,8 +1175,17 @@ def command_build(args: argparse.Namespace) -> dict:
             "source_chapters": source_chapters,
             "sections": reading_sections,
             "references": references,
-            "assets": [],
+            "assets": asset_names,
         }
+        if asset_names:
+            manifest["assets_root"] = "images"
+            manifest["asset_integrity"] = {
+                "algorithm": "sha256-file-list-v1",
+                "count": len(asset_integrity_files),
+                "files": asset_integrity_files,
+            }
+        if knowledge_map_decl is not None:
+            manifest["knowledge_map"] = knowledge_map_decl
         write_json(staging / "manifest.json", manifest)
         staging.rename(package)
     except Exception:
@@ -1018,6 +1208,7 @@ def validate_package(package: Path) -> dict:
     blockers: list[dict] = []
     if manifest.get("schema_version") != 2 or manifest.get("book", {}).get("status") != "ready":
         add_problem(blockers, "manifest", "manifest 不是可发布的 YuReader schema 2 包")
+    blockers.extend(book_metadata_errors(manifest.get("book") or {}))
     quality_meta = manifest.get("quality") if isinstance(manifest.get("quality"), dict) else {}
     quality_path = package / quality_meta.get("report", "")
     if not quality_path.is_file():
@@ -1030,12 +1221,145 @@ def validate_package(package: Path) -> dict:
         relative = manifest.get("artifacts", {}).get(artifact_key)
         if not relative or not (package / relative).is_file():
             add_problem(blockers, "package_artifact_missing", "候选包缺少可追溯报告", artifact_key=artifact_key, artifact=relative)
-    for section in [*manifest.get("sections", []), *manifest.get("references", [])]:
+    derived_items = [*manifest.get("sections", []), *manifest.get("references", [])]
+    for section in derived_items:
         artifact = package / section.get("artifact", "")
         if not artifact.is_file():
             add_problem(blockers, "section_missing", "页面文件不存在", section_id=section.get("id"), artifact=section.get("artifact"))
         elif sha256_file(artifact) != section.get("sha256"):
             add_problem(blockers, "section_hash", "页面哈希不一致", section_id=section.get("id"))
+    assets = manifest.get("assets")
+    if isinstance(assets, list) and assets:
+        integrity = manifest.get("asset_integrity") if isinstance(manifest.get("asset_integrity"), dict) else {}
+        integrity_files = integrity.get("files") if isinstance(integrity.get("files"), list) else []
+        if integrity.get("algorithm") != "sha256-file-list-v1" or integrity.get("count") != len(assets):
+            add_problem(blockers, "asset_integrity", "图片资产缺少完整的 SHA-256 契约")
+        declared_assets: set[str] = set()
+        for index, item in enumerate(integrity_files):
+            if not isinstance(item, dict):
+                add_problem(blockers, "asset_integrity", "图片资产声明必须是对象", index=index)
+                continue
+            relative = item.get("path")
+            expected_hash = item.get("sha256")
+            if not isinstance(relative, str) or not relative.startswith("images/") or Path(relative).is_absolute() or ".." in Path(relative).parts:
+                add_problem(blockers, "asset_integrity", "图片资产路径非法", index=index, path=relative)
+                continue
+            asset_file = package / relative
+            declared_assets.add(Path(relative).name)
+            if not asset_file.is_file():
+                add_problem(blockers, "asset_missing", "图片资产不存在", path=relative)
+            elif not isinstance(expected_hash, str) or sha256_file(asset_file) != expected_hash:
+                add_problem(blockers, "asset_hash", "图片资产 SHA-256 不一致", path=relative)
+        if declared_assets != set(assets):
+            add_problem(
+                blockers,
+                "asset_integrity",
+                "manifest.assets 与 asset_integrity.files 不一致",
+                assets=sorted(str(item) for item in assets),
+                declared=sorted(declared_assets),
+            )
+    provenance = manifest.get("provenance") if isinstance(manifest.get("provenance"), dict) else {}
+    original = provenance.get("original") if isinstance(provenance.get("original"), dict) else {}
+    cleaned = provenance.get("cleaned_candidate") if isinstance(provenance.get("cleaned_candidate"), dict) else {}
+    if cleaned.get("mode") == "line_preserving_derived_text":
+        if cleaned.get("source_sha256") != original.get("sha256"):
+            add_problem(blockers, "derived_source_hash", "派生正文记录的源哈希与原始归档不一致")
+        if cleaned.get("hash_algorithm") != DERIVED_TEXT_HASH_ALGORITHM:
+            add_problem(blockers, "derived_hash_contract", "派生正文缺少受支持的独立哈希契约")
+        elif cleaned.get("sha256") != derived_text_hash(derived_items):
+            add_problem(blockers, "derived_hash", "派生正文聚合哈希不一致")
+        if cleaned.get("artifact_count") != len(derived_items):
+            add_problem(
+                blockers,
+                "derived_artifact_count",
+                "派生正文记录的页面数量不一致",
+                actual=len(derived_items),
+                expected=cleaned.get("artifact_count"),
+            )
+
+    knowledge_map_decl = manifest.get("knowledge_map") if isinstance(manifest.get("knowledge_map"), dict) else {}
+    if knowledge_map_decl:
+        km_path_value = knowledge_map_decl.get("path")
+        km_file = package / str(km_path_value or "")
+        if not isinstance(km_path_value, str) or not km_path_value or not km_file.is_file() or km_file.parent != package:
+            add_problem(blockers, "knowledge_map_missing", "候选包缺少知识映射文件", path=km_path_value)
+        else:
+            if sha256_file(km_file) != knowledge_map_decl.get("sha256"):
+                add_problem(blockers, "knowledge_map_hash", "知识映射 SHA-256 与 manifest 声明不一致", path=km_path_value)
+            try:
+                km_payload = load_json(km_file)
+            except YuBookError as exc:
+                add_problem(blockers, "knowledge_map_shape", "包内 knowledge-map.json 无法解析", path=km_path_value, error=str(exc))
+                km_payload = None
+            if not isinstance(km_payload, dict):
+                add_problem(blockers, "knowledge_map_shape", "包内 knowledge-map.json 顶层必须为对象")
+            else:
+                if km_payload.get("schema_version") != 1:
+                    add_problem(blockers, "knowledge_map_schema", "包内 knowledge-map.schema_version 必须为 1")
+                manifest_book_id = (manifest.get("book") or {}).get("id") if isinstance(manifest.get("book"), dict) else None
+                if km_payload.get("book_id") != manifest_book_id:
+                    add_problem(
+                        blockers,
+                        "knowledge_map_book_id",
+                        "包内 knowledge-map.book_id 与 manifest.book.id 不一致",
+                    )
+                if km_payload.get("input_sha256") is not None and km_payload.get("input_sha256") != original.get("sha256"):
+                    add_problem(blockers, "knowledge_map_source_hash", "包内 knowledge-map.input_sha256 与原始归档哈希不一致")
+                entries = km_payload.get("entries")
+                if isinstance(entries, list):
+                    declared_entry_count = knowledge_map_decl.get("entry_count")
+                    if isinstance(declared_entry_count, int) and declared_entry_count != len(entries):
+                        add_problem(
+                            blockers,
+                            "knowledge_map_entry_count",
+                            "manifest 声明的 entry_count 与包内实际不一致",
+                            declared=declared_entry_count,
+                            actual=len(entries),
+                        )
+                    seen_km: set[str] = set()
+                    for index, entry in enumerate(entries):
+                        if not isinstance(entry, dict):
+                            add_problem(blockers, "knowledge_map_entry_shape", "知识映射 entry 必须是对象", index=index)
+                            continue
+                        knowledge_id = entry.get("knowledge_id")
+                        if not isinstance(knowledge_id, str) or not knowledge_id.strip():
+                            add_problem(blockers, "knowledge_map_entry_shape", "knowledge entry 缺少非空 knowledge_id", index=index)
+                            continue
+                        if knowledge_id in seen_km:
+                            add_problem(blockers, "knowledge_map_duplicate", "知识映射存在重复 knowledge_id", knowledge_id=knowledge_id)
+                        seen_km.add(knowledge_id)
+                        page_ids = entry.get("page_ids")
+                        if page_ids is not None:
+                            if not isinstance(page_ids, list) or any(not isinstance(page_id, str) for page_id in page_ids):
+                                add_problem(blockers, "knowledge_map_page_ids", "knowledge entry.page_ids 必须是字符串数组", knowledge_id=knowledge_id)
+                            else:
+                                available_page_ids = {
+                                    value
+                                    for section in manifest.get("sections", [])
+                                    if isinstance(section, dict)
+                                    for value in (section.get("key"), section.get("node_id"))
+                                    if isinstance(value, str)
+                                }
+                                missing_page_ids = sorted(set(page_ids) - available_page_ids)
+                                if missing_page_ids:
+                                    add_problem(
+                                        blockers,
+                                        "knowledge_map_page_ids",
+                                        "knowledge entry 引用了包内不存在的阅读页",
+                                        knowledge_id=knowledge_id,
+                                        page_ids=missing_page_ids,
+                                    )
+                knowledge_positions = km_payload.get("knowledge_positions")
+                if isinstance(knowledge_positions, list):
+                    declared_position_count = knowledge_map_decl.get("knowledge_position_count")
+                    if isinstance(declared_position_count, int) and declared_position_count != len(knowledge_positions):
+                        add_problem(
+                            blockers,
+                            "knowledge_map_position_count",
+                            "manifest 声明的 knowledge_position_count 与包内实际不一致",
+                            declared=declared_position_count,
+                            actual=len(knowledge_positions),
+                        )
     return {"status": "blocked" if blockers else "pass", "blockers": blockers, "manifest": manifest}
 
 
@@ -1060,10 +1384,12 @@ def command_import(args: argparse.Namespace) -> dict:
     staging.mkdir()
     try:
         shutil.copy2(package / "manifest.json", staging / "manifest.json")
-        for name in ("cleaned", "reference", "reports"):
+        for name in ("cleaned", "reference", "reports", "images"):
             source_dir = package / name
             if source_dir.is_dir():
                 shutil.copytree(source_dir, staging / name)
+        if (package / "knowledge-map.json").is_file():
+            shutil.copy2(package / "knowledge-map.json", staging / "knowledge-map.json")
         staged_audit = validate_package(staging)
         if staged_audit["blockers"]:
             raise YuBookError("暂存包复核失败")

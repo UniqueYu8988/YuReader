@@ -1,0 +1,29 @@
+{
+  "index_version": 1,
+  "bank_id": "politics-basic-bank",
+  "sources": [
+    {
+      "source_id": "youtiku-basic",
+      "filename": "优题库-基础题.md",
+      "display_name": "优题库 基础题",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "primary",
+      "blocks": [
+        {"block_id": "b-0012", "page": "P3", "page_label": "第3页", "start_line": 231, "end_line": 233, "label": "第一章 单选"},
+        {"block_id": "b-0031", "page": "P8", "page_label": "第8页", "start_line": 310, "end_line": 312, "label": "第一章 第三节 单选"},
+        {"block_id": "b-0040", "page": "P9", "page_label": "第9页", "start_line": 401, "end_line": 403, "label": "第一章 待复核题"}
+      ]
+    },
+    {
+      "source_id": "youtiku-advanced",
+      "filename": "优题库-拔高题.md",
+      "display_name": "优题库 拔高题",
+      "sha256": "faae0acc656b59d0a113067518287afed5f812105991a0aa7b90d188ee467793",
+      "role": "auxiliary",
+      "blocks": [
+        {"block_id": "b-1001", "page": "P1", "page_label": "第1页", "start_line": 510, "end_line": 513, "label": "综合测试 001 多选"},
+        {"block_id": "b-1004", "page": "P1", "page_label": "第1页", "start_line": 540, "end_line": 542, "label": "综合测试 001 单选"}
+      ]
+    }
+  ]
+}

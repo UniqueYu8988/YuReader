@@ -1,0 +1,32 @@
+{
+  "bank_id": "politics-basic-bank",
+  "bank_title": "政治基础题库（最小有效示例）",
+  "quality": {
+    "status": "pass",
+    "blocker_count": 0,
+    "warning_count": 0
+  },
+  "summary": {
+    "question_count": 4,
+    "quarantined_count": 1,
+    "question_type_counts": {
+      "single_choice": 3,
+      "multiple_choice": 1
+    },
+    "difficulty_counts": {
+      "basic": 3,
+      "advanced": 1
+    },
+    "scope_counts": {
+      "chapter": 3,
+      "comprehensive": 1
+    },
+    "transformations_total": 3,
+    "knowledge_map_entries": 3,
+    "source_blocks_total": 5,
+    "known_question_ids": 4
+  },
+  "blocker_codes": [],
+  "warning_codes": [],
+  "recommendation": "可发布：0 blocker、0 warning"
+}

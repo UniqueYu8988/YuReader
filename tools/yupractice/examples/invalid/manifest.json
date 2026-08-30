@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "bank": {
+    "id": "politics-basic-bank",
+    "title": "政治题库（无效示例）",
+    "domain": "politics",
+    "subject": "马克思主义基本原理",
+    "resource_type": "question_bank",
+    "status": "ready"
+  },
+  "sources": [
+    {
+      "source_id": "youtiku-basic",
+      "filename": "优题库-基础题.md",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "primary"
+    }
+  ],
+  "question_count": 2,
+  "quarantined_count": 0,
+  "question_type_counts": {
+    "single_choice": 1
+  },
+  "knowledge_map": {
+    "path": "knowledge-map.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "questions": {
+    "path": "questions.jsonl",
+    "sha256": "96cbe6c300147a4b771967b6cb19a5e1e6aec8b137a3f5ac0389c5e37608064f"
+  },
+  "source_index": {
+    "path": "source-index.json",
+    "sha256": "3ce3cfb52a65cc309e0fef9bb8883071c1d091bbbf54c5b647d9556c5f3cef71"
+  },
+  "quality": {
+    "status": "pass",
+    "blocker_count": 0,
+    "warning_count": 0
+  },
+  "generated_at": "2026-08-30T11:00:00",
+  "generator": "yupractice/0.2.0"
+}

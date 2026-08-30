@@ -1,0 +1,38 @@
+{
+  "package_dir": "C:\\Users\\Yu\\Documents\\YuReader\\tools\\yupractice\\examples\\minimal-valid",
+  "schema_version": 1,
+  "validated_at": "2026-08-30T10:52:34",
+  "bank": {
+    "id": "politics-basic-bank",
+    "title": "政治基础题库（最小有效示例）",
+    "domain": "politics",
+    "subject": "马克思主义基本原理"
+  },
+  "quality": {
+    "status": "pass",
+    "blocker_count": 0,
+    "warning_count": 0
+  },
+  "summary": {
+    "question_count": 4,
+    "quarantined_count": 1,
+    "question_type_counts": {
+      "single_choice": 3,
+      "multiple_choice": 1
+    },
+    "difficulty_counts": {
+      "basic": 3,
+      "advanced": 1
+    },
+    "scope_counts": {
+      "chapter": 3,
+      "comprehensive": 1
+    },
+    "transformations_total": 3,
+    "knowledge_map_entries": 3,
+    "source_blocks_total": 5,
+    "known_question_ids": 4
+  },
+  "blockers": [],
+  "warnings": []
+}

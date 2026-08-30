@@ -1,0 +1,26 @@
+{
+  "map_version": 1,
+  "bank_id": "politics-basic-bank",
+  "entries": [
+    {
+      "knowledge_id": "politics.marxism.chapter-01",
+      "label": "第一章 马克思主义基本原理（示例）",
+      "path": ["政治", "马克思主义基本原理", "第一章"],
+      "kind": "chapter"
+    },
+    {
+      "knowledge_id": "politics.marxism.chapter-01.section-02",
+      "label": "第一章 第二节（示例）",
+      "path": ["政治", "马克思主义基本原理", "第一章", "第二节"],
+      "kind": "section",
+      "source_ref": {"source_id": "youtiku-basic", "block_id": "b-0012"}
+    },
+    {
+      "knowledge_id": "politics.marxism.chapter-01.section-03",
+      "label": "第一章 第三节（示例）",
+      "path": ["政治", "马克思主义基本原理", "第一章", "第三节"],
+      "kind": "section",
+      "source_ref": {"source_id": "youtiku-basic", "block_id": "b-0031"}
+    }
+  ]
+}

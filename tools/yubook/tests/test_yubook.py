@@ -10,6 +10,8 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
 
 import yubook  # noqa: E402
 
@@ -111,6 +113,22 @@ class YuBookTests(unittest.TestCase):
             self.assertEqual(1, len(manifest["references"]))
             self.assertEqual([1, 2, 3], [item["order"] for item in manifest["sections"]])
             self.assertEqual(3, manifest["provenance"]["cleaned_candidate"]["transformation_count"])
+            self.assertEqual(
+                yubook.DERIVED_TEXT_HASH_ALGORITHM,
+                manifest["provenance"]["cleaned_candidate"]["hash_algorithm"],
+            )
+            self.assertEqual(
+                manifest["provenance"]["original"]["sha256"],
+                manifest["provenance"]["cleaned_candidate"]["source_sha256"],
+            )
+            self.assertNotEqual(
+                manifest["provenance"]["original"]["sha256"],
+                manifest["provenance"]["cleaned_candidate"]["sha256"],
+            )
+            self.assertEqual(
+                4,
+                manifest["provenance"]["cleaned_candidate"]["artifact_count"],
+            )
             self.assertTrue((package / "reports" / "transformations.json").is_file())
             self.assertNotIn("本资料仅用于", "".join((package / item["artifact"]).read_text(encoding="utf-8") for item in manifest["sections"]))
             self.assertIn("增加𬌗垫", "".join((package / item["artifact"]).read_text(encoding="utf-8") for item in manifest["sections"]))
@@ -235,6 +253,232 @@ class YuBookTests(unittest.TestCase):
             reference.write_text(reference.read_text(encoding="utf-8") + "tampered", encoding="utf-8")
             audit = yubook.validate_package(package)
             self.assertIn("section_hash", {item["code"] for item in audit["blockers"]})
+
+    def test_derived_text_hash_is_part_of_package_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            manifest_path = package / "manifest.json"
+            manifest = yubook.load_json(manifest_path)
+            manifest["provenance"]["cleaned_candidate"]["sha256"] = "0" * 64
+            yubook.write_json(manifest_path, manifest)
+            audit = yubook.validate_package(package)
+            self.assertIn("derived_hash", {item["code"] for item in audit["blockers"]})
+
+    # ---- 政治讲义资源元数据（YuBook 0.4.0） ----
+
+    def make_politics_project(self, root: Path) -> Path:
+        """在样本工程上叠加 politics 讲义元数据与 knowledge-map.json。"""
+        project = self.make_project(root)
+        book = yubook.load_json(project / "book.json")
+        book["domain"] = "politics"
+        book["subject"] = "马克思主义基本原理"
+        book["resource_type"] = "lecture"
+        yubook.write_json(project / "book.json", book)
+        knowledge_map = {
+            "schema_version": 1,
+            "book_id": "sample-book",
+            "namespace": "politics.marxism",
+            "entries": [
+                {
+                    "knowledge_id": "politics.marxism.ch01",
+                    "label": "第一章 绪论",
+                    "kind": "chapter",
+                    "path": ["政治", "马克思主义基本原理", "第一章 绪论"],
+                    "chapter_id": "ch01",
+                    "page_ids": ["ch01-s01", "ch01-s02"],
+                },
+                {
+                    "knowledge_id": "politics.marxism.ch01.s01",
+                    "label": "第一节 学科概况",
+                    "kind": "section",
+                    "path": ["政治", "马克思主义基本原理", "第一章 绪论", "第一节 学科概况"],
+                    "chapter_id": "ch01",
+                    "section_id": "ch01-s01",
+                    "page_ids": ["ch01-s01"],
+                },
+                {
+                    "knowledge_id": "politics.marxism.ch01.s02",
+                    "label": "第二节 学习方法",
+                    "kind": "section",
+                    "path": ["政治", "马克思主义基本原理", "第一章 绪论", "第二节 学习方法"],
+                    "chapter_id": "ch01",
+                    "section_id": "ch01-s02",
+                    "page_ids": ["ch01-s02"],
+                },
+                {
+                    "knowledge_id": "politics.marxism.ch02",
+                    "label": "第二章 基础知识",
+                    "kind": "chapter",
+                    "path": ["政治", "马克思主义基本原理", "第二章 基础知识"],
+                    "chapter_id": "ch02",
+                    "page_ids": ["ch02-s01"],
+                },
+                {
+                    "knowledge_id": "politics.marxism.intro",
+                    "label": "导论（学科前置内容）",
+                    "kind": "excluded",
+                    "path": ["政治", "马克思主义基本原理", "导论（学科前置，仅归档）"],
+                    "chapter_id": None,
+                    "section_id": None,
+                    "page_ids": [],
+                    "source_range": [1, 10],
+                },
+            ],
+        }
+        yubook.write_json(project / "knowledge-map.json", knowledge_map)
+        return project
+
+    def test_politics_lecture_metadata_reaches_final_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            audit = yubook.validate_package(package)
+            self.assertEqual("pass", audit["status"])
+            book = audit["manifest"]["book"]
+            self.assertEqual("politics", book["domain"])
+            self.assertEqual("马克思主义基本原理", book["subject"])
+            self.assertEqual("lecture", book["resource_type"])
+
+    def test_old_book_without_metadata_still_builds(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertFalse(report["blockers"])
+            result = yubook.command_build(Namespace(project=str(project)))
+            audit = yubook.validate_package(Path(result["package"]))
+            self.assertEqual("pass", audit["status"])
+            self.assertNotIn("domain", audit["manifest"]["book"])
+            self.assertNotIn("knowledge_map", audit["manifest"])
+
+    def test_invalid_domain_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            book = yubook.load_json(project / "book.json")
+            book["domain"] = "history"
+            yubook.write_json(project / "book.json", book)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertIn("book_domain_invalid", {item["code"] for item in report["blockers"]})
+
+    def test_invalid_resource_type_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            book = yubook.load_json(project / "book.json")
+            book["resource_type"] = "magazine"
+            yubook.write_json(project / "book.json", book)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertIn("book_resource_type_invalid", {item["code"] for item in report["blockers"]})
+
+    def test_knowledge_map_copied_into_dist_with_declaration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            self.assertTrue((package / "knowledge-map.json").is_file())
+            manifest = yubook.load_json(package / "manifest.json")
+            declared = manifest["knowledge_map"]
+            self.assertEqual("knowledge-map.json", declared["path"])
+            self.assertEqual(5, declared["entry_count"])
+            self.assertEqual(yubook.sha256_file(package / "knowledge-map.json"), declared["sha256"])
+
+    def test_knowledge_map_hash_tampering_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            km_path = package / "knowledge-map.json"
+            km_path.write_text(km_path.read_text(encoding="utf-8") + "\ntampered", encoding="utf-8")
+            audit = yubook.validate_package(package)
+            self.assertIn("knowledge_map_hash", {item["code"] for item in audit["blockers"]})
+
+    def test_knowledge_map_duplicate_id_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            knowledge_map = yubook.load_json(project / "knowledge-map.json")
+            knowledge_map["entries"].append(dict(knowledge_map["entries"][0]))
+            yubook.write_json(project / "knowledge-map.json", knowledge_map)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertIn("knowledge_map_duplicate", {item["code"] for item in report["blockers"]})
+
+    def test_knowledge_map_book_id_mismatch_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            knowledge_map = yubook.load_json(project / "knowledge-map.json")
+            knowledge_map["book_id"] = "another-book"
+            yubook.write_json(project / "knowledge-map.json", knowledge_map)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertIn("knowledge_map_book_id", {item["code"] for item in report["blockers"]})
+
+    def test_knowledge_map_unknown_page_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            knowledge_map = yubook.load_json(project / "knowledge-map.json")
+            knowledge_map["entries"][0]["page_ids"].append("missing-page")
+            yubook.write_json(project / "knowledge-map.json", knowledge_map)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertIn("knowledge_map_page_ids", {item["code"] for item in report["blockers"]})
+
+    def test_knowledge_map_change_creates_new_immutable_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            first = Path(yubook.command_build(Namespace(project=str(project)))["package"])
+            knowledge_map = yubook.load_json(project / "knowledge-map.json")
+            knowledge_map["title"] = "更新后的知识映射"
+            yubook.write_json(project / "knowledge-map.json", knowledge_map)
+            second = Path(yubook.command_build(Namespace(project=str(project)))["package"])
+            self.assertNotEqual(first, second)
+            self.assertEqual("更新后的知识映射", yubook.load_json(second / "knowledge-map.json")["title"])
+
+    def test_book_metadata_change_creates_new_immutable_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            first = Path(yubook.command_build(Namespace(project=str(project)))["package"])
+            book = yubook.load_json(project / "book.json")
+            book["subject"] = "政治理论"
+            yubook.write_json(project / "book.json", book)
+            second = Path(yubook.command_build(Namespace(project=str(project)))["package"])
+            self.assertNotEqual(first, second)
+            self.assertEqual("政治理论", yubook.load_json(second / "manifest.json")["book"]["subject"])
+
+    def test_asset_hash_tampering_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            image_dir = project / "pages" / "images"
+            image_dir.mkdir(parents=True)
+            (image_dir / "figure.png").write_bytes(b"original-image")
+            package = Path(yubook.command_build(Namespace(project=str(project)))["package"])
+            (package / "images" / "figure.png").write_bytes(b"tampered")
+            audit = yubook.validate_package(package)
+            self.assertIn("asset_hash", {item["code"] for item in audit["blockers"]})
+
+    def test_project_without_knowledge_map_still_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertFalse(report["blockers"])
+            result = yubook.command_build(Namespace(project=str(project)))
+            audit = yubook.validate_package(Path(result["package"]))
+            self.assertEqual("pass", audit["status"])
+
+    def test_temporary_import_manifest_book_returns_politics_lecture(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_politics_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            content_root = Path(temp) / "content"
+            imported = yubook.command_import(Namespace(package=str(package), content_root=str(content_root)))
+            import app  # noqa: E402  （只读复用 YuReader 现有 manifest_book）
+            loaded = app.manifest_book(Path(imported["target"]) / "manifest.json")
+            self.assertIsNotNone(loaded, "临时导入包必须被 YuReader manifest_book 读取")
+            book, _sections = loaded
+            self.assertEqual("politics", book["domain"])
+            self.assertEqual("lecture", book["resource_type"])
+            self.assertEqual("马克思主义基本原理", book["subject"])
+            self.assertEqual("政治", book["domain_label"])
+            self.assertEqual(3, len(book["sections"]))
+            self.assertTrue((Path(imported["target"]) / "knowledge-map.json").is_file())
 
 
 if __name__ == "__main__":

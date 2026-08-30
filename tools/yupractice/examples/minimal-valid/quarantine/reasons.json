@@ -1,0 +1,12 @@
+{
+  "bank_id": "politics-basic-bank",
+  "reasons": [
+    {
+      "question_id": "youtiku-basic-marx-c01-quarantine-001",
+      "reason": "题干与选项粘连、选项A文字OCR残缺，置信度不足以进入正式题；保留原文待复核。",
+      "confidence": "uncertain",
+      "source_refs": [{"source_id": "youtiku-basic", "block_id": "b-0040"}],
+      "decided_at": "2026-08-30T09:30:00"
+    }
+  ]
+}

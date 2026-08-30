@@ -1,0 +1,50 @@
+{
+  "bank_id": "politics-basic-bank",
+  "bank_title": "政治题库（无效示例）",
+  "quality": {
+    "status": "blocked",
+    "blocker_count": 15,
+    "warning_count": 4
+  },
+  "summary": {
+    "question_count": 3,
+    "quarantined_count": 1,
+    "question_type_counts": {
+      "single_choice": 3
+    },
+    "difficulty_counts": {
+      "basic": 3
+    },
+    "scope_counts": {
+      "chapter": 3
+    },
+    "transformations_total": 1,
+    "knowledge_map_entries": 2,
+    "source_blocks_total": 1,
+    "known_question_ids": 2
+  },
+  "blocker_codes": [
+    "E009",
+    "E014",
+    "E028",
+    "E020",
+    "E022",
+    "E024",
+    "E025",
+    "E026",
+    "E027",
+    "E007",
+    "E008",
+    "E029",
+    "E032",
+    "E030",
+    "E033"
+  ],
+  "warning_codes": [
+    "W016",
+    "W001",
+    "W002",
+    "W012"
+  ],
+  "recommendation": "不发布：存在 blocker"
+}

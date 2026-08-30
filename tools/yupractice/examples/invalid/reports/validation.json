@@ -1,0 +1,125 @@
+{
+  "package_dir": "C:\\Users\\Yu\\Documents\\YuReader\\tools\\yupractice\\examples\\invalid",
+  "schema_version": 1,
+  "validated_at": "2026-08-30T10:52:16",
+  "bank": {
+    "id": "politics-basic-bank",
+    "title": "政治题库（无效示例）",
+    "domain": "politics",
+    "subject": "马克思主义基本原理"
+  },
+  "quality": {
+    "status": "blocked",
+    "blocker_count": 15,
+    "warning_count": 4
+  },
+  "summary": {
+    "question_count": 3,
+    "quarantined_count": 1,
+    "question_type_counts": {
+      "single_choice": 3
+    },
+    "difficulty_counts": {
+      "basic": 3
+    },
+    "scope_counts": {
+      "chapter": 3
+    },
+    "transformations_total": 1,
+    "knowledge_map_entries": 2,
+    "source_blocks_total": 1,
+    "known_question_ids": 2
+  },
+  "blockers": [
+    {
+      "code": "E009",
+      "message": "knowledge-map.json SHA-256 与 manifest.knowledge_map.sha256 不一致"
+    },
+    {
+      "code": "E014",
+      "message": "重复的 question_id: good-q-001",
+      "where": "questions.jsonl:行2"
+    },
+    {
+      "code": "E028",
+      "message": "重复的“单元＋题型＋局部题号”键: unit_key='u1' type='single_choice' number=1",
+      "where": "questions.jsonl:行2"
+    },
+    {
+      "code": "E020",
+      "message": "单选题必须只有一个正确答案，实际 2 个",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E022",
+      "message": "knowledge_id 不存在于 knowledge-map: politics.marxism.chapter-99",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E024",
+      "message": "block_id 无法在 source-index 解析: youtiku-basic/b-9999",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E025",
+      "message": "source_analysis_md 缺失或为空（原书解析不可缺）",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E026",
+      "message": "正式题目 status 必须为 ready，实际 'draft'",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E027",
+      "message": "transformations[0] 缺少 type",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "E007",
+      "message": "manifest.question_count=2 与 questions.jsonl 实际 3 不一致"
+    },
+    {
+      "code": "E008",
+      "message": "manifest.question_type_counts={'single_choice': 1} 与实际 {'single_choice': 3} 不一致"
+    },
+    {
+      "code": "E029",
+      "message": "隔离题目出现在正式 questions.jsonl: good-q-001",
+      "where": "quarantine/questions.jsonl:行1"
+    },
+    {
+      "code": "E032",
+      "message": "隔离题目缺少隔离原因记录: good-q-001"
+    },
+    {
+      "code": "E030",
+      "message": "manifest.quarantined_count=0 与 quarantine/questions.jsonl 实际 1 不一致"
+    },
+    {
+      "code": "E033",
+      "message": "manifest.quality 声明 (blockers=0, warnings=0) 与实测 (14, 4) 不一致"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "W016",
+      "message": "transformations[0] 使用未登记类型 None",
+      "where": "questions.jsonl:行3"
+    },
+    {
+      "code": "W001",
+      "message": "知识映射存在孤立条目（没有被任何正式题目引用）: politics.marxism.chapter-02"
+    },
+    {
+      "code": "W002",
+      "message": "题目未关联任何知识位置",
+      "where": "quarantine/questions.jsonl:行1"
+    },
+    {
+      "code": "W012",
+      "message": "隔离原因对应不存在的隔离题 'ghost-id-not-in-quarantine'",
+      "where": "quarantine/reasons.json:reasons[0]"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "bank_id": "politics-basic-bank",
+  "reasons": [
+    {
+      "question_id": "ghost-id-not-in-quarantine",
+      "reason": "这条原因指向的隔离题并不存在。",
+      "confidence": "uncertain",
+      "decided_at": "2026-08-30T11:10:00"
+    }
+  ]
+}

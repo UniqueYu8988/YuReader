@@ -4,6 +4,26 @@
 
 YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已经由主流程亲自完成《口腔种植学》（书内版权证据为第1版，历史文件名与稳定 ID 沿用“5e”）、《口腔解剖生理学》第8版、《口腔组织病理学》第8版、《口腔修复学》第8版、《牙体牙髓病学》第5版、《牙周病学》第5版、《口腔颌面外科学》第8版和《儿童口腔医学》第5版的原始 Markdown 直入闭环；继续沿用 YuQuiz 视觉基线，没有修改 YuQuiz。
 
+## 政治资料候选与 YuPractice 基础收尾（2026-08-30）
+
+- 新增 `tools/yupractice/` 题库包契约、验证器、示例与测试；验证题库/题目状态、题型、选项答案、稳定 ID、知识位置、来源块、哈希、隔离区、变换记录和质量声明。畸形 JSON 字段只产生 blocker，不再导致验证器崩溃；正式题中的推广语、二维码残留及无资产契约图片会被阻断。
+- YuBook 升级到 `0.4.1`：不可变包身份现同时取决于来源、目录、`book.json`、`knowledge-map.json` 和图片资产；包级验证逐文件核对 97 张图片 SHA-256，并验证知识映射的 book/source/page 引用，避免元数据或资产变化时错误复用旧候选。
+- 《核心考案·马克思主义基本原理》最终候选为 `tools/yubook/workspace/politics-core-marxism/dist/politics-core-marxism-52b1f892/`：8章、20节知识位置、54阅读页、8参考页、97图片；项目及包级验证均 pass，0 blocker、0 warning。旧 `d5a4d33f`、`c061b803` 包已归档到 `_process/superseded/`，未导入正式书架。
+- 基础题库完整候选为 `tools/yubook/workspace/politics-basic-bank/dist/politics-basic-bank/`：629道正式题（377单选、252多选）+16道自动隔离题；0 blocker、14 warning，均为隔离题缺少可唯一恢复的原书解析，不污染正式题集。
+- 拔高题库完整候选为 `tools/yubook/workspace/politics-advanced-bank/dist/politics-advanced-bank/`：21套测试、630道正式题（286单选、344多选）；0 blocker、0 warning。16条史纲时代映射、安全推广尾部清理和最终 ready 状态均已固化进唯一构建入口，连续重建的数据哈希一致。
+- 两套题库正式题及隔离题的二维码、推广语、装饰图片引用、误粘下一单元标题残留均为0；原始 MinerU/PDF 与 OneDrive 文件未修改。`py_compile`、`node --check`、YuBook 24/24、YuPractice 53/53、应用 71/71 测试全部通过。
+- 当前仍是“可导入候选”，尚未接入正式题库存储、练习 UI、个人解析或 Obsidian 题目笔记。下一阶段应以原子导入与可逆替换为起点，再实现讲义知识位置—题库匹配—作答—个人解析回填闭环。
+
+## YuBook 0.3.1 派生完整性修复与三书替换（2026-08-29）
+
+- 修复 `cleaned_candidate.sha256` 错误复用原始文件哈希的问题：manifest 现在分别记录原始归档 SHA-256 和基于全部 reading/reference 页面、页面哈希及来源范围计算的 `canonical-json-page-set-v1` 派生正文聚合哈希；包校验会阻断缺失契约、源哈希错配、聚合哈希错配和页面数量错配。
+- 候选包名称加入构建契约版本，使同一份 outline 在工具契约升级后产生新的不可变包，不覆盖历史产物。新增派生哈希篡改回归后 YuBook 测试10/10通过。
+- 《儿童口腔医学》第5版最终包为 `tools/yubook/workspace/pediatric-dentistry-5e/dist/pediatric-dentistry-5e-7b5ab4bc/`：15章、92个阅读页、15个参考页，补齐9处高置信度“𬌗”词组；0 blocker、0 warning。同步重写本轮最终审计，废除旧报告中“0项正文变换”的过时结论。
+- 《口腔颌面医学影像诊断学》第7版最终包为 `tools/yubook/workspace/oral-maxillofacial-imaging-7e/dist/oral-maxillofacial-imaging-7e-8d1f17c7/`：13章、73个阅读页、10个参考页；唯一 warning 为内容完整的274字自然短节。
+- 《口腔黏膜病学》第5版最终包为 `tools/yubook/workspace/oral-mucosa-diseases-5e/dist/oral-mucosa-diseases-5e-ac1626a5/`：12章、55个阅读页、30个参考页；0 blocker、0 warning。
+- 三包均已原子导入正式书架，稳定页面 ID、标题、章节顺序和来源映射保持不变；正式目录分别与候选包127/101/102个文件逐文件 SHA-256 一致。OneDrive 原始文件未修改。
+- 验证：`py_compile`、`node --check`、YuBook 10/10测试及应用18/18测试通过；实时服务 `/api/health` 返回0.10.0，`/api/bootstrap` 返回11本书与儿牙92节、影像73节、黏膜55节。隔离浏览器实例实际打开儿牙第十一章第二、三节，正文“𬌗”术语、上下节切换和笔记入口正常，控制台0 error/0 warning；390×844下页面宽度380、无横向溢出，截图为 `output/playwright/yubook-pediatric-0.3.1-desktop.png` 与 `output/playwright/yubook-pediatric-0.3.1-mobile.png`。
+
 ## 个人学习平台 · 阶段一（2026-08-29）
 
 产品定位调整为本地个人学习平台：阅读资料 → 侧边栏 AI 理解 → 章节笔记 → Obsidian 备份 → 对应练习（独立模块）→ 昨日复习 → 学习日志。YuQuiz 保持只读参考，不修改/迁移/依赖其 `study.db` 与运行数据；未合并题库。
