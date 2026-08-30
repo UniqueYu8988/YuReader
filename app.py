@@ -24,6 +24,7 @@ REVIEWS_DIR = DATA_DIR / "reviews"
 REVIEW_WORKFLOW_DIR = DATA_DIR / "review-workflow"
 LOGS_DIR = DATA_DIR / "logs"
 WEEKLY_DIR = DATA_DIR / "weekly-reports"
+ENGLISH_NOTEBOOK_DIR = DATA_DIR / "english-weekly"
 ACTIVITY_PATH = DATA_DIR / "activity.json"
 STATIC_DIR = ROOT / "static"
 HOST = "127.0.0.1"
@@ -1507,6 +1508,85 @@ def weekly_payload(week: str = "") -> dict:
     }
 
 
+def english_notebook_target(week: str) -> tuple[Path, str, str]:
+    """Resolve one weekly English notebook without touching book notes or logs."""
+    week_bounds(week)  # validate before using the value in a filename
+    local_target = ENGLISH_NOTEBOOK_DIR / f"{week}.md"
+    relative = Path("YuReader") / "英语周记" / f"{week}.md"
+    vault = obsidian_vault()
+    if not vault:
+        return local_target, "local", ""
+    target = (vault / relative).resolve()
+    if vault != target and vault not in target.parents:
+        raise ValueError("English notebook path escapes Obsidian vault")
+    uri = f"obsidian://open?vault={quote(vault.name)}&file={quote(relative.as_posix())}"
+    return target, "obsidian", uri
+
+
+def english_notebook_files() -> dict[str, Path]:
+    """List weekly English notebooks, preferring the configured Obsidian copy."""
+    files: dict[str, Path] = {}
+    if ENGLISH_NOTEBOOK_DIR.is_dir():
+        files.update({path.stem: path for path in ENGLISH_NOTEBOOK_DIR.glob("*.md") if re.fullmatch(r"\d{4}-W\d{2}", path.stem)})
+    vault = obsidian_vault()
+    remote = vault / "YuReader" / "英语周记" if vault else None
+    if remote and remote.is_dir():
+        files.update({path.stem: path for path in remote.glob("*.md") if re.fullmatch(r"\d{4}-W\d{2}", path.stem)})
+    return files
+
+
+def english_notebook_payload(week: str = "") -> dict:
+    """Return the selected weekly notebook and its lightweight archive index."""
+    if not week:
+        year, number, _ = date.today().isocalendar()
+        week = f"{year}-W{number:02d}"
+    start, end = week_bounds(week)
+    files = english_notebook_files()
+    source = files.get(week)
+    content = ""
+    if source:
+        try:
+            content = source.read_text(encoding="utf-8-sig")
+        except OSError:
+            content = ""
+    target, storage, uri = english_notebook_target(week)
+    archives: list[dict] = []
+    for archived_week, path in sorted(files.items(), reverse=True):
+        try:
+            archived_content = path.read_text(encoding="utf-8-sig").strip()
+            updated_at = datetime.fromtimestamp(path.stat().st_mtime).astimezone().isoformat(timespec="seconds")
+        except OSError:
+            continue
+        archived_start, archived_end = week_bounds(archived_week)
+        archives.append(
+            {
+                "week": archived_week,
+                "start": archived_start.isoformat(),
+                "end": archived_end.isoformat(),
+                "character_count": len(archived_content),
+                "updated_at": updated_at,
+                "current": archived_week == week,
+            }
+        )
+    today = date.today()
+    current_year, current_number, _ = today.isocalendar()
+    current_week = f"{current_year}-W{current_number:02d}"
+    return {
+        "week": week,
+        "current_week": current_week,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "today": today.isoformat(),
+        "today_weekday": today.weekday(),
+        "content": content,
+        "character_count": len(content.strip()),
+        "storage": storage,
+        "path": str(target),
+        "obsidian_uri": uri,
+        "archives": archives,
+    }
+
+
 class ReaderHandler(BaseHTTPRequestHandler):
     server_version = f"YuReader/{VERSION}"
 
@@ -1555,6 +1635,13 @@ class ReaderHandler(BaseHTTPRequestHandler):
             try:
                 requested = parse_qs(parsed.query).get("week", [""])[0]
                 self.send_json(weekly_payload(requested))
+            except (ValueError, OSError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/english-notebook":
+            try:
+                requested = parse_qs(parsed.query).get("week", [""])[0]
+                self.send_json(english_notebook_payload(requested))
             except (ValueError, OSError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
@@ -1682,7 +1769,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/notes", "/api/review-notes", "/api/review-subject", "/api/review-summary", "/api/weekly-summary", "/api/activity", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis"}:
+        if parsed.path not in {"/api/notes", "/api/review-notes", "/api/review-subject", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/activity", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis"}:
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
             return
         try:
@@ -1761,6 +1848,17 @@ class ReaderHandler(BaseHTTPRequestHandler):
                         lines.extend(["", f"### {item['date']}", "", item["summary"]])
                 atomic_write(target, "\n".join(lines))
                 self.send_json({"ok": True, "week": week, "saved": bool(content), "storage": storage, "path": str(target), "obsidian_uri": uri})
+                return
+            if parsed.path == "/api/english-notebook":
+                week = str(body.get("week") or "")
+                if not week:
+                    current_year, current_number, _ = date.today().isocalendar()
+                    week = f"{current_year}-W{current_number:02d}"
+                content = str(body.get("content") or "").replace("\r\n", "\n").strip()
+                target, storage, uri = english_notebook_target(week)
+                atomic_write(target, content)
+                payload = english_notebook_payload(week)
+                self.send_json({"ok": True, "saved": bool(content), **payload})
                 return
             if parsed.path == "/api/reading-time":
                 section_id = str(body.get("section_id") or "").strip()

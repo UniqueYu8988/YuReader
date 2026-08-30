@@ -18,7 +18,7 @@ const BOOK_COVER_LABELS = {
   "politics-modern-history": "史纲",
   "politics-xi": "习中特",
 };
-const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, resourceCache: new Map(), resourceLoads: new Map(), readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
+const state = { books: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, resourceCache: new Map(), resourceLoads: new Map(), englishNotebook: null, englishNotebookSaveTimer: null, readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSubjectId: "", reviewSubjectSaveTimer: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceAnalysisSaveTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
 const READING_FLUSH_SECONDS = 15;
@@ -241,7 +241,7 @@ function setLibraryMode() {
   state.openRequest += 1; stopReadingTimer();
   state.resourceBookId = null;
   $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
-  setActiveView("library"); closeNotePopover(); renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
+  setActiveView("library"); closeNotePopover(); if (state.libraryDomain === "english") openEnglishNotebook(); else renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function setReaderMode() {
@@ -491,8 +491,109 @@ function renderDomainTabs() {
     const domain = button.dataset.domain;
     button.classList.toggle("active", domain === state.libraryDomain);
     const badge = button.querySelector("em");
-    if (badge) badge.textContent = String(counts[domain] || 0);
+    if (badge) badge.textContent = domain === "english" ? "周记" : String(counts[domain] || 0);
   });
+}
+
+function formatEnglishDate(value) {
+  const parsed = new Date(`${String(value || "")}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? String(value || "") : parsed.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+}
+
+function englishNotebookVisibility(visible) {
+  const search = $("librarySearch")?.closest(".knowledge-search");
+  $("englishNotebook")?.classList.toggle("hidden", !visible);
+  $("bookTree")?.classList.toggle("hidden", visible);
+  if (search) search.classList.toggle("hidden", visible);
+}
+
+function renderEnglishWeekStrip(payload) {
+  const strip = $("englishWeekStrip");
+  if (!strip) return;
+  const labels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+  const start = new Date(`${String(payload?.start || "")}T12:00:00`);
+  strip.innerHTML = labels.map((label, index) => {
+    const current = new Date(start); current.setDate(start.getDate() + index);
+    const iso = Number.isNaN(current.getTime()) ? "" : current.toISOString().slice(0, 10);
+    const today = payload?.week === payload?.current_week && iso === payload?.today;
+    return `<span class="english-week-day${today ? " today" : ""}"><strong>${label}</strong><small>${formatEnglishDate(iso)}</small></span>`;
+  }).join("");
+}
+
+function renderEnglishArchiveList(payload) {
+  const list = $("englishArchiveList"); const archives = payload?.archives || [];
+  if (!list) return;
+  $("englishArchiveCount").textContent = `${archives.length} 份`;
+  list.innerHTML = archives.length ? archives.map((entry) => `<button class="english-archive-row${entry.week === payload.week ? " current" : ""}" type="button" data-english-week="${escapeHtml(entry.week)}"><span><strong>${escapeHtml(entry.week)} · ${formatEnglishDate(entry.start)}—${formatEnglishDate(entry.end)}</strong><small>${entry.week === payload.current_week ? "本周" : "已归档"}</small></span><span>${formatInteger(entry.character_count)} 字</span><i data-lucide="arrow-right"></i></button>`).join("") : `<div class="english-archive-empty">还没有历史周记。输入本周内容后，这里会留下每周一份的归档。</div>`;
+  list.querySelectorAll("[data-english-week]").forEach((button) => button.addEventListener("click", () => openEnglishNotebook(button.dataset.englishWeek)));
+  refreshIcons();
+}
+
+function renderEnglishNotebook() {
+  englishNotebookVisibility(true);
+  const payload = state.englishNotebook;
+  const editor = $("englishNotebookEditor"); const insertButton = $("englishInsertDay");
+  if (!payload) {
+    $("englishNotebookTitle").textContent = "英语周记";
+    $("englishNotebookMeta").textContent = "正在读取本周内容…";
+    $("englishNotebookSaved").textContent = "读取中…";
+    editor.value = ""; editor.disabled = true; insertButton.disabled = true;
+    $("englishWeekStrip").innerHTML = ""; $("englishArchiveList").innerHTML = ""; $("englishArchiveCount").textContent = "";
+    return;
+  }
+  $("englishNotebookTitle").textContent = `${payload.week} · 英语周记`;
+  $("englishNotebookMeta").textContent = `${formatEnglishDate(payload.start)} — ${formatEnglishDate(payload.end)} · 周一至周日共一份归档`;
+  $("englishNotebookObsidian").href = payload.obsidian_uri || "obsidian://open";
+  editor.value = payload.content || ""; editor.disabled = Boolean(payload.error);
+  insertButton.disabled = Boolean(payload.error) || payload.week !== payload.current_week;
+  $("englishNotebookSaved").textContent = payload.error ? "暂时无法读取，请确认本地服务" : payload.character_count ? (payload.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存";
+  renderEnglishWeekStrip(payload); renderEnglishArchiveList(payload); refreshIcons();
+}
+
+async function openEnglishNotebook(week = "") {
+  const requestId = ++state.openRequest;
+  stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden");
+  state.libraryDomain = "english"; state.resourceBookId = null; state.resource = null; state.englishNotebook = null;
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden");
+  setActiveView("library"); renderEnglishNotebook(); window.scrollTo({ top: 0, behavior: "auto" });
+  try {
+    const suffix = week ? `?week=${encodeURIComponent(week)}` : "";
+    const response = await fetch(`/api/english-notebook${suffix}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("english notebook unavailable");
+    const payload = await response.json();
+    if (requestId !== state.openRequest) return;
+    state.englishNotebook = payload; renderEnglishNotebook();
+  } catch {
+    if (requestId !== state.openRequest) return;
+    const currentYear = new Date().getFullYear();
+    state.englishNotebook = { week: week || `${currentYear}-W01`, current_week: "", start: "", end: "", content: "", archives: [], error: true };
+    renderEnglishNotebook();
+  }
+}
+
+function scheduleEnglishNotebookSave() {
+  const payload = state.englishNotebook; if (!payload || payload.error) return;
+  const content = $("englishNotebookEditor").value; $("englishNotebookSaved").textContent = "保存中…"; window.clearTimeout(state.englishNotebookSaveTimer);
+  state.englishNotebookSaveTimer = window.setTimeout(async () => {
+    try {
+      const response = await fetch("/api/english-notebook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: payload.week, content }) });
+      if (!response.ok) throw new Error("save failed");
+      const result = await response.json();
+      if (state.englishNotebook?.week !== payload.week) return;
+      state.englishNotebook = result; $("englishNotebookObsidian").href = result.obsidian_uri || "obsidian://open"; $("englishNotebookSaved").textContent = content.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存"; renderEnglishArchiveList(result);
+    } catch { if (state.englishNotebook?.week === payload.week) $("englishNotebookSaved").textContent = "保存失败，请稍后重试"; }
+  }, 420);
+}
+
+function insertEnglishDayHeading() {
+  const payload = state.englishNotebook; const editor = $("englishNotebookEditor");
+  if (!payload || payload.error || payload.week !== payload.current_week) return;
+  const weekday = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][Number(payload.today_weekday)] || "今天";
+  const marker = `## ${weekday} · ${formatEnglishDate(payload.today)}`;
+  if (editor.value.includes(marker)) { editor.focus(); return; }
+  const heading = `\n\n${marker}\n\n`;
+  const start = editor.selectionStart ?? editor.value.length; const end = editor.selectionEnd ?? start;
+  editor.value = `${editor.value.slice(0, start)}${heading}${editor.value.slice(end)}`; editor.selectionStart = editor.selectionEnd = start + heading.length; editor.focus(); scheduleEnglishNotebookSave();
 }
 
 function sectionEntryHtml(section) {
@@ -511,6 +612,8 @@ function chapterListHtml(book, chapters, { openAll = false } = {}) {
 
 function renderBooks(filter = "") {
   renderDomainTabs();
+  if (state.libraryDomain === "english") { englishNotebookVisibility(true); renderEnglishNotebook(); return; }
+  englishNotebookVisibility(false);
   const query = filter.trim().toLowerCase(); const tree = $("bookTree");
   const matchedBooks = domainBooks().filter((book) => !query || searchableBook(book).includes(query));
   if (!matchedBooks.length) {
@@ -848,7 +951,7 @@ function scheduleNoteSave() {
 function bindNavigation() {
   document.querySelectorAll("[data-dashboard]").forEach((button) => button.addEventListener("click", setHomeMode));
   $("libraryNav").addEventListener("click", setLibraryMode); $("mobileLibrary").addEventListener("click", setLibraryMode);
-  document.querySelectorAll("[data-domain]").forEach((button) => button.addEventListener("click", () => { state.libraryDomain = button.dataset.domain; state.inlineBookId = null; renderBooks($("librarySearch").value); }));
+  document.querySelectorAll("[data-domain]").forEach((button) => button.addEventListener("click", () => { const domain = button.dataset.domain; state.inlineBookId = null; if (domain === "english") openEnglishNotebook(); else { state.libraryDomain = domain; state.englishNotebook = null; renderBooks($("librarySearch").value); } }));
   $("resourceBack").addEventListener("click", returnFromResource);
   $("resourceContinue").addEventListener("click", () => { const sectionId = $("resourceContinue").dataset.sectionId; if (sectionId) { state.readerOriginBookId = state.resourceBookId; state.inlineBookId = null; openSection(sectionId); } });
   $("practiceBack").addEventListener("click", returnFromPractice); $("practiceSubmit").addEventListener("click", submitPracticeAnswer); $("practicePrevious").addEventListener("click", () => { if (state.practiceIndex > 0) { state.practiceIndex -= 1; renderPracticeQuestion(); } }); $("practiceNext").addEventListener("click", () => { if (state.practiceIndex < (state.practice?.question_count || 1) - 1) { state.practiceIndex += 1; renderPracticeQuestion(); } }); $("practicePersonalAnalysis").addEventListener("input", schedulePracticeAnalysisSave);
@@ -864,7 +967,7 @@ function bindNavigation() {
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => button.addEventListener("click", () => navigateSection(-1))); [$("readerNextSection"), $("nextSectionLink")].forEach((button) => button.addEventListener("click", () => navigateSection(1)));
   $("toggleSectionNoteDock").addEventListener("click", (event) => state.noteOpen ? closeNotePopover() : openNotePopover(event.currentTarget)); $("closeSectionNote").addEventListener("click", () => closeNotePopover({ restoreFocus: true })); $("sectionNote").addEventListener("input", scheduleNoteSave);
   $("reviewSubjectBack").addEventListener("click", renderReviewTasks); $("reviewReportBack").addEventListener("click", renderReviewTasks); $("reviewReportEntry").addEventListener("click", openReviewReport); $("reviewSubjectResult").addEventListener("input", scheduleSubjectReviewSave); $("reviewDailySummary").addEventListener("input", scheduleDailySummarySave);
-  $("logsBack").addEventListener("click", renderLogsList); $("weeklyBack").addEventListener("click", renderLogsList); $("openWeeklyReport").addEventListener("click", openWeeklyReport); $("weeklySummary").addEventListener("input", scheduleWeeklySave);
+  $("logsBack").addEventListener("click", renderLogsList); $("weeklyBack").addEventListener("click", renderLogsList); $("openWeeklyReport").addEventListener("click", openWeeklyReport); $("weeklySummary").addEventListener("input", scheduleWeeklySave); $("englishNotebookEditor").addEventListener("input", scheduleEnglishNotebookSave); $("englishInsertDay").addEventListener("click", insertEnglishDayHeading);
   document.querySelectorAll("[data-section-material]").forEach((button) => button.addEventListener("click", () => { state.material = button.dataset.sectionMaterial; renderMaterial(); })); $("librarySearch").addEventListener("input", (event) => renderBooks(event.target.value)); document.addEventListener("click", (event) => { if (!event.target.closest(".reader-toolbar")) closeSectionMenu(); });
   document.addEventListener("keydown", (event) => { if (event.key !== "Escape") return; if (state.noteOpen) { closeNotePopover({ restoreFocus: true }); return; } closeSectionMenu(); });
 }

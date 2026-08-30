@@ -60,6 +60,18 @@
             </header>
             <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>书架还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+            <section class="english-notebook hidden" id="englishNotebook" aria-label="英语周记">
+              <header class="english-notebook-heading">
+                <div><p class="eyebrow">每周归档</p><h3 id="englishNotebookTitle">英语周记</h3><p id="englishNotebookMeta">周一至周日，一周一份 Markdown</p></div>
+                <a class="note-icon-button" id="englishNotebookObsidian" href="obsidian://open" title="在 Obsidian 中打开英语周记" aria-label="在 Obsidian 中打开英语周记"><img src="/assets/obsidian.svg" alt=""></a>
+              </header>
+              <div class="english-week-strip" id="englishWeekStrip" aria-label="本周日期"></div>
+              <section class="english-notebook-paper">
+                <textarea id="englishNotebookEditor" rows="18" placeholder="把本周英语学习、词汇、句子或侧边栏生成的内容粘贴到这里。可以用二级标题分隔每天的记录。"></textarea>
+                <footer><span id="englishNotebookSaved">输入后自动保存</span><button class="english-insert-day" id="englishInsertDay" type="button"><i data-lucide="calendar-plus"></i><span>插入今日分隔</span></button></footer>
+              </section>
+              <section class="english-notebook-archives" aria-label="历史英语周记"><header><div><p class="eyebrow">历史归档</p><h4>每周一封</h4></div><span id="englishArchiveCount">0 份</span></header><div id="englishArchiveList"></div></section>
+            </section>
           </section>
 
           <section class="knowledge-resource" id="resourcePanel" aria-label="资料学习主页">

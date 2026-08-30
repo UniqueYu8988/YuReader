@@ -37,6 +37,7 @@ YuReader 是用户本人使用的本地个人学习平台，以阅读为核心�
 - 章节笔记继续按稳定小节 ID 原地保存在 `data/notes/`，不会为复习复制正文或生成每日内容快照；检测到 Obsidian vault 时，同时镜像为 `YuReader/<领域>/<学科>/<章节>/<小节>.md`。稳定 ID 写入 YAML frontmatter，不再挤占文件名或增加目录层级。
 - Gemini 的分科复习成果粘贴回网页后完成对应待办；全部完成后，可用合并 Markdown 生成一段“昨日总结”，它会置于当天唯一一份学习日志开头。检测到 Obsidian 时保存到 `YuReader/学习日志/YYYY-MM-DD.md`，否则回退到 `data/logs/YYYY-MM-DD.md`。
 - “日志”入口像邮件列表一样回看每日归档；“生成周报”仅收集一周的每日总结，阶段总结独立保存到 Obsidian 的 `YuReader/周报/YYYY-Www.md` 或本地 `data/weekly-reports/`，不会重复搬运所有章节笔记。
+- 书架的“英语”领域是独立的英语周记本，不要求先制作英语教材包；当前周按周一至周日共用一份 Markdown，支持粘贴、自动保存和插入当天分隔，历史周记保存在 Obsidian 的 `YuReader/英语周记/YYYY-Www.md` 或本地 `data/english-weekly/`，与章节笔记和学习日志分开。
 - Markdown 表格与带 `rowspan` / `colspan` 的受限 HTML 表格可在正文中阅读。
 - 导入工作区将原始归档、清洗候选、发布正文、质量报告和未来语义切片分开保存。
 - 没有外部 Agent 产物时，可直接用原始 Markdown 与人工复核的 layout 建立可追溯书籍包。
