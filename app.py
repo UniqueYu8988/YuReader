@@ -637,14 +637,24 @@ def practice_question(bank_id: str, question_id: str) -> dict:
     return {"question": public_question(question, reveal=revealed), "attempt": attempt if revealed else None, "personal_analysis": str(personal.get("content") or "") if isinstance(personal, dict) else ""}
 
 
+def practice_subject_label(bank: dict) -> str:
+    """Prefer the stable learning subject over a source-series title."""
+    questions = load_bank_questions(bank["id"])
+    for question in questions:
+        label = str(question.get("subject_label") or "").strip()
+        if label:
+            return label
+    return str(bank.get("subject") or bank["id"]).strip()
+
+
 def practice_notes_target(bank: dict) -> tuple[Path, str, str]:
     domain = safe_domain(bank.get("domain"))
-    subject = re.sub(r"[\\/:*?\"<>|]+", "-", str(bank.get("subject") or bank["id"]).strip()).strip(" .-") or bank["id"]
+    subject = safe_note_component(practice_subject_label(bank), bank["id"])
     local = DATA_DIR / "practice-notes" / domain / f"{subject}.md"
     vault = obsidian_vault()
     if not vault:
         return local, "local", ""
-    relative = Path("YuReader") / "练习笔记" / DOMAIN_LABELS[domain] / f"{subject}.md"
+    relative = Path("YuReader") / DOMAIN_LABELS[domain] / subject / "练习解析.md"
     target = (vault / relative).resolve()
     if vault != target and vault not in target.parents:
         raise ValueError("practice note path escapes Obsidian vault")
@@ -664,7 +674,7 @@ def write_practice_notes(bank_id: str) -> tuple[Path, str, str]:
             continue
         attempt = attempts.get(question["question_id"], {}) if isinstance(attempts, dict) else {}
         entries.append((question, analysis, attempt if isinstance(attempt, dict) else {}))
-    lines = [f"# {bank['subject']}练习笔记", "", "本文件由 YuReader 根据已保存的个人解析原地重建。"]
+    lines = [f"# {practice_subject_label(bank)}练习解析", "", "本文件由 YuReader 根据已保存的个人解析原地重建。"]
     for question, analysis, attempt in entries:
         lines.extend(["", f"## {question['question_id']}", "", f"> {question.get('stem_md') or ''}", "", f"- 我的答案：{'、'.join(attempt.get('selected_answers') or []) or '未作答'}", f"- 正确答案：{'、'.join(question.get('correct_answers') or [])}", "", "### 我的解析", "", str(analysis["content"]).strip()])
     target, storage, uri = practice_notes_target(bank)
@@ -725,15 +735,14 @@ def section_note_target(book: dict, section: dict) -> tuple[Path, str, str]:
     """Map one stable reader section to a browsable Obsidian note location."""
     domain = safe_domain(book.get("domain"))
     subject = safe_note_component(book.get("subject"), "未分类学科")
-    title = safe_note_component(book.get("title"), book.get("id") or "资料")
     chapter = safe_note_component(section.get("chapter_title"), "未分章")
     section_title = safe_note_component(section.get("title"), section.get("id") or "小节")
-    filename = f"{section_title} · {section['id']}.md"
+    filename = f"{section_title}.md"
     local = note_path(section["id"])
     vault = obsidian_vault()
     if not vault:
         return local, "local", ""
-    relative = Path("YuReader") / "学习笔记" / DOMAIN_LABELS[domain] / subject / title / chapter / filename
+    relative = Path("YuReader") / DOMAIN_LABELS[domain] / subject / chapter / filename
     target = (vault / relative).resolve()
     if vault != target and vault not in target.parents:
         raise ValueError("section note path escapes Obsidian vault")

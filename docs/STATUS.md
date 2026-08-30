@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-08-29
+更新时间：2026-08-30
 
 YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已经由主流程亲自完成《口腔种植学》（书内版权证据为第1版，历史文件名与稳定 ID 沿用“5e”）、《口腔解剖生理学》第8版、《口腔组织病理学》第8版、《口腔修复学》第8版、《牙体牙髓病学》第5版、《牙周病学》第5版、《口腔颌面外科学》第8版和《儿童口腔医学》第5版的原始 Markdown 直入闭环；继续沿用 YuQuiz 视觉基线，没有修改 YuQuiz。
 
@@ -9,17 +9,24 @@ YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已�
 - 讲义 `knowledge-map.json` 的稳定知识位置现在下沉到每个正式阅读页；练习关联只比较稳定 ID 的命名空间、精确小节位置和明确的章节回退，不按中文标题模糊猜题。没有真实匹配时阅读页不显示入口。
 - 新增只读练习接口：可查询资料/当前节可用题组、打开题组会话并逐题读取。作答前接口刻意不发送 `correct_answers` 与 `source_analysis_md`；提交合法选项后才返回答案与原书解析。隔离区文件从未进入读取路径。
 - 阅读页提供克制的“本节练习”入口，资料主页仅在真实拔高综合测试存在时显示综合测试。练习页面一次一题，支持单选/多选、前后切题、已作答状态与解析后个人笔记回填；它是独立视图，不改变正文、章节笔记、复习或日志工作流。
-- 用户作答和个人解析分别原子保存到 `data/practice/attempts.json`、`data/practice/analyses.json`。每次保存个人解析会原地重建一份学科聚合笔记：Obsidian 可用时为 `YuReader/练习笔记/政治/考研政治（思想政治理论）.md`，否则回退到 `data/practice-notes/`；不创建每题一个文件，也不写入题库发布包。
-- 验证：`python -m py_compile app.py`、`node --check static/app.js`、题库运行时测试13/13通过；真实本机 API 确认《核心考案》第一节准确给出2道小节题，题组会话只返回题干/选项，答案在提交后才出现。浏览器自动化 CLI 当前主机未安装，未将其失败冒充为视觉验收；最终仍需在桌面与390×844移动端各手动完成一次本节练习、解析保存和 Obsidian 跳转检查。
+- 用户作答和个人解析分别原子保存到 `data/practice/attempts.json`、`data/practice/analyses.json`。每次保存个人解析会原地重建一份学科聚合笔记：Obsidian 可用时为 `YuReader/政治/马克思主义基本原理/练习解析.md`，否则回退到 `data/practice-notes/`；不创建每题一个文件，也不写入题库发布包。
+- 验证：`python -m py_compile app.py`、`node --check static/app.js`、应用测试86/86通过；真实本机 API 确认第一节准确给出2道小节题，题组会话只返回题干/选项，答案在提交后才出现。Playwright 已在桌面与390×844移动端验证合并后的目录、第二节正文、表格、练习入口和新 Obsidian URI，控制台0 error/0 warning。
 
 ## Obsidian 章节笔记目录（2026-08-30）
 
-- 章节笔记仍以 `data/notes/<stable-section-id>.md` 作为兼容的本地事实源；检测到 vault 时，保存会同步生成可浏览的 `YuReader/学习笔记/<领域>/<学科>/<资料>/<章节>/<小节> · <稳定ID>.md`。
+- 章节笔记仍以 `data/notes/<stable-section-id>.md` 作为兼容的本地事实源；检测到 vault 时，保存会同步生成可浏览的 `YuReader/<领域>/<学科>/<章节>/<小节>.md`。
 - Obsidian 副本含资料/章节面包屑与 `book_id`、`section_id` frontmatter，目录可读而稳定 ID 不丢失；打开已有本地笔记的章节会只补建缺失的副本，不覆盖用户已在 Obsidian 编辑的同名文件。
+
+## 政治讲义目录收拢（2026-08-30）
+
+- 《马克思主义基本原理》按原书自然节重新发布为8章、20个阅读页和8个参考页；34个考点级页面全部合并回所属小节，考点文字与97张图片仍保留在正文内。最长自然节约1.11万字，无需为了旧的8,000字经验值继续拆页。
+- 新候选 `tools/yubook/workspace/politics-core-marxism/dist/politics-core-marxism-0ae9afa3/` 已通过 YuBook 项目/包校验并原子导入；原始归档 SHA-256 仍为 `04e2cf89…a9916f`，0 blocker、0 warning。
+- 第一节既有笔记沿用稳定 ID `96b0dbd70c35`；旧考点页的阅读时长、最近位置和已读集合已合并映射到新小节，日总时长不变。迁移前活动数据保存在 `data/activity.before-politics-section-merge.json`。
+- Obsidian 主路径已收敛为 `YuReader/政治/马克思主义基本原理/第一章…/第一节….md`；练习个人解析与章节目录同属学科根目录，使用单一 `练习解析.md` 聚合文件。
 
 ## 政治资料运行时发布地基（2026-08-30）
 
-- 《核心考案·马克思主义基本原理》从 `politics-core-marxism-52b1f892` 候选通过 YuBook 原子导入 `content/politics-core-marxism/`：8章、54阅读页、8参考页、97张包内图片；既有医学书、稳定小节 ID、笔记和活动数据不改写。
+- 《马克思主义基本原理》当前已由上方 `0ae9afa3` 候选替换为8章、20个自然节、8参考页和97张包内图片；本条原 `52b1f892` / 54阅读页状态仅为历史基线。
 - 新增 `tools/import_question_bank.py` 作为 YuReader 层的题库发布适配器。它先运行 YuPractice validator，再以 staging + 原子替换发布最小运行时文件集到 `question-banks/`；同 ID 替换保留 `.backup-*` 与 `.import-releases/`，候选的 scratch、构建脚本和说明文件不进入运行时包。
 - 已发布 `politics-basic-bank`（629正式题、16隔离题、0 blocker/14个已解释 warning）和 `politics-advanced-bank`（630正式题、0 blocker/0 warning）。隔离题永不进入正式运行时索引。
 - 运行时新增只读题库目录索引及 `/api/question-banks`；`/api/bootstrap` 同时返回书籍和真实题库元数据。讲义图片使用 `/api/book-assets/<book_id>/images/<name>`，仅允许 manifest 声明的资产且拒绝路径穿越。

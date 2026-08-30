@@ -185,8 +185,9 @@ class ObsidianSectionNoteTests(unittest.TestCase):
     def test_vault_note_has_browsable_hierarchy_and_stable_identity(self):
         target, storage, uri = app.section_note_target(self.book, self.section)
         self.assertEqual(storage, "obsidian")
-        self.assertTrue(target.is_relative_to(self.vault / "YuReader" / "学习笔记" / "政治" / "马克思主义基本原理" / "核心考案" / "第一章 辩证唯物论"))
+        self.assertTrue(target.is_relative_to(self.vault / "YuReader" / "政治" / "马克思主义基本原理" / "第一章 辩证唯物论"))
         self.assertNotIn("/", target.name)
+        self.assertNotIn("abcdefabcdef", target.name)
         self.assertIn("section_id: abcdefabcdef", app.section_note_markdown(self.book, self.section, "我的笔记"))
         self.assertIn("obsidian://open", uri)
 

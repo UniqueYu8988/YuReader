@@ -228,7 +228,7 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         copy_tree(ROOT / "tools" / "yupractice" / "examples" / "minimal-valid", self.qb_root / "politics-basic-bank")
         self.original_globals = {
             name: getattr(app, name)
-            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "DATA_DIR", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE")
+            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "DATA_DIR", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE", "obsidian_vault")
         }
         app.CONTENT_DIR = self.content_root
         app.QUESTION_BANK_DIR = self.qb_root
@@ -236,6 +236,7 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         app.BOOK_ASSETS = {}
         app.CATALOG_CACHE = {"checked_at": 0.0, "signature": None, "books": [], "sections": {}}
         app.QUESTION_BANK_CACHE = {"checked_at": 0.0, "signature": None, "banks": []}
+        app.obsidian_vault = lambda: None
 
     def tearDown(self):
         for name, value in self.original_globals.items():
@@ -328,6 +329,17 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         saved = json.loads(analysis.wfile.getvalue().decode("utf-8"))
         self.assertTrue(Path(saved["path"]).is_file())
         self.assertIn("我的判断过程", Path(saved["path"]).read_text(encoding="utf-8"))
+
+    def test_practice_note_joins_the_subject_root_in_obsidian(self):
+        vault = Path(self.temp.name) / "vault"
+        (vault / ".obsidian").mkdir(parents=True)
+        app.obsidian_vault = lambda: vault
+        bank = app.question_bank_by_id("politics-basic-bank")
+        target, storage, uri = app.practice_notes_target(bank)
+        self.assertEqual(storage, "obsidian")
+        self.assertTrue(target.is_relative_to(vault / "YuReader" / "政治" / "马克思主义基本原理"))
+        self.assertEqual(target.name, "练习解析.md")
+        self.assertIn("obsidian://open", uri)
 
 
 class ImageAssetAccessTests(unittest.TestCase):
