@@ -714,6 +714,61 @@ def note_path(section_id: str) -> Path:
     return NOTES_DIR / f"{section_id}.md"
 
 
+def safe_note_component(value: object, fallback: str) -> str:
+    """Produce a human-readable, Windows-safe folder/file component."""
+    cleaned = re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", "-", str(value or "").strip())
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .-")
+    return (cleaned[:80].rstrip(" .-") or fallback)
+
+
+def section_note_target(book: dict, section: dict) -> tuple[Path, str, str]:
+    """Map one stable reader section to a browsable Obsidian note location."""
+    domain = safe_domain(book.get("domain"))
+    subject = safe_note_component(book.get("subject"), "未分类学科")
+    title = safe_note_component(book.get("title"), book.get("id") or "资料")
+    chapter = safe_note_component(section.get("chapter_title"), "未分章")
+    section_title = safe_note_component(section.get("title"), section.get("id") or "小节")
+    filename = f"{section_title} · {section['id']}.md"
+    local = note_path(section["id"])
+    vault = obsidian_vault()
+    if not vault:
+        return local, "local", ""
+    relative = Path("YuReader") / "学习笔记" / DOMAIN_LABELS[domain] / subject / title / chapter / filename
+    target = (vault / relative).resolve()
+    if vault != target and vault not in target.parents:
+        raise ValueError("section note path escapes Obsidian vault")
+    uri = f"obsidian://open?vault={quote(vault.name)}&file={quote(relative.as_posix())}"
+    return target, "obsidian", uri
+
+
+def section_note_markdown(book: dict, section: dict, content: str) -> str:
+    """Keep the Obsidian copy navigable while local note bodies stay compatible."""
+    chapter = str(section.get("chapter_title") or "未分章")
+    lines = [
+        "---",
+        "yureader_note: true",
+        f"book_id: {book['id']}",
+        f"section_id: {section['id']}",
+        f"domain: {safe_domain(book.get('domain'))}",
+        "---",
+        "",
+        f"# {section['title']}",
+        "",
+        f"> {book['title']} / {chapter}",
+    ]
+    if content.strip():
+        lines.extend(["", content.strip()])
+    return "\n".join(lines)
+
+
+def ensure_section_note_mirror(book: dict, section: dict, content: str) -> tuple[Path, str, str]:
+    """Backfill an old local section note once, without overwriting vault edits."""
+    target, storage, uri = section_note_target(book, section)
+    if storage == "obsidian" and content.strip() and not target.exists():
+        atomic_write(target, section_note_markdown(book, section, content))
+    return target, storage, uri
+
+
 def dated_note_path(directory: Path, day: str, section_id: str | None = None) -> Path:
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
         raise ValueError("invalid date")
@@ -1539,7 +1594,11 @@ class ReaderHandler(BaseHTTPRequestHandler):
                     current_note = note.read_text(encoding="utf-8-sig")
             except ValueError:
                 pass
-            self.send_json({**section, "note": current_note})
+            book = next((item for item in books if any(entry["id"] == section["id"] for entry in item.get("sections", []))), None)
+            note_storage, note_uri = "local", ""
+            if book:
+                _, note_storage, note_uri = ensure_section_note_mirror(book, section, current_note)
+            self.send_json({**section, "note": current_note, "note_storage": note_storage, "obsidian_uri": note_uri})
             return
         if path.startswith("/api/book-assets/"):
             remaining = path[len("/api/book-assets/"):]
@@ -1710,13 +1769,19 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 return
             section_id = str(body.get("section_id") or "")
             content = str(body.get("content") or "").replace("\r\n", "\n").strip()
-            _, sections = catalog()
+            books, sections = catalog()
             if section_id not in sections:
                 raise ValueError("section not found")
-            target = note_path(section_id)
-            atomic_write(target, content)
+            section = sections[section_id]
+            book = next((item for item in books if any(entry["id"] == section_id for entry in item.get("sections", []))), None)
+            if not book:
+                raise ValueError("book not found")
+            atomic_write(note_path(section_id), content)
+            target, storage, uri = section_note_target(book, section)
+            if storage == "obsidian":
+                atomic_write(target, section_note_markdown(book, section, content))
             record_activity("note_save", section_id, len(content))
-            self.send_json({"ok": True, "saved": bool(content), "section_id": section_id})
+            self.send_json({"ok": True, "saved": bool(content), "section_id": section_id, "storage": storage, "path": str(target), "obsidian_uri": uri})
         except (ValueError, json.JSONDecodeError, OSError) as error:
             self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
 

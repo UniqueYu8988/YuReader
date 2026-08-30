@@ -162,5 +162,34 @@ class BookLearningSummaryTests(unittest.TestCase):
         self.assertIsNone(summary["last_section"])
 
 
+class ObsidianSectionNoteTests(unittest.TestCase):
+    """Section notes keep stable local IDs and gain a browsable vault tree."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.originals = {name: getattr(app, name) for name in ("DATA_DIR", "NOTES_DIR", "obsidian_vault")}
+        app.DATA_DIR = self.root / "data"
+        app.NOTES_DIR = app.DATA_DIR / "notes"
+        self.vault = self.root / "vault"
+        (self.vault / ".obsidian").mkdir(parents=True)
+        app.obsidian_vault = lambda: self.vault
+        self.book = {"id": "politics-core", "title": "核心考案", "domain": "politics", "subject": "马克思主义基本原理"}
+        self.section = {"id": "abcdefabcdef", "title": "第一节 哲学/基本问题", "chapter_title": "第一章 辩证唯物论"}
+
+    def tearDown(self):
+        for name, value in self.originals.items():
+            setattr(app, name, value)
+        self.temp.cleanup()
+
+    def test_vault_note_has_browsable_hierarchy_and_stable_identity(self):
+        target, storage, uri = app.section_note_target(self.book, self.section)
+        self.assertEqual(storage, "obsidian")
+        self.assertTrue(target.is_relative_to(self.vault / "YuReader" / "学习笔记" / "政治" / "马克思主义基本原理" / "核心考案" / "第一章 辩证唯物论"))
+        self.assertNotIn("/", target.name)
+        self.assertIn("section_id: abcdefabcdef", app.section_note_markdown(self.book, self.section, "我的笔记"))
+        self.assertIn("obsidian://open", uri)
+
+
 if __name__ == "__main__":
     unittest.main()

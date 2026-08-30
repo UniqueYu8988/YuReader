@@ -535,7 +535,7 @@ async function openSection(sectionId) {
   $("readerBook").textContent = section.book_title; $("readerChapter").textContent = section.chapter_title || "目录"; $("readerTitle").textContent = section.title; $("readerLocation").textContent = section.title; $("readerSectionNumber").textContent = `${String(section.chapter_order || 1).padStart(2, "0")} 章 · ${section.section_order || 1} / ${chapterSectionCount} 节`;
   const materialLabel = section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown";
   const lengthLabel = formatCharacters(section.character_count); $("readerBookMeta").textContent = `${materialLabel}${lengthLabel ? ` · ${lengthLabel}` : ""}`; $("readerBookMeta").title = section.path || materialLabel; $("readerNoteMeta").textContent = section.note?.trim() ? "已有笔记" : "暂无笔记";
-  $("sectionNote").value = section.note || ""; $("noteSavedText").textContent = section.note?.trim() ? "已保存到本节" : "输入后自动保存";
+  $("sectionNote").value = section.note || ""; $("noteSavedText").textContent = section.note?.trim() ? "已保存到本节" : "输入后自动保存"; $("openObsidian").href = section.obsidian_uri || "obsidian://open";
   state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks($("librarySearch").value); loadSectionPractice(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -653,10 +653,10 @@ function scheduleNoteSave() {
   state.saveTimer = window.setTimeout(async () => {
     try {
       const response = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section_id: sectionId, content }) });
-      if (!response.ok) throw new Error("save failed");
+      if (!response.ok) throw new Error("save failed"); const result = await response.json();
       const cached = state.sections.get(sectionId); if (cached) state.sections.set(sectionId, { ...cached, note: content });
       if (state.current?.id !== sectionId) return;
-      state.current.note = content; $("noteSavedText").textContent = content.trim() ? "已自动保存" : "输入后自动保存"; $("readerNoteMeta").textContent = content.trim() ? "已有笔记" : "暂无笔记"; if (state.material === "note") renderMaterial(); loadStats();
+      state.current.note = content; $("openObsidian").href = result.obsidian_uri || "obsidian://open"; $("noteSavedText").textContent = content.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存"; $("readerNoteMeta").textContent = content.trim() ? "已有笔记" : "暂无笔记"; if (state.material === "note") renderMaterial(); loadStats();
     } catch { if (state.current?.id === sectionId) $("noteSavedText").textContent = "保存失败，请稍后重试"; }
   }, 420);
 }

@@ -12,6 +12,11 @@ YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已�
 - 用户作答和个人解析分别原子保存到 `data/practice/attempts.json`、`data/practice/analyses.json`。每次保存个人解析会原地重建一份学科聚合笔记：Obsidian 可用时为 `YuReader/练习笔记/政治/考研政治（思想政治理论）.md`，否则回退到 `data/practice-notes/`；不创建每题一个文件，也不写入题库发布包。
 - 验证：`python -m py_compile app.py`、`node --check static/app.js`、题库运行时测试13/13通过；真实本机 API 确认《核心考案》第一节准确给出2道小节题，题组会话只返回题干/选项，答案在提交后才出现。浏览器自动化 CLI 当前主机未安装，未将其失败冒充为视觉验收；最终仍需在桌面与390×844移动端各手动完成一次本节练习、解析保存和 Obsidian 跳转检查。
 
+## Obsidian 章节笔记目录（2026-08-30）
+
+- 章节笔记仍以 `data/notes/<stable-section-id>.md` 作为兼容的本地事实源；检测到 vault 时，保存会同步生成可浏览的 `YuReader/学习笔记/<领域>/<学科>/<资料>/<章节>/<小节> · <稳定ID>.md`。
+- Obsidian 副本含资料/章节面包屑与 `book_id`、`section_id` frontmatter，目录可读而稳定 ID 不丢失；打开已有本地笔记的章节会只补建缺失的副本，不覆盖用户已在 Obsidian 编辑的同名文件。
+
 ## 政治资料运行时发布地基（2026-08-30）
 
 - 《核心考案·马克思主义基本原理》从 `politics-core-marxism-52b1f892` 候选通过 YuBook 原子导入 `content/politics-core-marxism/`：8章、54阅读页、8参考页、97张包内图片；既有医学书、稳定小节 ID、笔记和活动数据不改写。
