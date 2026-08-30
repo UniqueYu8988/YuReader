@@ -1,0 +1,5 @@
+{
+  "skills": ["../tools/yubook"],
+  "extensions": ["extensions/yureader-safety.ts"],
+  "enableSkillCommands": true
+}

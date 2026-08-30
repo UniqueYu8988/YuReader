@@ -95,6 +95,91 @@ function renderMarkdown(markdown, imageBase = "") {
   return blocks.join("") || `<div class="section-material-empty"><i data-lucide="file-text"></i><strong>暂无内容</strong><span>这一节还没有可以展示的 Markdown。</span></div>`;
 }
 
+function normalizeSectionHeading(value) {
+  return String(value || "").normalize("NFKC").replace(/[*_`~#]/g, "").replace(/[\s·•:：,，。.!！?？()（）\[\]【】]/g, "").toLowerCase();
+}
+
+function displayGuideTitle(value) {
+  return String(value || "").replace(/^\s*[、．.]\s*/, "").trim();
+}
+
+function prepareSectionMarkdown(markdown, sectionTitle) {
+  const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+  const sectionKey = normalizeSectionHeading(sectionTitle);
+  let contentStart = 0;
+  let removedDuplicate = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (!match || normalizeSectionHeading(match[2]) !== sectionKey) continue;
+    lines.splice(index, 1);
+    contentStart = index;
+    removedDuplicate = true;
+    break;
+  }
+
+  const headings = [];
+  for (const line of lines.slice(contentStart)) {
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (!match) continue;
+    const title = match[2].trim();
+    if (!title || normalizeSectionHeading(title) === sectionKey) continue;
+    if (/^第[一二三四五六七八九十百零〇\d]+章/.test(title) || /^>{0,2}\s*导言$/.test(title)) continue;
+    headings.push({ level: match[1].length, title });
+  }
+
+  const points = headings.filter((item) => /^考点\s*\d+/i.test(item.title));
+  const major = headings.filter((item) => /^[一二三四五六七八九十百]+[、.．]\s*/.test(item.title));
+  let selected = [];
+  let kind = "内容";
+  if (points.length >= 2) {
+    selected = points;
+    kind = "考点";
+  } else if (major.length >= 2) {
+    selected = major;
+  } else if (headings.length >= 2) {
+    const shallowest = Math.min(...headings.map((item) => item.level));
+    selected = headings.filter((item) => item.level === shallowest);
+  }
+
+  const seen = new Set();
+  selected = selected.filter((item) => {
+    const key = normalizeSectionHeading(item.title);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { markdown: lines.join("\n"), guide: selected, kind, removedDuplicate };
+}
+
+function renderSectionGuide(article, guideElement, guideItems, kind) {
+  guideElement.classList.add("hidden");
+  guideElement.innerHTML = "";
+  if (!guideItems.length) return;
+
+  const renderedHeadings = [...article.querySelectorAll("h1, h2, h3, h4, h5, h6")];
+  const links = [];
+  let searchFrom = 0;
+  guideItems.forEach((item, index) => {
+    const expected = normalizeSectionHeading(item.title);
+    const offset = renderedHeadings.slice(searchFrom).findIndex((heading) => normalizeSectionHeading(heading.textContent) === expected);
+    if (offset < 0) return;
+    const headingIndex = searchFrom + offset;
+    const heading = renderedHeadings[headingIndex];
+    const id = `section-guide-${links.length + 1}`;
+    heading.id = id;
+    searchFrom = headingIndex + 1;
+    links.push(`<a href="#${id}"><span>${String(links.length + 1).padStart(2, "0")}</span><strong>${inlineMarkdown(displayGuideTitle(item.title))}</strong></a>`);
+  });
+  if (!links.length) return;
+
+  guideElement.innerHTML = `<details open><summary><span><small>本节导航</small><strong>${links.length} 个${kind}</strong></span><i data-lucide="chevron-down"></i></summary><div class="section-guide-grid">${links.join("")}</div></details>`;
+  guideElement.classList.remove("hidden");
+  guideElement.querySelectorAll("a").forEach((link) => link.addEventListener("click", (event) => {
+    event.preventDefault();
+    document.getElementById(link.getAttribute("href").slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+}
+
 function showToast(message) {
   const toast = $("toast"); toast.textContent = message; toast.classList.add("is-visible");
   window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
@@ -616,9 +701,17 @@ function returnFromPractice() { if (state.practiceReturn === "resource" && state
 
 function renderMaterial() {
   const article = $("knowledgeArticle"); const source = state.material === "note" ? state.current?.note : state.current?.markdown;
+  const guide = $("sectionGuide");
   const imageBase = state.current?.book_id ? `/api/book-assets/${encodeURIComponent(state.current.book_id)}/` : "";
   article.classList.toggle("note-stream", state.material === "note");
-  article.innerHTML = state.material === "note" && !state.current?.note?.trim() ? `<div class="section-material-empty"><i data-lucide="notebook-pen"></i><strong>这一节还没有笔记</strong><span>打开右下角笔记入口，粘贴 AI 整理结果即可。</span></div>` : renderMarkdown(source || "暂无内容", imageBase);
+  if (state.material === "note") {
+    guide.classList.add("hidden"); guide.innerHTML = "";
+    article.innerHTML = !state.current?.note?.trim() ? `<div class="section-material-empty"><i data-lucide="notebook-pen"></i><strong>这一节还没有笔记</strong><span>打开右下角笔记入口，粘贴 AI 整理结果即可。</span></div>` : renderMarkdown(source || "暂无内容", imageBase);
+  } else {
+    const prepared = prepareSectionMarkdown(source || "暂无内容", state.current?.title || "");
+    article.innerHTML = renderMarkdown(prepared.markdown, imageBase);
+    renderSectionGuide(article, guide, prepared.guide, prepared.kind);
+  }
   document.querySelectorAll("[data-section-material]").forEach((button) => { const active = button.dataset.sectionMaterial === state.material; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); }); refreshIcons();
 }
 

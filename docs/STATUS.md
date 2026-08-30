@@ -4,6 +4,14 @@
 
 YuReader 当前版本为 `0.10.0`。在《口腔正畸学》第7版之外，已经由主流程亲自完成《口腔种植学》（书内版权证据为第1版，历史文件名与稳定 ID 沿用“5e”）、《口腔解剖生理学》第8版、《口腔组织病理学》第8版、《口腔修复学》第8版、《牙体牙髓病学》第5版、《牙周病学》第5版、《口腔颌面外科学》第8版和《儿童口腔医学》第5版的原始 Markdown 直入闭环；继续沿用 YuQuiz 视觉基线，没有修改 YuQuiz。
 
+## Pi 制作入口与阅读页内导航（2026-08-30）
+
+- 项目根新增 `.pi/settings.json`：Pi 在 YuReader 中直接复用 `tools/yubook/SKILL.md`，不再需要每轮重复粘贴书籍制作契约；当前只启用一个项目级安全扩展，没有安装第三方插件或引入模型编排层。启动日志已实际确认 skill 与扩展均被加载。
+- `.pi/extensions/yureader-safety.ts` 是最小保护栏：拦截 Pi 对 OneDrive 原始书籍、YuBook `workspace/*/source` 与 `dist`、正式 `content/`、`question-banks/`、`data/` 及 Git/密钥文件的直接写入；YuBook 的 `init / validate / build / import` 仍可作为受支持命令运行。它不是沙箱，仍要求每次候选包通过 YuBook 校验后再发布。
+- 阅读器正文展示现在只隐藏当前页面标题对应的第一个重复 Markdown 标题，源文件、manifest 和来源映射均不变。正文前新增页内导航：政治页优先收集“考点”标题，医学页收集匹配到正文的主要结构标题；导航链接使用页面内锚点，笔记模式不显示该导航。
+- 导航采用运行时推导，不向书籍 Markdown 注入目录表，因此不会增加 Obsidian 层级，也不会把标题规范化误写入原文。缺少可靠标题时保持原文显示并隐藏导航。
+- 验证：Pi `--approve --offline --no-session --no-tools --verbose` 启动日志显示 skill/extension；`node --check static/app.js`、`python -m py_compile app.py` 通过。真实政治第二节显示9个考点导航并保留正文表格；真实医学第一节显示2个主要内容导航且不再重复显示小节标题。Playwright 桌面1280×800与移动390×844截图已保存，控制台均为0 error/0 warning。
+
 ## 政治最小练习闭环（2026-08-30）
 
 - 讲义 `knowledge-map.json` 的稳定知识位置现在下沉到每个正式阅读页；练习关联只比较稳定 ID 的命名空间、精确小节位置和明确的章节回退，不按中文标题模糊猜题。没有真实匹配时阅读页不显示入口。

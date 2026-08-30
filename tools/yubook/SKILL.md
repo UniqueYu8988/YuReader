@@ -23,6 +23,8 @@ Immutable package identity must include every publishable input: outline, archiv
 
 If the task asks only for a candidate, an audit, or explicitly says not to import, stop after the immutable package and final report. A passing validator never overrides that boundary. Keep one-off probes and generated diagnostics under `notes/_scratch/`; do not leave dozens of temporary scripts or stale candidate paths in the book workspace root. Before reporting completion, remove disposable scratch artifacts or clearly isolate them from the authoritative `book.json`, `outline.json`, `source/`, `notes/`, and `dist/` outputs.
 
+When one source volume contains several subjects that users should enter independently, create one bounded workspace and one stable book ID per subject. Keep the source-series title in provenance rather than adding it as a visible navigation layer. Preserve topic and 考点 headings inside their natural section: YuReader generates the page-local guide at runtime, so do not inject a duplicate hand-written contents table into the derived Markdown.
+
 ## Required references
 
 - Read [references/outline.md](references/outline.md) while reconstructing hierarchy and writing `outline.json`.
