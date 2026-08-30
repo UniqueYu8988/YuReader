@@ -628,6 +628,13 @@ function practiceEntryLabel(entry) {
   return entry.match_level === "comprehensive" ? "综合测试" : entry.match_level === "chapter" ? "本章练习" : "本节练习";
 }
 
+function concisePracticeBankTitle(title) {
+  const value = String(title || "").trim();
+  if (value.includes("拔高")) return "拔高题库";
+  if (value.includes("基础")) return "基础题库";
+  return value.replace(/(?:综合测试)?题库$/, "") || "真实题库";
+}
+
 async function loadSectionPractice() {
   const button = $("readerPractice"); button.classList.add("hidden"); button.replaceWith(button.cloneNode(true));
   const fresh = $("readerPractice");
@@ -667,14 +674,16 @@ async function openPractice(entry, returnTo) {
 async function renderPracticeQuestion() {
   const practice = state.practice; const item = practice?.questions?.[state.practiceIndex]; if (!item) return;
   $("practiceEyebrow").textContent = practice.entry.match_level === "comprehensive" ? "综合测试 · 真实题库" : `${practiceEntryLabel(practice.entry)} · 真实题库`;
-  $("practiceTitle").textContent = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题`;
+  $("practiceTitle").textContent = concisePracticeBankTitle(practice.bank.title); $("practiceTitle").title = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题`;
   $("practiceProgressText").textContent = `${state.practiceIndex + 1} / ${practice.question_count}`; $("practiceProgressBar").style.setProperty("--practice-progress", `${((state.practiceIndex + 1) / practice.question_count) * 100}%`);
-  $("practiceResult").classList.add("hidden"); $("practiceSubmit").classList.remove("hidden"); $("practiceSubmit").disabled = false; $("practiceSubmit").querySelector("strong").textContent = "查看答案与解析";
+  $("practiceResult").classList.add("hidden"); $("practiceSubmit").classList.remove("hidden"); $("practiceSubmit").disabled = true;
   const query = new URLSearchParams({ bank_id: practice.bank.id, question_id: item.question_id }); const response = await fetch(`/api/practice/question?${query}`, { cache: "no-store" }); if (!response.ok) { showToast("题目读取失败"); return; }
   const payload = await response.json(); const question = payload.question; state.practice.question = payload;
   $("practiceQuestionType").textContent = question.question_type === "multiple_choice" ? "多项选择" : "单项选择"; $("practiceQuestionNumber").textContent = `第 ${state.practiceIndex + 1} 题`;
   $("practiceStem").innerHTML = renderMarkdown(question.stem_md || ""); const prior = payload.attempt?.selected_answers || [];
-  $("practiceOptions").innerHTML = (question.options || []).map((option) => `<label><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${prior.includes(option.label) ? "checked" : ""}><span><strong>${escapeHtml(option.label)}</strong><em>${renderMarkdown(option.text_md || "")}</em></span></label>`).join("");
+  $("practiceOptions").innerHTML = (question.options || []).map((option) => `<label class="practice-option${prior.includes(option.label) ? " selected" : ""}"><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${prior.includes(option.label) ? "checked" : ""}><strong class="practice-option-label">${escapeHtml(option.label)}</strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true"></span></label>`).join("");
+  $("practiceOptions").querySelectorAll("input").forEach((input) => input.addEventListener("change", updatePracticeOptionState));
+  updatePracticeOptionState();
   $("practicePrevious").disabled = state.practiceIndex === 0; $("practiceNext").disabled = state.practiceIndex >= practice.question_count - 1;
   if (payload.attempt) showPracticeResult(payload); refreshIcons();
 }
@@ -682,7 +691,20 @@ async function renderPracticeQuestion() {
 function showPracticeResult(payload) {
   const question = payload.question; const attempt = payload.attempt || {}; $("practiceSubmit").classList.add("hidden"); $("practiceResult").classList.remove("hidden");
   $("practiceResultTitle").textContent = attempt.correct ? "回答正确" : "继续梳理这个知识点"; $("practiceCorrectAnswer").textContent = `正确答案：${(question.correct_answers || []).join("、")}`;
+  $("practiceResultIcon").classList.toggle("wrong", !attempt.correct); $("practiceResultIcon").innerHTML = `<i data-lucide="${attempt.correct ? "check" : "x"}"></i>`;
+  const correct = new Set(question.correct_answers || []); const selected = new Set(attempt.selected_answers || []);
+  $("practiceOptions").querySelectorAll(".practice-option").forEach((option) => {
+    const input = option.querySelector("input"); const label = input.value; input.disabled = true;
+    option.classList.toggle("correct", correct.has(label)); option.classList.toggle("incorrect", selected.has(label) && !correct.has(label));
+    option.querySelector(".practice-option-state").innerHTML = correct.has(label) ? '<i data-lucide="check"></i>' : (selected.has(label) ? '<i data-lucide="x"></i>' : "");
+  });
   $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析"); $("practicePersonalAnalysis").value = payload.personal_analysis || ""; $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"; refreshIcons();
+}
+
+function updatePracticeOptionState() {
+  const options = $("practiceOptions").querySelectorAll(".practice-option");
+  options.forEach((option) => option.classList.toggle("selected", option.querySelector("input").checked));
+  $("practiceSubmit").disabled = !$("practiceOptions").querySelector("input:checked");
 }
 
 async function submitPracticeAnswer() {
