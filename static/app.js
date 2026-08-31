@@ -989,7 +989,7 @@ function isClozeQuestion(question) {
 function practiceWorkflowHint(question) {
   const unit = String(question?.unit_label || question?.unit || "");
   if (/完形填空/.test(unit)) return "点击文章中的空格选择答案";
-  if (/Part B/.test(unit)) return "阅读段落并完成排序";
+  if (/Part B/.test(unit)) return "为缺口选择合适段落";
   if (/阅读理解/.test(unit)) return "先读完整文章，再判断题干";
   return "先阅读材料，再作答";
 }
