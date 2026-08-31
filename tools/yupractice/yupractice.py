@@ -490,7 +490,11 @@ def validate_question_record(
         else:
             findings.block("E025", "source_analysis_md 缺失或为空（原书解析不可缺）", where)
 
+    context_md = record.get("context_md")
+    if context_md is not None and not isinstance(context_md, str):
+        findings.block("E058", "context_md 如提供必须为字符串", where)
     content_fields: list[tuple[str, object]] = [
+        ("context_md", context_md),
         ("stem_md", stem_md),
         ("source_analysis_md", source_analysis_md),
     ]

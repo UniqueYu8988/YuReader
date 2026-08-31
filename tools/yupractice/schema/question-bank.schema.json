@@ -107,6 +107,7 @@
         "unit_key": { "type": "string", "description": "Stable key of the collection, e.g. marx-ch01." },
         "local_number": { "type": "integer", "minimum": 1, "description": "Local question number inside its unit. (unit_key, question_type, local_number) must be unique in the bank." },
         "stem_md": { "type": "string", "minLength": 1 },
+        "context_md": { "type": "string", "description": "Optional shared passage or directions shown separately from the question stem." },
         "options": {
           "type": "array",
           "minItems": 2,

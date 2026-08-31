@@ -55,12 +55,22 @@
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="书架">
             <header class="knowledge-index-header reader-library-header">
-              <div class="knowledge-index-heading"><h2>我的书架</h2><nav class="reader-domain-tabs" id="domainTabs" aria-label="学习领域"><button class="active" type="button" data-domain="medicine">医学<em id="domainCountMedicine">0</em></button><button type="button" data-domain="politics">政治<em id="domainCountPolitics">0</em></button><button type="button" data-domain="english">英语<em id="domainCountEnglish">0</em></button></nav></div>
+              <div class="knowledge-index-heading"><h2>我的书架</h2><nav class="reader-domain-tabs" id="domainTabs" aria-label="学习领域"><button class="active" type="button" data-domain="medicine"><i data-lucide="stethoscope"></i><span><strong>医学</strong><small>教材章节精读</small></span><em id="domainCountMedicine">0</em></button><button type="button" data-domain="politics"><i data-lucide="landmark"></i><span><strong>政治</strong><small>讲义习题联动</small></span><em id="domainCountPolitics">0</em></button><button type="button" data-domain="english"><i data-lucide="languages"></i><span><strong>英语</strong><small>真题方法积累</small></span><em id="domainCountEnglish">0</em></button></nav></div>
               <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
             </header>
             <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>书架还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+            <section class="english-hub hidden" id="englishHub" aria-label="英语学习">
+              <header class="english-hub-heading"><div><p class="eyebrow">ENGLISH WORKSPACE</p><h3>把输入、训练与沉淀放在一起</h3></div><p>不同资料使用不同的学习方式，不把英语重新塞进普通教材目录。</p></header>
+              <div class="english-module-list" id="englishModuleList"></div>
+            </section>
+            <section class="english-exams hidden" id="englishExams" aria-label="历年英语真题">
+              <button class="review-back-link english-notebook-back" id="englishExamsBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习</button>
+              <header class="english-notebook-heading"><div><p class="eyebrow">PAST PAPERS</p><h3>历年真题</h3><p>原文先作答，提交后再显示原书解析；个人解析继续独立保存。</p></div></header>
+              <div class="english-exam-list" id="englishExamList"></div>
+            </section>
             <section class="english-notebook hidden" id="englishNotebook" aria-label="英语周记">
+              <button class="review-back-link english-notebook-back" id="englishNotebookBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习</button>
               <header class="english-notebook-heading">
                 <div><p class="eyebrow">每周归档</p><h3 id="englishNotebookTitle">英语周记</h3><p id="englishNotebookMeta">周一至周日，一周一份 Markdown</p></div>
                 <a class="note-icon-button" id="englishNotebookObsidian" href="obsidian://open" title="在 Obsidian 中打开英语周记" aria-label="在 Obsidian 中打开英语周记"><img src="/assets/obsidian.svg" alt=""></a>
@@ -127,6 +137,10 @@
           <article class="practice-question-surface">
             <div class="practice-question-meta"><span id="practiceQuestionType"></span><i aria-hidden="true"></i><strong id="practiceQuestionNumber"></strong><span class="practice-source" id="practiceTitle">练习</span></div>
             <p class="practice-bank-meta" id="practiceMeta">正在读取题目…</p>
+            <details class="practice-context hidden" id="practiceContext">
+              <summary><span>阅读原文</span><i data-lucide="chevron-down"></i></summary>
+              <article class="knowledge-article" id="practiceContextBody"></article>
+            </details>
             <div class="knowledge-article practice-stem" id="practiceStem"></div>
             <form class="practice-options" id="practiceOptions"></form>
             <div class="practice-answer-controls"><button class="primary-button practice-submit" id="practiceSubmit" type="button" disabled><span>确认答案</span><i data-lucide="arrow-right"></i></button></div>

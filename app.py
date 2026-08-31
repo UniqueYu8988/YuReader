@@ -553,7 +553,8 @@ def public_question(question: dict, reveal: bool = False) -> dict:
         "question_id": question["question_id"], "bank_id": question.get("bank_id"),
         "question_type": question.get("question_type"), "difficulty": question.get("difficulty"),
         "scope": question.get("scope"), "unit": question.get("unit"), "unit_label": question.get("unit_label"),
-        "local_number": question.get("local_number"), "stem_md": question.get("stem_md") or "",
+        "local_number": question.get("local_number"), "context_md": question.get("context_md") or "",
+        "stem_md": question.get("stem_md") or "",
         "options": question.get("options") or [], "knowledge_ids": question.get("knowledge_ids") or [],
     }
     if reveal:

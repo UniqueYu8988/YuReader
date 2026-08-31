@@ -65,3 +65,7 @@ The Agent may edit only the archived working copy, `outline.json`, and generated
 - If a navigation title is repaired without changing body text, retain `source_title`, the reason, and evidence line numbers in the node.
 - YuBook removes only known watermark headings automatically. Record any other high-confidence full-term correction in `cleaning.text_replacements` with its exact source line, old term, new term, count, and reason.
 - Treat chapter questions, references, appendices, and indexes as `reference` by default. A `supporting` node may enter the reading sequence only with a concrete `reading_reason`.
+
+## English PDF pilot notes
+
+For English exam material, keep the four concerns separate: the original paper, a structured objective question bank, a same-year detailed-analysis source, and subjective translation/writing reading pages. Prefer native text extraction for selectable English PDF pages; use MinerU Pipeline OCR only for image-only analysis pages and keep a per-run receipt with page count, source hash, and output hash. A question may expose the shared paper passage through optional `context_md`, but must not include the answer or detailed analysis before submission. Part-B matching questions may have A–G/H options; the option labels must still be a continuous sequence from A in the package contract. Do not treat a detailed-analysis book as a method course merely because its title contains “写作”; resource selection should prefer exact grammar/vocabulary signals, then explicit exam companions.

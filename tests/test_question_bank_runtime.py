@@ -268,6 +268,18 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         books, _ = app.build_catalog()
         self.assertEqual([item["id"] for item in books], ["lecture-x"])
 
+    def test_public_question_preserves_optional_reading_context(self):
+        question = {
+            "question_id": "english-2025-e1-q-21",
+            "context_md": "Shared reading passage.",
+            "stem_md": "What is the answer?",
+            "options": [{"label": "A", "text_md": "A"}, {"label": "B", "text_md": "B"}],
+            "correct_answers": ["B"],
+        }
+        public = app.public_question(question)
+        self.assertEqual(public["context_md"], "Shared reading passage.")
+        self.assertNotIn("correct_answers", public)
+
     def test_hidden_import_backup_is_not_catalogued(self):
         # Atomic replacement deliberately keeps a hidden recovery copy beside
         # the live bank.  Runtime discovery must expose one stable bank ID,

@@ -571,6 +571,19 @@ class YuPracticeValidatorTests(unittest.TestCase):
             result = validate(package)
             self.assertIn("E057", [blocker["code"] for blocker in result["blockers"]])
 
+    def test_optional_context_is_validated_as_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build_package(Path(tmp), [valid_question(context_md="阅读原文。")])
+            self.assertEqual(validate(package)["quality"]["status"], "pass")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build_package(Path(tmp), [valid_question(context_md={"bad": True})])
+            self.assertIn("E058", [blocker["code"] for blocker in validate(package)["blockers"]])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build_package(Path(tmp), [valid_question(context_md="扫描右侧二维码继续刷题")])
+            self.assertIn("E056", [blocker["code"] for blocker in validate(package)["blockers"]])
+
     def test_bank_status_not_ready_is_blocker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = build_package(
