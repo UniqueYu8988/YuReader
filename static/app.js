@@ -982,19 +982,84 @@ async function openPractice(entry, returnTo, startIndex = 0) {
   } catch { showToast("暂时无法读取这组题目"); }
 }
 
+function isClozeQuestion(question) {
+  return /完形填空/.test(String(question?.unit_label || question?.unit || ""));
+}
+
+function practiceWorkflowHint(question) {
+  const unit = String(question?.unit_label || question?.unit || "");
+  if (/完形填空/.test(unit)) return "点击文章中的空格选择答案";
+  if (/Part B/.test(unit)) return "阅读段落并完成排序";
+  if (/阅读理解/.test(unit)) return "先读完整文章，再判断题干";
+  return "先阅读材料，再作答";
+}
+
+function prepareClozeMarkdown(markdown, count = 20) {
+  const source = String(markdown || ""); let cursor = 0; let output = "";
+  for (let number = 1; number <= count; number += 1) {
+    const pattern = new RegExp(`(?<![\\d,])${number}(?![\\d,])`);
+    const match = pattern.exec(source.slice(cursor));
+    if (!match) continue;
+    const start = cursor + match.index; const end = start + match[0].length;
+    output += source.slice(cursor, start) + `YUREADERCLOZE${number}TOKEN`; cursor = end;
+  }
+  return output + source.slice(cursor);
+}
+
+function renderClozeContext(markdown, activeNumber) {
+  const html = renderMarkdown(prepareClozeMarkdown(markdown));
+  return html.replace(/YUREADERCLOZE(\d+)TOKEN/g, (_, value) => {
+    const number = Number(value); const active = number === Number(activeNumber);
+    return `<button class="cloze-blank${active ? " active" : ""}" type="button" data-cloze-index="${number}" aria-label="第 ${number} 空">${number}</button>`;
+  });
+}
+
+function renderClozeChoices(question, attempt = null) {
+  const tray = $("practiceClozeChoices"); const cloze = isClozeQuestion(question);
+  tray.classList.toggle("hidden", !cloze);
+  if (!cloze) { tray.innerHTML = ""; return; }
+  const selected = new Set(attempt?.selected_answers || [...$("practiceOptions").querySelectorAll("input:checked")].map((input) => input.value));
+  const revealed = Boolean(attempt && Object.keys(attempt).length);
+  const correct = new Set(question.correct_answers || []);
+  const options = (question.options || []).map((option) => {
+    const label = String(option.label || ""); const classes = ["cloze-choice"];
+    if (selected.has(label)) classes.push("selected");
+    if (revealed && correct.has(label)) classes.push("correct");
+    if (revealed && selected.has(label) && !correct.has(label)) classes.push("incorrect");
+    return `<button class="${classes.join(" ")}" type="button" data-cloze-answer="${escapeHtml(label)}"${revealed ? " disabled" : ""}><strong>${escapeHtml(label)}</strong><span>${renderMarkdown(option.text_md || "")}</span></button>`;
+  }).join("");
+  const number = question.local_number || state.practiceIndex + 1;
+  tray.innerHTML = `<div class="cloze-choice-head"><strong>第 ${number} 空</strong><span>${revealed ? "已提交，可在下方查看解析" : "点击选项填入这个空"}</span></div><div class="cloze-choice-list">${options}</div>`;
+  tray.querySelectorAll("[data-cloze-answer]").forEach((button) => button.addEventListener("click", () => {
+    const input = $("practiceOptions").querySelector(`input[value="${button.dataset.clozeAnswer}"]`); if (!input || input.disabled) return;
+    input.checked = true; updatePracticeOptionState(); renderClozeChoices(question, null);
+  }));
+}
+
+function focusClozeBlank(number) {
+  const target = state.practice?.questions?.findIndex((item) => Number(item.local_number) === Number(number));
+  if (target == null || target < 0) return;
+  const focus = () => document.querySelector(`[data-cloze-index="${Number(number)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (target === state.practiceIndex) { focus(); return; }
+  state.practiceIndex = target; renderPracticeQuestion().then(focus).catch(() => {});
+}
+
 async function renderPracticeQuestion() {
   const practice = state.practice; const item = practice?.questions?.[state.practiceIndex]; if (!item) return;
   $("practiceEyebrow").textContent = practice.entry.match_level === "comprehensive" ? "综合测试 · 真实题库" : `${practiceEntryLabel(practice.entry)} · 真实题库`;
-  $("practiceTitle").textContent = concisePracticeBankTitle(practice.bank.title); $("practiceTitle").title = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题`;
+  $("practiceTitle").textContent = concisePracticeBankTitle(practice.bank.title); $("practiceTitle").title = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题 · ${practiceWorkflowHint(item)}`;
   $("practiceProgressText").textContent = `${state.practiceIndex + 1} / ${practice.question_count}`; $("practiceProgressBar").style.setProperty("--practice-progress", `${((state.practiceIndex + 1) / practice.question_count) * 100}%`);
   $("practiceResult").classList.add("hidden"); $("practiceSubmit").classList.remove("hidden"); $("practiceSubmit").disabled = true;
   const query = new URLSearchParams({ bank_id: practice.bank.id, question_id: item.question_id }); const response = await fetch(`/api/practice/question?${query}`, { cache: "no-store" }); if (!response.ok) { showToast("题目读取失败"); return; }
   const payload = await response.json(); const question = payload.question; state.practice.question = payload;
   const unitLabel = question.unit_label || question.unit || "题目"; const answerType = question.question_type === "multiple_choice" ? "多项选择" : "单项选择";
+  $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题 · ${practiceWorkflowHint(question)}`;
   $("practiceQuestionType").textContent = `${unitLabel} · ${answerType}`; $("practiceQuestionNumber").textContent = `第 ${question.local_number || state.practiceIndex + 1} 题`;
-  const context = String(question.context_md || "").trim(); const paragraphCount = context ? context.split(/\n\s*\n/).filter((item) => item.trim()).length : 0; $("practiceContext").classList.toggle("hidden", !context); $("practiceContext").open = Boolean(context); $("practiceContextLabel").textContent = context ? `阅读原文 · ${unitLabel}${paragraphCount ? `（${paragraphCount}段）` : ""}` : "阅读原文"; $("practiceContextBody").innerHTML = context ? renderMarkdown(context) : "";
-  $("practiceStem").innerHTML = renderMarkdown(question.stem_md || ""); const prior = payload.attempt?.selected_answers || [];
+  const context = String(question.context_md || "").trim(); const paragraphCount = context ? context.split(/\n\s*\n/).filter((item) => item.trim()).length : 0; const cloze = isClozeQuestion(question); $("practiceContext").classList.toggle("hidden", !context); $("practiceContext").open = Boolean(context); $("practiceContextLabel").textContent = context ? `${cloze ? "完形填空全文" : "阅读原文"} · ${unitLabel}${paragraphCount ? `（${paragraphCount}段）` : ""}` : "阅读原文"; $("practiceContextBody").innerHTML = context ? (cloze ? renderClozeContext(context, question.local_number) : renderMarkdown(context)) : "";
+  $("practiceContextBody").querySelectorAll("[data-cloze-index]").forEach((button) => button.addEventListener("click", () => focusClozeBlank(Number(button.dataset.clozeIndex))));
+  $("practiceStem").innerHTML = cloze ? `<p class="cloze-instruction">点击正文中的任意空格，选项会在正文下方出现。</p>` : renderMarkdown(question.stem_md || ""); const prior = payload.attempt?.selected_answers || [];
   $("practiceOptions").innerHTML = (question.options || []).map((option) => `<label class="practice-option${prior.includes(option.label) ? " selected" : ""}"><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${prior.includes(option.label) ? "checked" : ""}><strong class="practice-option-label">${escapeHtml(option.label)}</strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true"></span></label>`).join("");
+  $("practiceOptions").classList.toggle("hidden", cloze); renderClozeChoices(question, payload.attempt);
   $("practiceOptions").querySelectorAll("input").forEach((input) => input.addEventListener("change", updatePracticeOptionState));
   updatePracticeOptionState();
   $("practicePrevious").disabled = state.practiceIndex === 0; $("practiceNext").disabled = state.practiceIndex >= practice.question_count - 1;
@@ -1011,7 +1076,7 @@ function showPracticeResult(payload) {
     option.classList.toggle("correct", correct.has(label)); option.classList.toggle("incorrect", selected.has(label) && !correct.has(label));
     option.querySelector(".practice-option-state").innerHTML = correct.has(label) ? '<i data-lucide="check"></i>' : (selected.has(label) ? '<i data-lucide="x"></i>' : "");
   });
-  $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析"); $("practicePersonalAnalysis").value = payload.personal_analysis || ""; $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"; refreshIcons();
+  renderClozeChoices(question, attempt); $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析"); $("practicePersonalAnalysis").value = payload.personal_analysis || ""; $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"; refreshIcons();
 }
 
 function updatePracticeOptionState() {

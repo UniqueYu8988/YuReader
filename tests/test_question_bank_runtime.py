@@ -271,6 +271,7 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
     def test_public_question_preserves_optional_reading_context(self):
         question = {
             "question_id": "english-2025-e1-q-21",
+            "unit": "完形填空",
             "context_md": "Shared reading passage.",
             "stem_md": "What is the answer?",
             "options": [{"label": "A", "text_md": "A"}, {"label": "B", "text_md": "B"}],
@@ -278,6 +279,7 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         }
         public = app.public_question(question)
         self.assertEqual(public["context_md"], "Shared reading passage.")
+        self.assertEqual(public["unit_label"], "完形填空")
         self.assertNotIn("correct_answers", public)
 
     def test_hidden_import_backup_is_not_catalogued(self):

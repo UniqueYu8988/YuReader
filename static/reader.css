@@ -630,6 +630,21 @@
 .practice-context[open] summary svg { transform: rotate(180deg); }
 .practice-context article { max-height: min(54vh, 520px); overflow: auto; padding: 4px 8px 20px 0; color: var(--text-secondary); font-size: 14px; line-height: 1.82; scrollbar-width: thin; }
 .practice-context article p { margin: 0 0 1em; }
+.cloze-blank { display: inline-grid; min-width: 28px; height: 24px; margin: 0 2px; padding: 0 5px; place-items: center; border: 1px solid color-mix(in srgb, var(--primary) 58%, var(--line)); border-radius: 3px; color: var(--primary-strong); background: color-mix(in srgb, var(--primary) 8%, transparent); font: inherit; font-size: .84em; line-height: 1; vertical-align: baseline; cursor: pointer; transition: color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard); }
+.cloze-blank:hover, .cloze-blank.active { color: var(--text); background: color-mix(in srgb, var(--primary) 18%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 12%, transparent); }
+.cloze-choice-tray { margin: 6px 0 18px; padding: 13px 0 2px; border-top: 1px solid var(--line); }
+.cloze-choice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.cloze-choice-head strong { color: var(--primary-strong); font-size: 11px; font-weight: 600; }
+.cloze-choice-head span { color: var(--text-soft); font-size: 10px; }
+.cloze-choice-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cloze-choice { display: grid; min-width: 0; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 7px; padding: 9px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--text-secondary); background: transparent; text-align: left; cursor: pointer; transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
+.cloze-choice:hover:not(:disabled), .cloze-choice.selected { border-color: color-mix(in srgb, var(--primary) 70%, var(--line)); color: var(--text); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.cloze-choice strong { color: var(--primary); font-family: Georgia, "Times New Roman", serif; font-size: 13px; font-weight: 600; }
+.cloze-choice span { min-width: 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.cloze-choice.correct { border-color: color-mix(in srgb, var(--success) 70%, var(--line)); color: var(--success); background: color-mix(in srgb, var(--success) 9%, transparent); }
+.cloze-choice.incorrect { border-color: color-mix(in srgb, var(--danger) 70%, var(--line)); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.cloze-choice:disabled { cursor: default; }
+.cloze-instruction { margin: 18px 0 24px; color: var(--text-soft); font-size: 12px; line-height: 1.7; }
 .practice-stem { margin: 19px 0 25px; color: var(--text); font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 21px; font-weight: 500; line-height: 1.72; }
 .practice-stem p { margin: 0; }
 .practice-options { display: grid; gap: 0; border-block: 1px solid var(--line); }
@@ -682,6 +697,10 @@
   .practice-stem { margin-block: 16px 22px; font-size: 18px; line-height: 1.68; }
   .practice-option { min-height: 58px; grid-template-columns: 24px minmax(0, 1fr) 20px; gap: 10px; padding: 12px 6px; }
   .practice-option-text { font-size: 13px; }
+  .cloze-choice-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .cloze-choice { padding: 8px 6px; }
+  .cloze-choice span { font-size: 11px; }
+  .cloze-choice-head span { max-width: 180px; text-align: right; }
   .practice-answer-controls { margin-top: 18px; }
   .practice-submit { width: 100%; }
 }
