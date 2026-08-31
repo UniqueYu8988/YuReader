@@ -149,6 +149,36 @@
 .english-exam-row strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
 .english-exam-row > svg { width: 15px; color: var(--primary); }
 
+/* A paper guide keeps a year of English material legible before the first
+   question.  Each row is an entry point, not another competing dashboard. */
+.english-exam-overview { width: 100%; padding: 4px 0 72px; }
+.english-exam-overview-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 20px; border-block: 1px solid var(--line-strong); }
+.english-exam-overview-facts > div { display: grid; min-width: 0; gap: 6px; padding: 16px 18px 18px 0; }
+.english-exam-overview-facts > div + div { padding-left: 18px; border-left: 1px solid var(--line); }
+.english-exam-overview-facts span, .english-exam-overview-facts em { color: var(--text-soft); font-size: 9px; font-style: normal; }
+.english-exam-overview-facts strong { color: var(--text); font-size: 15px; font-weight: 500; }
+.english-paper-guide, .english-paper-companion { margin-top: 36px; }
+.english-paper-guide > header, .english-paper-companion > header { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line-strong); }
+.english-paper-guide > header h4, .english-paper-companion > header h4 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 19px; font-weight: 500; }
+.english-paper-guide > header .eyebrow, .english-paper-companion > header .eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+.english-paper-guide > header > span, .english-paper-companion > header > span { color: var(--text-soft); font-size: 9px; }
+.english-paper-row { display: grid; width: 100%; grid-template-columns: 32px minmax(0, 1fr) minmax(100px, auto) 16px; gap: 16px; align-items: center; min-height: 76px; padding: 12px 4px 12px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
+.english-paper-row:hover:not(.unavailable) { background: var(--surface-hover); }
+.english-paper-row-index { color: var(--primary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.english-paper-row-copy { display: grid; min-width: 0; gap: 4px; }
+.english-paper-row-copy small { color: var(--text-soft); font-size: 9px; }
+.english-paper-row-copy strong { overflow: hidden; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.english-paper-row-copy em { overflow: hidden; color: var(--text-soft); font-size: 9px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.english-paper-row-status { display: grid; justify-items: end; gap: 4px; color: var(--text-secondary); }
+.english-paper-row-status small { color: var(--text-soft); font-size: 9px; }
+.english-paper-row-status strong { font-size: 10px; font-weight: 500; }
+.english-paper-row > svg { width: 15px; color: var(--primary); }
+.english-paper-row.unavailable { color: var(--text-soft); cursor: default; opacity: .7; }
+.english-paper-row.unavailable > svg { color: var(--text-soft); }
+.english-paper-companion-list { border-bottom: 1px solid var(--line-strong); }
+.english-paper-companion-list .english-paper-row:last-child { border-bottom: 0; }
+.english-paper-companion-list .english-paper-row { grid-template-columns: 32px minmax(0, 1fr) minmax(100px, auto) 16px; }
+
 /* English is a weekly notebook rather than an empty book shelf. Keep it on the same quiet paper rhythm. */
 .english-notebook { width: 100%; padding: 4px 0 72px; }
 .english-notebook-back { margin: 2px 0 10px; }
@@ -445,6 +475,14 @@
   .reader-library-header { display: block; }
   .reader-library-header .knowledge-search { width: 100%; margin-top: 18px; }
   .english-notebook-heading { align-items: start; }
+  .english-exam-overview-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .english-exam-overview-facts > div { padding: 14px 0; }
+  .english-exam-overview-facts > div + div { padding-left: 0; border-left: 0; }
+  .english-exam-overview-facts > div:nth-child(even) { padding-left: 14px; border-left: 1px solid var(--line); }
+  .english-exam-overview-facts > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .english-paper-row, .english-paper-companion-list .english-paper-row { grid-template-columns: 26px minmax(0, 1fr) 15px; gap: 10px; min-height: 72px; padding-right: 0; }
+  .english-paper-row-status { display: none; }
+  .english-paper-row-copy strong { white-space: normal; }
   .english-week-day { padding-right: 6px; }
   .english-week-day + .english-week-day { padding-left: 6px; }
   .english-week-day small { font-size: 8px; }

@@ -350,6 +350,15 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         self.assertTrue(Path(saved["path"]).is_file())
         self.assertIn("我的判断过程", Path(saved["path"]).read_text(encoding="utf-8"))
 
+    def test_practice_overview_groups_questions_without_revealing_answers(self):
+        overview = app.practice_overview("politics-basic-bank")
+        self.assertEqual(overview["question_count"], 4)
+        self.assertEqual([item["question_count"] for item in overview["groups"]], [2, 1, 1])
+        self.assertEqual(overview["groups"][0]["start_index"], 0)
+        self.assertEqual(overview["groups"][1]["start_index"], 2)
+        self.assertNotIn("correct_answers", overview)
+        self.assertNotIn("questions", overview)
+
     def test_practice_note_joins_the_subject_root_in_obsidian(self):
         vault = Path(self.temp.name) / "vault"
         (vault / ".obsidian").mkdir(parents=True)
@@ -458,6 +467,13 @@ class ImageAssetAccessTests(unittest.TestCase):
         payload = json.loads(handler.wfile.getvalue().decode("utf-8"))
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["banks"][0]["resource_type"], "question_bank")
+
+        handler = FakeHandler("/api/practice/overview?bank_id=politics-basic-bank")
+        handler.do_GET()
+        self.assertEqual(handler.status, 200)
+        payload = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertEqual(payload["question_count"], 4)
+        self.assertEqual(payload["groups"][0]["label"], "第一单元 马克思主义基本原理")
 
         handler = FakeHandler("/api/bootstrap")
         handler.do_GET()

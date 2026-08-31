@@ -421,6 +421,7 @@ def build_question_bank_catalog() -> list[dict]:
             questions_decl = manifest.get("questions") if isinstance(manifest.get("questions"), dict) else {}
             km_decl = manifest.get("knowledge_map") if isinstance(manifest.get("knowledge_map"), dict) else {}
             source_index_decl = manifest.get("source_index") if isinstance(manifest.get("source_index"), dict) else {}
+            coverage = manifest.get("coverage") if isinstance(manifest.get("coverage"), dict) else {}
         except (OSError, json.JSONDecodeError, TypeError, ValueError):
             continue
 
@@ -479,6 +480,7 @@ def build_question_bank_catalog() -> list[dict]:
                 },
                 "test_count": manifest.get("test_count") if isinstance(manifest.get("test_count"), int) else None,
                 "generated_at": str(manifest.get("generated_at") or ""),
+                "coverage": coverage,
                 "path": manifest_path.parent.relative_to(QUESTION_BANK_DIR).as_posix(),
             }
         )
@@ -552,7 +554,8 @@ def public_question(question: dict, reveal: bool = False) -> dict:
     payload = {
         "question_id": question["question_id"], "bank_id": question.get("bank_id"),
         "question_type": question.get("question_type"), "difficulty": question.get("difficulty"),
-        "scope": question.get("scope"), "unit": question.get("unit"), "unit_label": question.get("unit_label"),
+        "scope": question.get("scope"), "unit": question.get("unit"),
+        "unit_label": question.get("unit_label") or practice_unit_metadata(question.get("unit"))["label"],
         "local_number": question.get("local_number"), "context_md": question.get("context_md") or "",
         "stem_md": question.get("stem_md") or "",
         "options": question.get("options") or [], "knowledge_ids": question.get("knowledge_ids") or [],
@@ -630,6 +633,81 @@ def practice_session(bank_id: str, knowledge_id: str, match_level: str) -> dict:
         attempt = attempts.get(question["question_id"], {}) if isinstance(attempts, dict) else {}
         items.append({"question_id": question["question_id"], "local_number": question.get("local_number"), "question_type": question.get("question_type"), "answered": bool(attempt), "correct": attempt.get("correct") if isinstance(attempt, dict) else None})
     return {"bank": {key: bank[key] for key in ("id", "title", "subject", "domain")}, "knowledge_id": knowledge_id, "match_level": match_level, "questions": items, "answered_count": sum(1 for item in items if item["answered"]), "question_count": len(items)}
+
+
+def practice_unit_metadata(unit: object) -> dict[str, str]:
+    """Return a stable, reader-friendly label for one exam unit.
+
+    English exam banks keep the source paper's unit labels (for example
+    ``阅读理解 Text 1``).  The overview needs a little more structure without
+    forcing those display labels into the question-bank contract, so this
+    mapping stays at the YuReader runtime boundary and safely falls back for
+    future banks.
+    """
+    value = re.sub(r"\s+", " ", str(unit or "").strip())
+    if re.fullmatch(r"完形填空", value):
+        return {"part": "Section I", "label": "完形填空", "kind": "objective"}
+    match = re.fullmatch(r"阅读理解\s+Text\s+(\d+)", value, re.IGNORECASE)
+    if match:
+        number = match.group(1)
+        return {"part": "Section II · Part A", "label": f"阅读理解 · Text {number}", "kind": "objective"}
+    if re.fullmatch(r"阅读理解\s+Part\s+B", value, re.IGNORECASE):
+        return {"part": "Section II · Part B", "label": "阅读理解 · Part B（新题型）", "kind": "objective"}
+    return {"part": "试卷题目", "label": value or "未命名题型", "kind": "objective"}
+
+
+def practice_overview(bank_id: str) -> dict:
+    """Build a lightweight, answer-safe guide for one published paper.
+
+    Questions remain the source of truth.  The response only exposes grouping,
+    ranges and progress; answers and explanations are still gated by the
+    existing per-question endpoint.
+    """
+    bank = question_bank_by_id(bank_id)
+    if not bank:
+        raise ValueError("question bank not found")
+    questions = load_bank_questions(bank_id)
+    attempts = load_practice_store("attempts").get("items", {})
+    groups: list[dict] = []
+    for index, question in enumerate(questions):
+        metadata = practice_unit_metadata(question.get("unit"))
+        key = str(question.get("unit_key") or question.get("unit") or f"group-{index + 1}")
+        if not groups or groups[-1]["key"] != key:
+            groups.append(
+                {
+                    "key": key,
+                    "part": metadata["part"],
+                    "label": metadata["label"],
+                    "kind": metadata["kind"],
+                    "start_index": index,
+                    "start_number": question.get("local_number") or index + 1,
+                    "end_number": question.get("local_number") or index + 1,
+                    "question_count": 0,
+                    "answered_count": 0,
+                    "correct_count": 0,
+                    "paragraph_count": 0,
+                    "context_characters": 0,
+                }
+            )
+        group = groups[-1]
+        group["question_count"] += 1
+        group["end_number"] = question.get("local_number") or index + 1
+        context = str(question.get("context_md") or "").strip()
+        group["paragraph_count"] = max(group["paragraph_count"], len([item for item in re.split(r"\n\s*\n", context) if item.strip()]))
+        group["context_characters"] = max(group["context_characters"], len(context))
+        attempt = attempts.get(question.get("question_id"), {}) if isinstance(attempts, dict) else {}
+        if isinstance(attempt, dict) and attempt:
+            group["answered_count"] += 1
+            if attempt.get("correct") is True:
+                group["correct_count"] += 1
+
+    public_bank = {key: bank[key] for key in ("id", "title", "subject", "domain", "coverage") if key in bank}
+    return {
+        "bank": public_bank,
+        "question_count": len(questions),
+        "answered_count": sum(group["answered_count"] for group in groups),
+        "groups": groups,
+    }
 
 
 def practice_question(bank_id: str, question_id: str) -> dict:
@@ -1674,6 +1752,13 @@ class ReaderHandler(BaseHTTPRequestHandler):
             try:
                 query = parse_qs(parsed.query)
                 self.send_json(practice_session(query.get("bank_id", [""])[0], query.get("knowledge_id", [""])[0], query.get("match_level", [""])[0]))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/practice/overview":
+            try:
+                query = parse_qs(parsed.query)
+                self.send_json(practice_overview(query.get("bank_id", [""])[0]))
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
