@@ -1,5 +1,16 @@
 # 当前状态
 
+## 统一学习系统重构 · 阶段 0：契约与基线（2026-09-02）
+
+- 已完整阅读 `AGENTS.md`、`README.md`、本文件，以及 `docs/learning-system-redesign/README.md` 和 01–06 全部编号设计文档；当前重构目标与阶段门槛以该设计目录为准。
+- 已修正最高优先级执行契约：练习仍与正文保持独立，但练习产生的活动、用户产出和计时可以进入统一学习记录、回顾和统计，不改写章节正文或现有独立存储；`docs/PLATFORM_UPGRADE.md` 已标为历史阶段设计并保留。
+- 开始体检时工作区已有未提交修改，涉及应用、前端、题库/YuBook/YuPractice、README 和本状态文档；本阶段未回滚、未覆盖这些修改，也未修改 `app.py`、前端、`content/`、`question-banks/` 或 `data/` 中的用户资料。
+- 新增 `tools/audit_learning_system_baseline.py`：只读扫描 Git、正式内容包、运行时题库、活动、用户数据目录和已发现的 Obsidian `YuReader/`；报告只保存路径、数量、时间戳、结构摘要和 SHA-256，不保存书籍、题目、笔记、答案或回顾正文。报告以 `tmp/learning-system-baseline-*.json` 保存，目录已被 `.gitignore` 保护，可重复生成。
+- 当前基线：API `/api/health` 为 `0.11.0`；运行时 `/api/bootstrap` 为 40 本书、1,758 个小节、34 个题库；题库正式题 2,699 道，YuPractice 逐包校验为 33 个 `pass`、1 个 `warning`（政治基础题库的 14 条既有隔离题警告）、0 个 blocker。内容目录另有 1 个示例目录，故物理顶层为 41 个目录、40 个 manifest 包。
+- 当前学习数据：`data/activity.json` 为 schema 1，覆盖 6 个日期、累计阅读 6,825 秒；9 个章节笔记文件中 4 个非空，3 个非空笔记暂无法按当前稳定小节 ID 映射；活动中有 2 个日期、3 个失联 ID。完整清单与哈希均在本阶段报告中记录，阶段 1 负责别名恢复，不在此阶段猜测映射。
+- 已发现 Obsidian vault；`/api/stats`、`/api/reviews` 均可用并已以无正文结构摘要写入基线。阶段 0 没有迁移数据、没有创建活动 schema、没有改变首页或导航、没有删除旧目录。
+- 阶段 0 验证：`python -m unittest tests.test_learning_baseline_audit -v`、审计器与 `app.py` 的 `py_compile`、`node --check static/app.js` 通过；完整 YuReader 104/104、YuBook 29/29、YuPractice 56/56 回归和真实浏览器 smoke 均已通过。
+
 ## 英语真题题型化做题框架（2026-08-31）
 
 - 完形填空不再把完整文章当作普通阅读题显示：2024/2025 真题的共享原文保留原卷段落，前端按题号顺序识别正文中的 1–20 个空，并渲染为可点击的空格按钮。点击任意空格会定位到对应题目，只展开该空的 A–D 选项；底部重复选项隐藏，减少在长文章中上下寻找的负担。
