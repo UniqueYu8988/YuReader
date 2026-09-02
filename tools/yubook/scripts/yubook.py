@@ -86,27 +86,73 @@ def canonical_hash(payload: object) -> str:
 
 def derived_text_hash(items: list[dict]) -> str:
     """Hash the ordered reading/reference artifact set without duplicating text."""
-    page_set = [
-        {
+    page_set = []
+    for item in sorted(
+        items,
+        key=lambda item: (
+            item["source_map"].get("original_char_start", item["source_map"]["original_line_start"]),
+            item["source_map"].get("original_char_end", item["source_map"]["original_line_end"]),
+            item["artifact"],
+        ),
+    ):
+        source_map = item["source_map"]
+        entry = {
             "artifact": item["artifact"],
             "sha256": item["sha256"],
-            "original_line_start": item["source_map"]["original_line_start"],
-            "original_line_end": item["source_map"]["original_line_end"],
+            "original_line_start": source_map["original_line_start"],
+            "original_line_end": source_map["original_line_end"],
         }
-        for item in sorted(
-            items,
-            key=lambda item: (
-                item["source_map"]["original_line_start"],
-                item["source_map"]["original_line_end"],
-                item["artifact"],
-            ),
-        )
-    ]
+        if "original_char_start" in source_map or "original_char_end" in source_map:
+            entry["original_char_start"] = source_map.get("original_char_start")
+            entry["original_char_end"] = source_map.get("original_char_end")
+        page_set.append(entry)
     return canonical_hash(page_set)
 
 
 def stable_id(*parts: object) -> str:
     return sha256_bytes(":".join(str(part) for part in parts).encode("utf-8"))[:12]
+
+
+def load_section_aliases(content_root: Path) -> dict[str, str]:
+    """Load only the stable-ID alias edges used by replacement validation."""
+    alias_path = content_root.parent / "data" / "section-aliases.json"
+    try:
+        payload = json.loads(read_text(alias_path))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        return {}
+    raw_aliases = payload.get("section_aliases")
+    if not isinstance(raw_aliases, dict):
+        return {}
+    aliases: dict[str, str] = {}
+    for legacy_id, entry in raw_aliases.items():
+        current_id = entry.get("current_id") if isinstance(entry, dict) else None
+        if (
+            isinstance(legacy_id, str)
+            and re.fullmatch(r"[0-9a-f]{12}", legacy_id)
+            and isinstance(current_id, str)
+            and re.fullmatch(r"[0-9a-f]{12}", current_id)
+            and legacy_id != current_id
+        ):
+            aliases[legacy_id] = current_id
+    return aliases
+
+
+def resolve_section_alias(section_id: object, aliases: dict[str, str]) -> str | None:
+    """Resolve an alias edge safely, returning None for cycles or invalid IDs."""
+    current = str(section_id or "")
+    if not re.fullmatch(r"[0-9a-f]{12}", current):
+        return None
+    visited: set[str] = set()
+    while current in aliases:
+        if current in visited:
+            return None
+        visited.add(current)
+        current = aliases[current]
+        if not re.fullmatch(r"[0-9a-f]{12}", current):
+            return None
+    return current
 
 
 def utc_now() -> str:
@@ -207,6 +253,45 @@ def source_lines(path: Path) -> list[str]:
     # actual CRLF/LF bytes so a page range can be reconstructed byte-for-byte.
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return handle.read().splitlines(keepends=True)
+
+
+def source_line_offsets(lines: list[str]) -> list[int]:
+    """Return absolute character offsets for the start of each source line."""
+    offsets: list[int] = []
+    cursor = 0
+    for line in lines:
+        offsets.append(cursor)
+        cursor += len(line)
+    return offsets
+
+
+def page_source_text(lines: list[str], page: dict, *, cleaned_lines: list[str] | None = None) -> str:
+    """Materialize one page, optionally using an auditable character span.
+
+    Normal pages continue to use inclusive source line ranges.  A page may
+    additionally declare ``start_char``/``end_char`` (absolute, end-exclusive)
+    when several independent tables share one physical source line.  The
+    character-span form is deliberately line-preserving: callers must provide
+    the same-length cleaned lines, so deterministic replacements cannot shift
+    an offset silently.
+    """
+    source = "".join(cleaned_lines if cleaned_lines is not None else lines)
+    start_char = page.get("start_char")
+    end_char = page.get("end_char")
+    if start_char is not None or end_char is not None:
+        if not isinstance(start_char, int) or not isinstance(end_char, int):
+            raise YuBookError("字符切页必须同时提供整数 start_char/end_char")
+        if start_char < 0 or end_char <= start_char or end_char > len(source):
+            raise YuBookError("字符切页范围无效")
+        text = source[start_char:end_char]
+    else:
+        start_line, end_line = page["start_line"], page["end_line"]
+        text = "".join((cleaned_lines if cleaned_lines is not None else lines)[start_line - 1 : end_line])
+    prefix = page.get("char_prefix", "")
+    suffix = page.get("char_suffix", "")
+    if not isinstance(prefix, str) or not isinstance(suffix, str):
+        raise YuBookError("字符切页的 char_prefix/char_suffix 必须是字符串")
+    return f"{prefix}{text}{suffix}"
 
 
 def line_ending(value: str) -> str:
@@ -473,6 +558,8 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
     outline = load_json(project / "outline.json")
     source = project_source(project, outline)
     lines = source_lines(source)
+    source_text = "".join(lines)
+    line_offsets = source_line_offsets(lines)
     blockers: list[dict] = []
     warnings: list[dict] = []
 
@@ -524,7 +611,8 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
     if current_id and current_title and DEFAULT_CONTENT_ROOT.is_dir():
         for manifest_path in DEFAULT_CONTENT_ROOT.glob("*/manifest.json"):
             try:
-                existing = load_json(manifest_path).get("book", {})
+                existing_manifest = load_json(manifest_path)
+                existing = existing_manifest.get("book", {})
             except YuBookError:
                 continue
             if existing.get("title") == current_title and existing.get("id") != current_id:
@@ -536,6 +624,36 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
                     planned_id=current_id,
                     existing_id=existing.get("id"),
                 )
+                break
+            if existing.get("id") != current_id:
+                continue
+            raw_pages = outline.get("pages") if isinstance(outline.get("pages"), list) else []
+            planned_section_ids = {
+                stable_id(current_id, "page", page.get("id"))
+                for page in raw_pages
+                if isinstance(page, dict) and page.get("role") == "reading" and isinstance(page.get("id"), str) and page.get("id")
+            }
+            existing_section_ids = {
+                str(section.get("id"))
+                for section in (existing_manifest.get("sections") if isinstance(existing_manifest.get("sections"), list) else [])
+                if isinstance(section, dict) and isinstance(section.get("id"), str)
+            }
+            missing_ids = existing_section_ids - planned_section_ids
+            if missing_ids:
+                aliases = load_section_aliases(DEFAULT_CONTENT_ROOT)
+                unresolved_ids = sorted(
+                    section_id
+                    for section_id in missing_ids
+                    if resolve_section_alias(section_id, aliases) not in planned_section_ids
+                )
+                if unresolved_ids:
+                    add_problem(
+                        blockers,
+                        "section_id_drift",
+                        "替换书包会使现有小节稳定 ID 失联；必须保留原 ID 或先登记高置信别名",
+                        book_id=current_id,
+                        existing_ids=unresolved_ids,
+                    )
                 break
 
     start = content.get("start_line")
@@ -763,8 +881,49 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
         if not isinstance(p_start, int) or not isinstance(p_end, int) or p_start < 1 or p_end < p_start or p_end > len(lines):
             add_problem(blockers, "page_range", "页面来源范围无效", page_id=page_id, start_line=p_start, end_line=p_end)
             continue
+        start_char, end_char = page.get("start_char"), page.get("end_char")
+        has_char_span = start_char is not None or end_char is not None
+        if has_char_span:
+            if not isinstance(start_char, int) or not isinstance(end_char, int):
+                add_problem(blockers, "page_char_range", "字符切页必须同时提供整数 start_char/end_char", page_id=page_id)
+                continue
+            line_start_offset = line_offsets[p_start - 1]
+            line_end_offset = line_offsets[p_end - 1] + len(lines[p_end - 1])
+            if start_char < line_start_offset or end_char > line_end_offset or end_char <= start_char:
+                add_problem(
+                    blockers,
+                    "page_char_range",
+                    "字符切页必须位于声明的来源行范围内且 end_char 大于 start_char",
+                    page_id=page_id,
+                    start_char=start_char,
+                    end_char=end_char,
+                    line_start_offset=line_start_offset,
+                    line_end_offset=line_end_offset,
+                )
+                continue
+            prefix, suffix = page.get("char_prefix", ""), page.get("char_suffix", "")
+            if not isinstance(prefix, str) or not isinstance(suffix, str):
+                add_problem(blockers, "page_char_wrapper", "字符切页的 char_prefix/char_suffix 必须是字符串", page_id=page_id)
+                continue
+            # A character offset points into the immutable source.  If a
+            # line-level transformation changes that span, offsets would no
+            # longer identify the same bytes; reject the page instead of
+            # silently shifting its provenance.
+            derived_lines, _ = derive_clean_lines(lines, outline)
+            if any(derived_lines[index] != lines[index] for index in range(p_start - 1, p_end)):
+                add_problem(
+                    blockers,
+                    "page_char_transform_conflict",
+                    "字符切页所在来源行包含会改变长度的行级清洗，无法安全映射",
+                    page_id=page_id,
+                )
+                continue
+        try:
+            page_text = page_source_text(lines, page)
+        except YuBookError as exc:
+            add_problem(blockers, "page_char_range", str(exc), page_id=page_id)
+            continue
         valid_pages.append(page)
-        page_text = "".join(lines[p_start - 1 : p_end])
         char_count = len(page_text.strip())
         if page.get("role") == "reading" and char_count < 300:
             add_problem(warnings, "short_page", "页面偏短，需要确认是否应并入相邻自然小节", page_id=page_id, characters=char_count)
@@ -776,16 +935,53 @@ def validate_project(project: Path) -> tuple[dict, dict, list[str]]:
 
     if page_orders and sorted(page_orders) != list(range(1, len(page_orders) + 1)):
         add_problem(blockers, "page_order_gap", "页面全书顺序必须从 1 连续递增", actual=sorted(page_orders))
-    ordered_pages = sorted(valid_pages, key=lambda page: (page["start_line"], page["end_line"]))
+
+    # English teaching booklets often place a course cover, category legend,
+    # QR promotion, or other front matter in the same source range as the
+    # first passage.  Keep the source range auditable, but surface the issue
+    # so a builder can make that prefix a reference artifact or an explicit
+    # derived transformation instead of showing it in the reading page.
+    if str(project_book.get("domain") or "").strip().lower() == "english":
+        reading_pages = [page for page in valid_pages if page.get("role") == "reading"]
+        if reading_pages:
+            first_page = min(reading_pages, key=lambda page: page.get("order", 10**9))
+            first_text = "".join(lines[first_page["start_line"] - 1 : first_page["end_line"]])
+            passage_match = re.search(r"(?m)^#{1,6}\s*Passage\s+0*1\b", first_text, re.IGNORECASE)
+            if passage_match and passage_match.start() > 0:
+                prefix = first_text[: passage_match.start()]
+                if re.search(r"(?:二维码|赠送|免费获取|扫码|课程|社会生活类|商业经济类|科学技术类)", prefix):
+                    add_problem(
+                        warnings,
+                        "front_matter_prefix",
+                        "首个阅读页在 Passage 01 前含疑似课程/宣传前置信息；应归档或记录显式派生清理",
+                        page_id=first_page.get("id"),
+                        prefix_characters=len(prefix.strip()),
+                    )
+
+    def page_interval(page: dict) -> tuple[int, int]:
+        if isinstance(page.get("start_char"), int) and isinstance(page.get("end_char"), int):
+            return page["start_char"], page["end_char"]
+        return line_offsets[page["start_line"] - 1], line_offsets[page["end_line"] - 1] + len(lines[page["end_line"] - 1])
+
+    ordered_pages = sorted(valid_pages, key=page_interval)
     if ordered_pages and isinstance(start, int) and isinstance(end, int):
-        cursor = start
+        cursor = line_offsets[start - 1]
+        expected_end = line_offsets[end - 1] + len(lines[end - 1])
         for page in ordered_pages:
-            if page["start_line"] != cursor:
-                code = "source_gap" if page["start_line"] > cursor else "source_overlap"
-                add_problem(blockers, code, "页面范围必须无缺口、无重叠覆盖正文", expected_start=cursor, page_id=page.get("id"), actual_start=page["start_line"])
-            cursor = max(cursor, page["end_line"] + 1)
-        if cursor != end + 1:
-            add_problem(blockers, "source_tail", "页面没有覆盖到正文末尾", expected_end=end, covered_end=cursor - 1)
+            interval_start, interval_end = page_interval(page)
+            if interval_start != cursor:
+                code = "source_gap" if interval_start > cursor else "source_overlap"
+                add_problem(
+                    blockers,
+                    code,
+                    "页面范围必须无缺口、无重叠覆盖正文",
+                    expected_start=cursor,
+                    page_id=page.get("id"),
+                    actual_start=interval_start,
+                )
+            cursor = max(cursor, interval_end)
+        if cursor != expected_end:
+            add_problem(blockers, "source_tail", "页面没有覆盖到正文末尾", expected_end=expected_end, covered_end=cursor)
 
     reading_chapters: set[str] = set()
     for page in pages:
@@ -1009,7 +1205,7 @@ def command_build(args: argparse.Namespace) -> dict:
 
         pages = sorted(outline["pages"], key=lambda page: page["order"])
         for page in pages:
-            text = "".join(clean_lines[page["start_line"] - 1 : page["end_line"]])
+            text = page_source_text(clean_lines, page)
             public_id = stable_id(book_id, "page", page["id"])
             role = page["role"]
             folder = staging / ("cleaned/pages" if role == "reading" else "reference/pages")
@@ -1047,6 +1243,16 @@ def command_build(args: argparse.Namespace) -> dict:
                     "original_line_end": page["end_line"],
                 },
             }
+            if isinstance(page.get("start_char"), int) and isinstance(page.get("end_char"), int):
+                item["source_map"].update(
+                    {
+                        "original_char_start": page["start_char"],
+                        "original_char_end": page["end_char"],
+                    }
+                )
+                if page.get("char_prefix") or page.get("char_suffix"):
+                    item["source_map"]["derived_prefix"] = page.get("char_prefix", "")
+                    item["source_map"]["derived_suffix"] = page.get("char_suffix", "")
             if chapter:
                 item.update(
                     {
@@ -1225,6 +1431,11 @@ def validate_package(package: Path) -> dict:
         relative = manifest.get("artifacts", {}).get(artifact_key)
         if not relative or not (package / relative).is_file():
             add_problem(blockers, "package_artifact_missing", "候选包缺少可追溯报告", artifact_key=artifact_key, artifact=relative)
+    repair_meta = manifest.get("repair") if isinstance(manifest.get("repair"), dict) else None
+    if repair_meta is not None:
+        receipt = repair_meta.get("receipt")
+        if not isinstance(receipt, str) or not receipt or not (package / receipt).is_file():
+            add_problem(blockers, "repair_receipt_missing", "派生修复包缺少 repair receipt", receipt=receipt)
     derived_items = [*manifest.get("sections", []), *manifest.get("references", [])]
     for section in derived_items:
         artifact = package / section.get("artifact", "")

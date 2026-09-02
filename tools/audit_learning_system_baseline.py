@@ -33,7 +33,7 @@ INVENTORY_DIRS = {
     "logs": "logs",
     "weekly_reports": "weekly-reports",
 }
-API_PATHS = ("/api/health", "/api/bootstrap", "/api/stats", "/api/reviews")
+API_PATHS = ("/api/health", "/api/bootstrap", "/api/stats", "/api/reviews", "/api/unarchived", "/api/activities")
 
 
 def sha256_file(path: Path) -> str:
@@ -247,7 +247,47 @@ def section_ids_from_content(root: Path) -> set[str]:
     return ids
 
 
-def activity_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
+def load_section_aliases(root: Path) -> dict[str, dict[str, str]]:
+    path = root / "data" / "section-aliases.json"
+    payload, error = json_object(path)
+    if error or payload is None or payload.get("schema_version") != 1:
+        return {}
+    raw_aliases = payload.get("section_aliases")
+    if not isinstance(raw_aliases, dict):
+        return {}
+    aliases: dict[str, dict[str, str]] = {}
+    for legacy_id, entry in raw_aliases.items():
+        current_id = entry.get("current_id") if isinstance(entry, dict) else None
+        if (
+            isinstance(legacy_id, str)
+            and len(legacy_id) == 12
+            and all(char in "0123456789abcdef" for char in legacy_id)
+            and isinstance(current_id, str)
+            and len(current_id) == 12
+            and all(char in "0123456789abcdef" for char in current_id)
+            and legacy_id != current_id
+        ):
+            aliases[legacy_id] = {
+                "current_id": current_id,
+                "confidence": str(entry.get("confidence") or ""),
+            }
+    return aliases
+
+
+def resolve_section_id(section_id: object, section_ids: set[str], aliases: dict[str, dict[str, str]]) -> str | None:
+    current = str(section_id or "")
+    if current not in section_ids and current not in aliases:
+        return current if current in section_ids else None
+    visited: set[str] = set()
+    while current in aliases:
+        if current in visited:
+            return None
+        visited.add(current)
+        current = aliases[current]["current_id"]
+    return current if current in section_ids else None
+
+
+def activity_inventory(root: Path, section_ids: set[str], aliases: dict[str, dict[str, str]]) -> dict[str, Any]:
     path = root / "data" / "activity.json"
     result: dict[str, Any] = {"path": str(path), "exists": path.is_file()}
     if not path.is_file():
@@ -270,7 +310,13 @@ def activity_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
         sections = [str(item) for item in value.get("sections", []) if str(item)] if isinstance(value.get("sections"), list) else []
         notes = [str(item) for item in value.get("notes", []) if str(item)] if isinstance(value.get("notes"), list) else []
         section_seconds = value.get("section_reading_seconds") if isinstance(value.get("section_reading_seconds"), dict) else {}
-        unknown_ids = sorted((set(sections) | set(notes) | {str(item) for item in section_seconds}) - section_ids)
+        unknown_ids = sorted(
+            {
+                section_id
+                for section_id in (set(sections) | set(notes) | {str(item) for item in section_seconds})
+                if not resolve_section_id(section_id, section_ids, aliases)
+            }
+        )
         if unknown_ids:
             unknown.append({"date": str(day), "ids": unknown_ids})
         reading_seconds = max(0, int(value.get("reading_seconds") or 0))
@@ -296,7 +342,7 @@ def activity_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
             "total_reading_seconds": total_reading_seconds,
             "total_section_reading_seconds": total_section_seconds,
             "last_section_id": last_section,
-            "last_section_mapped": bool(last_section) and last_section in section_ids,
+            "last_section_mapped": bool(last_section) and bool(resolve_section_id(last_section, section_ids, aliases)),
             "days": day_summaries,
             "unmapped_activity_ids": unknown,
         }
@@ -304,7 +350,7 @@ def activity_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
     return result
 
 
-def data_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
+def data_inventory(root: Path, section_ids: set[str], aliases: dict[str, dict[str, str]]) -> dict[str, Any]:
     data_root = root / "data"
     result: dict[str, Any] = {"root": str(data_root), "directories": {}}
     for label, name in INVENTORY_DIRS.items():
@@ -323,10 +369,12 @@ def data_inventory(root: Path, section_ids: set[str]) -> dict[str, Any]:
     for path in sorted(note_files):
         entry = file_metadata(path, root, include_non_empty=True)
         stem = path.stem
+        resolved_id = resolve_section_id(stem, section_ids, aliases)
         entry.update(
             {
                 "section_id": stem,
-                "mapping_status": "mapped" if stem in section_ids else "unmapped",
+                "resolved_section_id": resolved_id or "",
+                "mapping_status": "mapped" if resolved_id else "unmapped",
             }
         )
         notes.append(entry)
@@ -426,6 +474,12 @@ def api_summary(path: str, payload: Any) -> dict[str, Any]:
     elif path == "/api/reviews":
         safe_keys = {"review_date", "review_note_date", "note_count", "subject_count", "page_count", "review_note_characters", "completed_count", "all_complete"}
         summary["safe_metrics"] = {key: payload[key] for key in sorted(safe_keys) if key in payload and isinstance(payload[key], (bool, int, float, str))}
+    elif path == "/api/unarchived":
+        safe_keys = {"schema_version", "note_count", "activity_count"}
+        summary["safe_metrics"] = {key: payload[key] for key in sorted(safe_keys) if key in payload and isinstance(payload[key], (bool, int, float, str))}
+    elif path == "/api/activities":
+        safe_keys = {"schema_version", "count", "duration_seconds"}
+        summary["safe_metrics"] = {key: payload[key] for key in sorted(safe_keys) if key in payload and isinstance(payload[key], (bool, int, float, str))}
     return summary
 
 
@@ -448,8 +502,10 @@ def build_report(root: Path, *, api_base: str = "http://127.0.0.1:8775", api_tim
     root = root.resolve()
     content = content_inventory(root)
     section_ids = section_ids_from_content(root)
-    data = data_inventory(root, section_ids)
-    activity = activity_inventory(root, section_ids)
+    aliases = load_section_aliases(root)
+    alias_path = root / "data" / "section-aliases.json"
+    data = data_inventory(root, section_ids, aliases)
+    activity = activity_inventory(root, section_ids, aliases)
     report = {
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
@@ -457,6 +513,13 @@ def build_report(root: Path, *, api_base: str = "http://127.0.0.1:8775", api_tim
         "git": git_baseline(root),
         "content": content,
         "question_banks": question_bank_inventory(root),
+        "section_aliases": {
+            "path": str(alias_path),
+            "exists": alias_path.is_file(),
+            "sha256": sha256_file(alias_path) if alias_path.is_file() else "",
+            "count": len(aliases),
+            "entries": [{"legacy_id": legacy_id, **entry} for legacy_id, entry in sorted(aliases.items())],
+        },
         "activity": activity,
         "data": data,
         "obsidian": obsidian_inventory(root),

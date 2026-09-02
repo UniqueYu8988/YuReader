@@ -297,6 +297,42 @@ class YuPracticeValidatorTests(unittest.TestCase):
             result = validate(package)
             self.assertIn("E025", [blocker["code"] for blocker in result["blockers"]])
 
+    def test_cloze_context_missing_number_is_surface_as_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            questions = [
+                valid_question(
+                    f"cloze-q-{number:03d}",
+                    unit_key="use-of-english",
+                    local_number=number,
+                    context_md="ANSWER SHEET\n" + " ".join(str(item) for item in range(1, 20)),
+                    source_analysis_md=f"解析 {number}",
+                )
+                for number in range(1, 21)
+            ]
+            package = build_package(Path(tmp), questions)
+            result = validate(package)
+            self.assertIn("W021", [warning["code"] for warning in result["warnings"]])
+
+    def test_guarded_analysis_does_not_trigger_noise_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build_package(
+                Path(tmp),
+                [
+                    valid_question(
+                        source_analysis_md="【原书解析未可靠转录】请结合原始解析页阅读。",
+                        transformations=[
+                            {
+                                "type": "other",
+                                "reason": "content_quality_guard: repeated OCR noise",
+                                "verified": True,
+                            }
+                        ],
+                    )
+                ],
+            )
+            result = validate(package)
+            self.assertNotIn("W022", [warning["code"] for warning in result["warnings"]])
+
     def test_status_not_ready_is_blocker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = build_package(Path(tmp), [valid_question(status="draft")])

@@ -39,6 +39,20 @@ aggregate must be grouped by the individual question's stable subject label
 Obsidian backups under the matching subject even when one runtime bank serves
 the whole domain.
 
+## 通用内容处理经验（持续沉淀）
+
+- 目录是导航证据，不是正文的替代品。先从正文第一章开始建立稳定的章/节边界，再生成页面；书前版权、课程宣传、二维码和书末索引默认归入 `reference`，不让它们占用主阅读流。
+- 清洗只做高置信度、可逐行解释的变更。优先修复重复页眉、明确的 OCR 专业词、标题断裂和编号后的排版空格；普通错字、语义不确定的 OCR 和疑似表格内容原样保留，交给侧边栏 AI 结合上下文理解。
+- MinerU 将标题前的装饰箭头识别为 `->>`、`>>` 或单个 `>` 时，可只在 Markdown 标题行移除箭头，保留后面的标题文字；不要对正文中的 `>`、数学符号或引用块做全局替换。
+- 同一来源行可能同时命中多个规则。替换记录以 `(source_line, old)` 去重，并在构建前模拟最终结果，确保规则组合后仍是预期标题；不能只检查 replacement 列表而忽略最终派生正文。
+- 不用字符数阈值强行切页。一个物理来源行中合并的多节内容无法可靠定位时，保留完整内容并在质量报告中标记 long-page warning；绝不复制、猜写或制造缺失边界。
+- 若同一物理来源行内存在明确、可复现的 HTML 表格起点，可在页面中声明绝对 `start_char`/`end_char`（end-exclusive）切页；字符区间必须连续覆盖来源，必要的 `<table>` 外壳只能作为显式 `char_prefix`/`char_suffix` 结构包装，并记录在 source_map，不能改变单词或题干。
+- 页面只服务于阅读和侧边栏上下文：保留原文、表格、公式、图注和来源映射，不为“看起来完整”补造图片，也不把 AI 摘要混入原书正文。每次导入前都要用最后一个候选包的 manifest、质量报告和清单做回归。
+- 发布后仍要复核 `provenance.original.external_path` 指向的文件哈希；若工作区路径被后续流程替换，必须从带有正确 `original/source.md` 的旧候选或新归档重新建包，不能只手改 manifest 中的哈希来掩盖来源漂移。
+- 扫描到 Unicode replacement character（`U+FFFD`）时先按重复页眉/页脚或编码损坏分组审计；没有同源证据就保留原样并记录风险，禁止逐字符臆测替换。
+- 英语试卷中若出现短的非中文乱码行，同时带有明确页脚页码形态（`.1.`–`.14.`、`� 14`、`1:vf`/`14:Vf` 或 `A-14`），可逐行移除并记录 provenance；书前 20 行和没有页码证据的乱码一律保留。
+- 对英文资料，可按 Passage/题型等原生边界整理；若 OCR 将“第 N 段原文”拆成多行，可依据同一 Passage 内连续编号恢复标题，但不要凭空补写段落正文。宣传页和重复书名保留在 reference，避免污染学习页面。
+
 ## Required references
 
 - Read [references/outline.md](references/outline.md) while reconstructing hierarchy and writing `outline.json`.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -158,6 +159,141 @@ class YuBookTests(unittest.TestCase):
             self.assertTrue((target / "manifest.json").is_file())
             self.assertFalse((target / "original").exists())
 
+    def test_existing_section_id_drift_is_blocked_without_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = self.make_project(root)
+            content_root = root / "content"
+            existing = content_root / "sample-book"
+            existing.mkdir(parents=True)
+            yubook.write_json(
+                existing / "manifest.json",
+                {
+                    "book": {"id": "sample-book", "title": "示例教材"},
+                    "sections": [{"id": "111111111111"}],
+                },
+            )
+            original_content_root = yubook.DEFAULT_CONTENT_ROOT
+            yubook.DEFAULT_CONTENT_ROOT = content_root
+            try:
+                report, _outline, _lines = yubook.validate_project(project)
+            finally:
+                yubook.DEFAULT_CONTENT_ROOT = original_content_root
+            self.assertIn("section_id_drift", {item["code"] for item in report["blockers"]})
+
+    def test_existing_section_id_drift_can_be_resolved_by_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = self.make_project(root)
+            content_root = root / "content"
+            existing = content_root / "sample-book"
+            existing.mkdir(parents=True)
+            planned_id = yubook.stable_id("sample-book", "page", "ch01-s01")
+            yubook.write_json(
+                existing / "manifest.json",
+                {
+                    "book": {"id": "sample-book", "title": "示例教材"},
+                    "sections": [{"id": "111111111111"}],
+                },
+            )
+            yubook.write_json(
+                root / "data" / "section-aliases.json",
+                {
+                    "schema_version": 1,
+                    "section_aliases": {"111111111111": {"current_id": planned_id, "confidence": "high"}},
+                },
+            )
+            original_content_root = yubook.DEFAULT_CONTENT_ROOT
+            yubook.DEFAULT_CONTENT_ROOT = content_root
+            try:
+                report, _outline, _lines = yubook.validate_project(project)
+            finally:
+                yubook.DEFAULT_CONTENT_ROOT = original_content_root
+            self.assertNotIn("section_id_drift", {item["code"] for item in report["blockers"]})
+
+    def test_character_span_pages_split_one_source_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = root / "project"
+            (project / "source").mkdir(parents=True)
+            source_text = (
+                "示例词汇表\n"
+                "第1版\n"
+                "# 第一章 词汇\n"
+                "<table><tr><td>Unit 1 Lesson 1</td></tr><tr><td>Unit 1 Lesson 2</td></tr></table>\n"
+            )
+            source = project / "source" / "original.md"
+            source.write_text(source_text, encoding="utf-8")
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            (project / "book.json").write_text(
+                json.dumps(
+                    {
+                        "id": "char-span-book",
+                        "title": "示例词汇表",
+                        "edition": "第1版",
+                        "external_source": str(source),
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            lines = yubook.source_lines(source)
+            actual_source = "".join(lines)
+            second_row = actual_source.index("<tr>", actual_source.index("<tr>") + 1)
+            outline = {
+                "schema_version": 1,
+                "book": {
+                    "id": "char-span-book",
+                    "title": "示例词汇表",
+                    "edition": "第1版",
+                    "identity_evidence": [
+                        {"field": "title", "line": 1, "quote": "示例词汇表"},
+                        {"field": "edition", "line": 2, "quote": "第1版"},
+                    ],
+                },
+                "source": {"artifact": "source/original.md", "sha256": source_hash, "line_count": len(lines)},
+                "content": {"start_line": 3, "end_line": 4},
+                "nodes": [
+                    {"id": "ch01", "parent_id": None, "order": 1, "kind": "chapter", "title": "第一章 词汇", "source_line": 3},
+                    {"id": "ch01-s01", "parent_id": "ch01", "order": 1, "kind": "section", "title": "第一节 Lesson 1", "source_line": 4},
+                    {"id": "ch01-s02", "parent_id": "ch01", "order": 2, "kind": "section", "title": "第二节 Lesson 2", "source_line": 4},
+                ],
+                "pages": [
+                    {
+                        "id": "ch01-s01",
+                        "node_id": "ch01-s01",
+                        "order": 1,
+                        "role": "reading",
+                        "title": "第一节 Lesson 1",
+                        "start_line": 3,
+                        "end_line": 4,
+                        "start_char": yubook.source_line_offsets(lines)[2],
+                        "end_char": second_row,
+                        "char_suffix": "</table>\n",
+                    },
+                    {
+                        "id": "ch01-s02",
+                        "node_id": "ch01-s02",
+                        "order": 2,
+                        "role": "reading",
+                        "title": "第二节 Lesson 2",
+                        "start_line": 4,
+                        "end_line": 4,
+                        "start_char": second_row,
+                        "end_char": len(actual_source),
+                        "char_prefix": "<table>",
+                    },
+                ],
+                "issues": [],
+            }
+            yubook.write_json(project / "outline.json", outline)
+            report, _outline, _lines = yubook.validate_project(project)
+            self.assertFalse(report["blockers"])
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            self.assertEqual(2, len(yubook.load_json(package / "manifest.json")["sections"]))
+            self.assertEqual("pass", yubook.validate_package(package)["status"])
+
     def test_fragment_title_and_number_gap_are_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             project = self.make_project(Path(temp))
@@ -275,6 +411,18 @@ class YuBookTests(unittest.TestCase):
             yubook.write_json(manifest_path, manifest)
             audit = yubook.validate_package(package)
             self.assertIn("derived_hash", {item["code"] for item in audit["blockers"]})
+
+    def test_repaired_package_requires_a_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = self.make_project(Path(temp))
+            result = yubook.command_build(Namespace(project=str(project)))
+            package = Path(result["package"])
+            manifest_path = package / "manifest.json"
+            manifest = yubook.load_json(manifest_path)
+            manifest["repair"] = {"name": "test-repair", "receipt": "reports/repair-receipt.json"}
+            yubook.write_json(manifest_path, manifest)
+            audit = yubook.validate_package(package)
+            self.assertIn("repair_receipt_missing", {item["code"] for item in audit["blockers"]})
 
     # ---- 政治讲义资源元数据（YuBook 0.4.0） ----
 

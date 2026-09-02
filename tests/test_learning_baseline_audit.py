@@ -49,6 +49,42 @@ class LearningBaselineAuditTests(unittest.TestCase):
             self.assertNotIn("失联笔记不应进入报告", serialized)
             self.assertIn("sha256", report["data"]["notes"]["files"][0])
 
+    def test_report_resolves_metadata_only_section_aliases(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            content = root / "content" / "book-a"
+            content.mkdir(parents=True)
+            (content / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "book": {"id": "book-a", "title": "测试书", "status": "ready"},
+                        "quality": {"status": "pass", "blocker_count": 0, "warning_count": 0},
+                        "sections": [{"id": "aaaaaaaaaaaa", "artifact": "page.md"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            notes = root / "data" / "notes"
+            notes.mkdir(parents=True)
+            (notes / "bbbbbbbbbbbb.md").write_text("别名笔记正文不应进入报告", encoding="utf-8")
+            (root / "data" / "section-aliases.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "section_aliases": {"bbbbbbbbbbbb": {"current_id": "aaaaaaaaaaaa", "confidence": "high"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(root, api_base="http://127.0.0.1:1", api_timeout=0.1)
+
+            self.assertEqual(report["section_aliases"]["count"], 1)
+            self.assertEqual(report["data"]["notes"]["mapped_non_empty_count"], 1)
+            self.assertEqual(report["data"]["notes"]["unmapped_non_empty_count"], 0)
+            self.assertNotIn("别名笔记正文不应进入报告", json.dumps(report, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     unittest.main()

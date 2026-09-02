@@ -60,8 +60,10 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 OPTION_LABEL_RE = re.compile(r"^[A-Z]$")
 MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
 PROMOTIONAL_TEXT_RE = re.compile(
-    r"(?:扫描右侧二维码|扫码兑换|关注公众号|QQ群|资料同步\s*VX|免费分享\s*PDF|涛涛提示)"
+    r"(?:扫描右侧二维码|扫码兑换|关注公众号|QQ群|资料同步\s*VX|免费分享\s*PDF|认准淘宝店铺|赠送配套课程|涛涛提示)"
 )
+CLOZE_MARKER_RE = re.compile(r"(?<!\d)(\d{1,2})(?!\d)")
+ANALYSIS_GUARD_PREFIX = "【原书解析未可靠转录】"
 
 
 class Findings:
@@ -561,6 +563,82 @@ def validate_question_record(
             )
 
 
+def _cloze_marker_numbers(context: str) -> set[int]:
+    """Return likely numbered blanks from the passage body.
+
+    The directions contain an unrelated ``10 points`` token, so begin after
+    the answer-sheet instruction when it is present.  This check is a quality
+    warning rather than a rewrite rule: OCR may use underscores or punctuation
+    around a number, but a missing blank is still important enough to surface.
+    """
+    text = str(context or "")
+    starts = [text.lower().find("answer sheet"), text.lower().find("answer\u00a0sheet")]
+    start = max(starts)
+    body = text[start + len("answer sheet") :] if start >= 0 else text
+    return {
+        int(match.group(1))
+        for match in CLOZE_MARKER_RE.finditer(body)
+        if 1 <= int(match.group(1)) <= 20
+    }
+
+
+def _analysis_is_guarded(question: dict) -> bool:
+    text = str(question.get("source_analysis_md") or "").lstrip()
+    if text.startswith(ANALYSIS_GUARD_PREFIX):
+        return True
+    transformations = question.get("transformations")
+    return isinstance(transformations, list) and any(
+        isinstance(item, dict)
+        and "content_quality_guard:" in str(item.get("reason") or "")
+        for item in transformations
+    )
+
+
+def _analysis_noise_reason(question: dict, duplicate_counts: dict[str, int]) -> str | None:
+    """Detect only high-confidence analysis corruption, never infer a repair."""
+    text = str(question.get("source_analysis_md") or "")
+    if not text.strip() or _analysis_is_guarded(question):
+        return None
+    if len(text) > 20_000:
+        return f"解析长度 {len(text)} 字，疑似跨题串接"
+    if "[无文本层" in text or text.count("配套") >= 8 or text.count("音频") >= 8:
+        return "解析含重复低信息 OCR 噪声"
+    if text.count("\ufffd") >= 3:
+        return "解析含多个替换字符"
+    if str(question.get("question_id") or "") == "english-e2-2024-q-02" and "digital technologies" in text:
+        return "解析内容与题号明显错配"
+    if duplicate_counts.get(text, 0) > 1 and len(text) >= 200:
+        return "多个题目共用完全相同的长解析，疑似边界串题"
+    return None
+
+
+def _validate_content_quality(formal_questions: list[dict], findings: Findings) -> None:
+    """Add conservative content-level gates after structural validation."""
+    duplicate_counts: dict[str, int] = {}
+    for question in formal_questions:
+        text = str(question.get("source_analysis_md") or "")
+        if text.strip():
+            duplicate_counts[text] = duplicate_counts.get(text, 0) + 1
+
+    checked_cloze_contexts: set[str] = set()
+    for question in formal_questions:
+        where = f"questions.jsonl:{question.get('question_id', '<unknown>')}"
+        if question.get("unit_key") == "use-of-english":
+            context = str(question.get("context_md") or "")
+            if context not in checked_cloze_contexts:
+                checked_cloze_contexts.add(context)
+                missing = sorted(set(range(1, 21)) - _cloze_marker_numbers(context))
+                if missing:
+                    findings.warn(
+                        "W021",
+                        f"完形上下文疑似缺少空位标记: {', '.join(str(item) for item in missing)}",
+                        where,
+                    )
+        reason = _analysis_noise_reason(question, duplicate_counts)
+        if reason:
+            findings.warn("W022", reason, where)
+
+
 def validate_package(package_dir: Path) -> dict:
     findings = Findings()
     package = {
@@ -739,6 +817,13 @@ def validate_package(package_dir: Path) -> dict:
                 )
         else:
             findings.block("E008", "manifest.question_type_counts 缺失或不是对象")
+
+        # Structural fields above cannot tell whether OCR has dropped a
+        # cloze blank or spliced one question's explanation into another.
+        # Run the conservative content gate only after the complete formal
+        # question set is available, so one shared passage produces one clear
+        # finding instead of twenty duplicates.
+        _validate_content_quality(formal_questions, findings)
 
     # ---- quarantine ----
     quarantine_dir = package_dir / "quarantine"

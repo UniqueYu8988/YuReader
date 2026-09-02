@@ -42,33 +42,35 @@ class ReviewWorkflowTests(unittest.TestCase):
             setattr(app, name, value)
         self.temp.cleanup()
 
+    def write_legacy_workflow(self, day, payload):
+        app.atomic_write(app.workflow_state_path(day), json.dumps(payload, ensure_ascii=False))
+
     def test_subject_tasks_use_real_note_and_time_totals(self):
         payload = app.review_payload(self.day, self.books, self.sections)
         self.assertEqual(payload["subject_count"], 2)
         self.assertEqual([item["reading_seconds"] for item in payload["subjects"]], [30, 60])
         self.assertFalse(payload["all_complete"])
 
-    def test_daily_log_is_one_file_with_summary_first(self):
-        app.save_workflow_state(self.day, {"subjects": {"book-a": "甲成果", "book-b": "乙成果"}, "summary": "昨日总述"})
-        payload = app.review_payload(self.day, self.books, self.sections)
-        target, storage, _, content = app.write_daily_log(self.day, payload["subjects"], payload["daily_summary"])
-        self.assertTrue(payload["all_complete"])
-        self.assertEqual(storage, "local")
-        self.assertEqual(list(app.LOGS_DIR.glob("*.md")), [target])
-        self.assertLess(content.index("昨日总述"), content.index("甲成果"))
-        self.assertIn("### 学科乙", content)
+    def test_legacy_daily_log_remains_readable_without_new_writes(self):
+        self.write_legacy_workflow(self.day, {"subjects": {"book-a": "甲成果", "book-b": "乙成果"}, "summary": "昨日总述"})
+        legacy_content = "# 旧学习日志\n\n## 昨日总结\n\n昨日总述\n\n## 分科复习\n\n### 学科甲\n\n甲成果\n\n### 学科乙\n\n乙成果"
+        app.atomic_write(app.LOGS_DIR / f"{self.day}.md", legacy_content)
+        payload = app.logs_payload(self.day)
+        self.assertIn("昨日总述", payload["detail"]["content"])
+        self.assertTrue(payload["detail"]["legacy"])
+        self.assertEqual(payload["entries"][0]["source"], "legacy_log")
 
     def test_weekly_source_collects_daily_summaries_only(self):
-        app.save_workflow_state(self.day, {"subjects": {"book-a": "详细成果"}, "summary": "每日总述"})
+        self.write_legacy_workflow(self.day, {"subjects": {"book-a": "详细成果"}, "summary": "每日总述"})
         year, week, _ = date.fromisoformat(self.day).isocalendar()
         payload = app.weekly_payload(f"{year}-W{week:02d}")
         self.assertIn("每日总述", payload["source_markdown"])
         self.assertNotIn("详细成果", payload["source_markdown"])
 
     def test_default_week_uses_latest_archived_summary_and_archives_are_listed(self):
-        app.save_workflow_state(self.day, {"subjects": {"book-a": "甲成果", "book-b": "乙成果"}, "summary": "每日总述"})
+        self.write_legacy_workflow(self.day, {"subjects": {"book-a": "甲成果", "book-b": "乙成果"}, "summary": "每日总述"})
         review = app.review_payload(self.day, self.books, self.sections)
-        app.write_daily_log(self.day, review["subjects"], review["daily_summary"])
+        app.atomic_write(app.LOGS_DIR / f"{self.day}.md", "旧学习日志")
         year, week, _ = date.fromisoformat(self.day).isocalendar()
         weekly = app.weekly_payload()
         self.assertEqual(weekly["week"], f"{year}-W{week:02d}")

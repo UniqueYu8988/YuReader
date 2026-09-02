@@ -228,11 +228,12 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         copy_tree(ROOT / "tools" / "yupractice" / "examples" / "minimal-valid", self.qb_root / "politics-basic-bank")
         self.original_globals = {
             name: getattr(app, name)
-            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "DATA_DIR", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE", "obsidian_vault")
+            for name in ("CONTENT_DIR", "QUESTION_BANK_DIR", "DATA_DIR", "ACTIVITY_PATH", "BOOK_ASSETS", "CATALOG_CACHE", "QUESTION_BANK_CACHE", "obsidian_vault")
         }
         app.CONTENT_DIR = self.content_root
         app.QUESTION_BANK_DIR = self.qb_root
         app.DATA_DIR = Path(self.temp.name) / "data"
+        app.ACTIVITY_PATH = app.DATA_DIR / "activity.json"
         app.BOOK_ASSETS = {}
         app.CATALOG_CACHE = {"checked_at": 0.0, "signature": None, "books": [], "sections": {}}
         app.QUESTION_BANK_CACHE = {"checked_at": 0.0, "signature": None, "banks": []}
@@ -281,6 +282,72 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         self.assertEqual(public["context_md"], "Shared reading passage.")
         self.assertEqual(public["unit_label"], "完形填空")
         self.assertNotIn("correct_answers", public)
+
+    def test_english_exam_display_metadata_distinguishes_tracks(self):
+        self.assertEqual(
+            app.public_question_bank_title(
+                "考研英语（二）2025年真题客观题候选包",
+                "english-e2-2025",
+                "考研英语（二）",
+                "english",
+            ),
+            "2025 年考研英语二真题",
+        )
+        self.assertEqual(
+            app.public_question_bank_title(
+                "2023 年考研英语一真题（候选）",
+                "english-2023-e1",
+                "考研英语一",
+                "english",
+            ),
+            "2023 年考研英语一真题",
+        )
+        self.assertEqual(app.practice_unit_metadata("Section I 完形填空")["part"], "Section I")
+        self.assertEqual(app.practice_unit_metadata("Section II Part A Text 1")["label"], "阅读理解 · Text 1")
+
+    def test_english_subjective_companion_maps_per_year_package(self):
+        sections = [
+            {"id": "translation", "title": "第一节 翻译 Part C", "chapter_order": 1, "section_order": 1},
+            {"id": "writing-a", "title": "第三节 应用文写作 Part A", "chapter_order": 1, "section_order": 2},
+            {"id": "writing-b", "title": "第五节 图画图表写作 Part B", "chapter_order": 1, "section_order": 3},
+        ]
+        companion = {
+            "id": "english-exam-2024-e1-subjective", "title": "2024 年考研英语一翻译与写作", "domain": "english",
+            "toc": [{"id": "chapter", "order": 1, "title": "第一章 2024 年考研英语一主观题", "sections": [{"id": item["id"]} for item in sections]}],
+            "sections": sections,
+        }
+        original_catalog = app.catalog
+        app.catalog = lambda: ([companion], {})
+        try:
+            result = app.english_subjective_companion({"id": "english-2024-e1", "domain": "english", "subject": "考研英语一"})
+        finally:
+            app.catalog = original_catalog
+        self.assertTrue(result["available"])
+        self.assertEqual(result["question_count"], 7)
+        self.assertEqual([item["section_id"] for item in result["sections"]], ["translation", "writing-a", "writing-b"])
+
+    def test_english_subjective_companion_keeps_aggregate_year_section(self):
+        companion = {
+            "id": "english-e2-subjective-2010-2017", "title": "2010—2017 年考研英语二翻译与写作", "domain": "english",
+            "toc": [
+                {"id": "chapter-2010", "order": 1, "title": "第1章 2010 年考研英语二翻译与写作", "sections": [{"id": "s2010"}]},
+                {"id": "chapter-2011", "order": 2, "title": "第2章 2011 年考研英语二翻译与写作", "sections": [{"id": "s2011"}]},
+            ],
+            "sections": [
+                {"id": "s2010", "title": "2010 翻译与写作真题", "chapter_order": 1, "section_order": 1},
+                {"id": "s2011", "title": "2011 翻译与写作真题", "chapter_order": 2, "section_order": 1},
+            ],
+        }
+        original_catalog = app.catalog
+        app.catalog = lambda: ([companion], {})
+        try:
+            result = app.english_subjective_companion({"id": "english-e2-2011", "domain": "english", "subject": "考研英语二"})
+        finally:
+            app.catalog = original_catalog
+        self.assertTrue(result["available"])
+        self.assertEqual(result["question_count"], 3)
+        self.assertEqual(len(result["sections"]), 1)
+        self.assertEqual(result["sections"][0]["section_id"], "s2011")
 
     def test_hidden_import_backup_is_not_catalogued(self):
         # Atomic replacement deliberately keeps a hidden recovery copy beside
@@ -358,6 +425,7 @@ class QuestionBankRuntimeIndexTests(unittest.TestCase):
         self.assertEqual([item["question_count"] for item in overview["groups"]], [2, 1, 1])
         self.assertEqual(overview["groups"][0]["start_index"], 0)
         self.assertEqual(overview["groups"][1]["start_index"], 2)
+        self.assertEqual(overview["groups"][0]["knowledge_id"], "politics.marxism.chapter-01.section-02")
         self.assertNotIn("correct_answers", overview)
         self.assertNotIn("questions", overview)
 
