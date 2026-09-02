@@ -53,10 +53,16 @@
 
       <section class="view active" id="homeView" data-view="home">
         <div class="reader-home">
-          <section class="reader-home-review-panel hidden" id="homeReviewPanel" aria-label="待回顾"><button id="homeOpenReview" type="button"><i data-lucide="history"></i><span><strong id="homeReviewTitle">待回顾</strong><small id="homeReviewMeta"></small></span><i data-lucide="arrow-right"></i></button></section>
           <section class="reader-home-lead">
             <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习库选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
+            <aside class="reader-home-today" aria-label="今日学习概况"><span>今日学习</span><strong><b id="homeTodayMinutes">0</b><em>分</em></strong><small>有效学习时长</small><div><span id="homeTodayActivities">0 项活动</span><span id="homeTodayNotes">0 条笔记</span></div></aside>
           </section>
+          <nav class="reader-home-portals" aria-label="学习入口">
+            <button type="button" id="homeOpenOralFocus"><i data-lucide="brain"></i><span><strong>口腔</strong><small>进入重点背诵</small></span></button>
+            <button type="button" id="homeOpenEnglish"><i data-lucide="languages"></i><span><strong>英语</strong><small>真题、阅读与周记</small></span></button>
+            <button type="button" id="homeOpenPolitics"><i data-lucide="landmark"></i><span><strong>政治</strong><small>讲义与对应练习</small></span></button>
+            <button type="button" id="homeOpenReview"><i data-lucide="history"></i><span><strong>回顾</strong><small id="homeReviewMeta">整理最近学习</small></span></button>
+          </nav>
           <section class="reader-home-trace-panel hidden" id="homeTracePanel" aria-label="今日学习"><header><h3>今天</h3><button class="icon-button" id="homeOpenStats" type="button" title="查看记录" aria-label="查看记录"><i data-lucide="arrow-up-right"></i></button></header><div class="reader-home-trace-list" id="homeTraceList"></div></section>
         </div>
       </section>

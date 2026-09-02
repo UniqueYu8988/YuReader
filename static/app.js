@@ -362,9 +362,8 @@ async function resumeActivityTarget(target) {
 function renderHome() {
   const stats = state.stats || {};
   const today = stats.today ? new Date(`${stats.today}T00:00:00`) : new Date();
-  const hour = new Date().getHours();
   $("homeDate").textContent = today.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
-  $("homeGreeting").textContent = hour < 11 ? "早上好，从一小节开始" : hour < 18 ? "今天继续学一点" : "晚上好，留下一点理解";
+  $("homeGreeting").textContent = "今天继续学一点";
   const continuation = stats.continue_activity;
   const continueTarget = stats.continue_target || null;
   state.homeContinueTarget = continueTarget;
@@ -372,10 +371,10 @@ function renderHome() {
   $("homeContinueLabel").textContent = continuation?.activity_label ? `继续${continuation.activity_label}` : "继续学习";
   $("homeContinueTitle").textContent = continuation?.title || "进入学习库选择内容";
   const pending = stats.review_pending;
-  $("homeReviewPanel").classList.toggle("hidden", !pending);
-  $("homeReviewTitle").textContent = pending ? `${reviewDateLabel(pending.date)}待回顾` : "待回顾";
-  $("homeReviewMeta").textContent = pending ? `${formatInteger(pending.activity_count)} 条学习记录` : "";
-  $("homeOpenReview").disabled = !pending;
+  $("homeTodayMinutes").textContent = formatInteger(Math.floor((stats.today_activity_seconds || 0) / 60));
+  $("homeTodayActivities").textContent = `${formatInteger(stats.today_activity_count || 0)} 项活动`;
+  $("homeTodayNotes").textContent = `${formatInteger(stats.today_note_count || 0)} 条笔记`;
+  $("homeReviewMeta").textContent = pending ? `${reviewDateLabel(pending.date)} · ${formatInteger(pending.activity_count)} 条待整理` : "整理最近学习";
 
   state.homeResumeTargets.clear();
   const todayActivities = stats.today_activities || [];
@@ -1001,7 +1000,7 @@ function renderBooks(filter = "") {
       : `<div class="knowledge-index-empty"><i data-lucide="library"></i><strong>${escapeHtml(DOMAIN_LABELS[state.libraryDomain] || "医学")}学习库还是空的</strong><span>这个领域还没有正式资料，放入学习库后刷新页面。</span></div>`;
     refreshIcons(); return;
   }
-  const focusCover = oralFocusVisible ? `<button class="reader-book-overview oral-focus-cover" type="button" data-oral-focus-entry title="打开口腔重点" aria-label="打开口腔重点"><span class="reader-book-cover" aria-hidden="true"><strong>口腔<br>重点</strong></span></button>` : "";
+  const focusCover = oralFocusVisible ? `<button class="reader-book-overview oral-focus-cover" type="button" data-oral-focus-entry title="打开口腔重点背诵" aria-label="打开口腔重点背诵"><span class="reader-book-cover" aria-hidden="true"><strong>口腔<br>背诵</strong></span></button>` : "";
   const covers = focusCover + matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong></span></button>`).join("");
   let directory = "";
   if (query) {
@@ -1733,6 +1732,9 @@ function bindNavigation() {
   $("reviewNav").addEventListener("click", openReview); $("mobileReview").addEventListener("click", openReview);
   $("logsNav").addEventListener("click", openLogs); $("mobileLogs").addEventListener("click", openLogs);
   document.querySelectorAll("[data-home-shelf]").forEach((button) => button.addEventListener("click", () => selectLibraryShelf(button.dataset.homeShelf)));
+  $("homeOpenOralFocus").addEventListener("click", () => openOralFocusIndex());
+  $("homeOpenEnglish").addEventListener("click", () => selectLibraryShelf("english"));
+  $("homeOpenPolitics").addEventListener("click", () => selectLibraryShelf("politics"));
   $("homeOpenReview").addEventListener("click", openReview); $("homeOpenStats").addEventListener("click", openLogs);
   $("homeContinue").addEventListener("click", () => resumeActivityTarget(state.homeContinueTarget));
   window.addEventListener("resize", () => { window.clearTimeout(state.homeResizeTimer); state.homeResizeTimer = window.setTimeout(() => { if ($("homeView").classList.contains("active")) renderHome(); }, 120); });
