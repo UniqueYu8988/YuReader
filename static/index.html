@@ -59,7 +59,7 @@
           </section>
           <nav class="reader-home-portals" aria-label="学习入口">
             <button type="button" id="homeOpenOralFocus"><i data-lucide="brain"></i><span><strong>口腔</strong><small>进入重点背诵</small></span></button>
-            <button type="button" id="homeOpenEnglish"><i data-lucide="languages"></i><span><strong>英语</strong><small>真题、阅读与周记</small></span></button>
+            <button type="button" id="homeOpenEnglish"><i data-lucide="languages"></i><span><strong>英语</strong><small>方法、真题与写作</small></span></button>
             <button type="button" id="homeOpenPolitics"><i data-lucide="landmark"></i><span><strong>政治</strong><small>讲义与对应练习</small></span></button>
             <button type="button" id="homeOpenReview"><i data-lucide="history"></i><span><strong>回顾</strong><small id="homeReviewMeta">整理最近学习</small></span></button>
           </nav>
@@ -70,16 +70,11 @@
       <section class="view" id="libraryView" data-view="library">
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="学习库">
-            <header class="knowledge-index-header reader-library-header">
-              <nav class="reader-domain-tabs" id="domainTabs" aria-label="学习学科"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button></nav>
-              <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
+            <header class="learning-center-header">
+              <div class="learning-center-intro"><p class="eyebrow">LEARNING CENTER</p><h2 id="learningCenterTitle">医学学习</h2><p id="learningCenterDescription">教材阅读、名词解释与论述背诵，按真实资料分别组织。</p></div>
+              <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><span>01</span><i data-lucide="stethoscope"></i><strong>医学</strong><small>教材与重点背诵</small></button><button type="button" data-shelf="politics"><span>02</span><i data-lucide="landmark"></i><strong>政治</strong><small>五科讲义与优题库</small></button><button type="button" data-shelf="english"><span>03</span><i data-lucide="languages"></i><strong>英语</strong><small>方法、真题与写作</small></button></nav>
             </header>
-            <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习库还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
-            <section class="english-hub hidden" id="englishHub" aria-label="英语学习">
-              <header class="english-hub-heading"><div><p class="eyebrow">ENGLISH WORKSPACE</p><h3>把输入、训练与沉淀放在一起</h3></div><p>不同资料使用不同的学习方式，不把英语重新塞进普通教材目录。</p></header>
-              <div class="english-module-list" id="englishModuleList"></div>
-            </section>
             <section class="english-exams hidden" id="englishExams" aria-label="历年英语真题">
               <button class="review-back-link english-notebook-back" id="englishExamsBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习库</button>
               <header class="english-notebook-heading"><div><p class="eyebrow">PAST PAPERS</p><h3>历年真题</h3><p>原文先作答，提交后再显示原书解析；个人解析继续独立保存。</p></div></header>
@@ -91,19 +86,6 @@
               <section class="english-exam-overview-facts" id="englishExamOverviewFacts" aria-label="试卷摘要"></section>
               <section class="english-paper-guide" aria-label="试卷题型导览"><header><div><p class="eyebrow">PAPER GUIDE</p><h4>按题型进入</h4></div><span id="englishExamOverviewProgress"></span></header><div id="englishExamOverviewSections"></div></section>
               <section class="english-paper-companion" id="englishExamOverviewCompanion"></section>
-            </section>
-            <section class="english-notebook hidden" id="englishNotebook" aria-label="英语周记">
-              <button class="review-back-link english-notebook-back" id="englishNotebookBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习库</button>
-              <header class="english-notebook-heading">
-                <div><p class="eyebrow">每周归档</p><h3 id="englishNotebookTitle">英语周记</h3><p id="englishNotebookMeta">周一至周日，一周一份 Markdown</p></div>
-                <a class="note-icon-button" id="englishNotebookObsidian" href="obsidian://open" title="在 Obsidian 中打开英语周记" aria-label="在 Obsidian 中打开英语周记"><img src="/assets/obsidian.svg" alt=""></a>
-              </header>
-              <div class="english-week-strip" id="englishWeekStrip" aria-label="本周日期"></div>
-              <section class="english-notebook-paper">
-                <textarea id="englishNotebookEditor" rows="18" placeholder="把本周英语学习、词汇、句子或侧边栏生成的内容粘贴到这里。可以用二级标题分隔每天的记录。"></textarea>
-                <footer><span id="englishNotebookSaved">输入后自动保存</span><button class="english-insert-day" id="englishInsertDay" type="button"><i data-lucide="calendar-plus"></i><span>插入今日分隔</span></button></footer>
-              </section>
-              <section class="english-notebook-archives" aria-label="历史英语周记"><header><div><p class="eyebrow">历史归档</p><h4>每周一封</h4></div><span id="englishArchiveCount">0 份</span></header><div id="englishArchiveList"></div></section>
             </section>
           </section>
 

@@ -886,3 +886,129 @@
   .reader-pagination .secondary-button,
   .review-pagination .secondary-button { max-width: 46%; min-height: 38px; }
 }
+
+/* Learning center: one visual system, three data-specific study paths. */
+.knowledge-workspace:not(.reader-open):not(.resource-open) { width: min(1120px, 100%); }
+.learning-center-header { position: relative; display: grid; grid-template-columns: minmax(280px, .9fr) minmax(520px, 1.45fr); align-items: stretch; margin: 8px 0 46px; border-block: 1px solid var(--line-strong); isolation: isolate; }
+.learning-center-header::before { position: absolute; z-index: -1; inset: 0 auto 0 0; width: clamp(150px, 24%, 270px); background: color-mix(in srgb, var(--primary) 13%, transparent); content: ""; }
+.learning-center-intro { min-height: 178px; padding: 29px 34px 28px 0; }
+.learning-center-intro .eyebrow { margin: 0 0 20px; color: var(--primary-strong); font-size: 9px; font-weight: 700; letter-spacing: .18em; }
+.learning-center-intro h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(30px, 3vw, 42px); font-weight: 500; letter-spacing: -.03em; }
+.learning-center-intro > p:last-child { max-width: 360px; margin: 13px 0 0; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.reader-domain-tabs.learning-domain-tabs { display: grid; width: auto; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: stretch; margin: 0; border: 0; border-left: 1px solid var(--line-strong); }
+.reader-domain-tabs.learning-domain-tabs button { position: relative; display: grid; min-width: 0; grid-template: auto auto 1fr / 1fr; align-content: center; gap: 8px; padding: 27px 22px; border: 0; border-radius: 0; color: var(--text-soft); background: transparent; box-shadow: none; text-align: left; cursor: pointer; transition: color 150ms var(--ease-standard), background 150ms var(--ease-standard); }
+.reader-domain-tabs.learning-domain-tabs button + button { padding-left: 22px; border-left: 1px solid var(--line); }
+.reader-domain-tabs.learning-domain-tabs button:hover { color: var(--text); background: var(--surface-hover); }
+.reader-domain-tabs.learning-domain-tabs button.active { color: var(--text); background: color-mix(in srgb, var(--primary) 9%, transparent); box-shadow: inset 0 -2px 0 var(--primary); }
+.reader-domain-tabs.learning-domain-tabs button > span { display: block; color: var(--primary); font: 700 9px/1 "Segoe UI", sans-serif; letter-spacing: .14em; }
+.reader-domain-tabs.learning-domain-tabs button > svg { position: absolute; top: 26px; right: 20px; width: 16px; height: 16px; color: var(--primary); }
+.reader-domain-tabs.learning-domain-tabs button strong { align-self: end; margin-top: 13px; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 20px; font-weight: 500; }
+.reader-domain-tabs.learning-domain-tabs button small { overflow: visible; color: var(--text-soft); font-size: 9px; font-weight: 400; line-height: 1.5; text-overflow: initial; white-space: normal; }
+
+.reader-book-list { padding-bottom: 76px; }
+.learning-center-section { padding: 0 0 50px; }
+.learning-center-section + .learning-center-section { padding-top: 45px; border-top: 1px solid var(--line-strong); }
+.learning-section-heading { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 17px; align-items: end; margin-bottom: 25px; }
+.learning-section-heading > span { padding-bottom: 4px; color: var(--primary); font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+.learning-section-heading > div { display: grid; gap: 5px; }
+.learning-section-heading h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 25px; font-weight: 500; line-height: 1.25; }
+.learning-section-heading p { margin: 0; color: var(--text-soft); font-size: 10px; }
+.learning-section-heading nav { display: flex; align-items: center; gap: 12px; }
+.learning-section-heading nav button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; color: var(--text-secondary); background: transparent; cursor: pointer; }
+.learning-section-heading nav button:hover { color: var(--primary-strong); border-color: var(--primary); background: var(--primary-soft); }
+.learning-section-heading nav button svg { width: 13px; }
+.learning-section-heading nav small { min-width: 28px; color: var(--text-soft); font-size: 9px; text-align: center; font-variant-numeric: tabular-nums; }
+.learning-rail { display: grid; grid-template-columns: repeat(var(--learning-rail-count), minmax(0, 1fr)); gap: clamp(18px, 2.7vw, 34px); overflow: hidden; }
+.learning-book-card { display: grid; min-width: 0; align-content: start; gap: 13px; padding: 0; border: 0; border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
+.learning-book-card > .reader-book-cover { width: 100%; height: auto; aspect-ratio: .72; padding: 20px 16px 15px 20px; }
+.learning-book-card:hover > .reader-book-cover { border-color: color-mix(in srgb, var(--primary) 62%, var(--line)); box-shadow: -4px 5px 0 color-mix(in srgb, var(--line-strong) 78%, transparent), 0 16px 28px rgba(52, 38, 29, .14); transform: translateY(-3px); }
+.learning-book-card.recent > .reader-book-cover::after { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); content: ""; }
+.learning-book-card > span:last-child { display: grid; min-width: 0; gap: 4px; }
+.learning-book-card > span:last-child strong { display: -webkit-box; overflow: hidden; font-size: 11px; font-weight: 600; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.learning-book-card > span:last-child small { overflow: hidden; color: var(--text-soft); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.learning-focus-card > .reader-book-cover { background: color-mix(in srgb, var(--primary-soft) 68%, var(--surface)); }
+.learning-focus-card > .reader-book-cover small { color: color-mix(in srgb, #4d3024 70%, transparent); font-size: 9px; letter-spacing: .12em; }
+.learning-focus-card > .reader-book-cover strong { font-size: clamp(18px, 2vw, 25px); }
+.learning-empty { display: grid; min-height: 92px; align-content: center; gap: 6px; padding: 18px 0; border-block: 1px solid var(--line); color: var(--text-soft); }
+.learning-empty strong { color: var(--text-secondary); font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
+.learning-empty span, .learning-loading { color: var(--text-soft); font-size: 10px; }
+
+.learning-practice-lead { display: flex; min-height: 112px; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 28px; border: 1px solid var(--line); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.learning-practice-section.advanced .learning-practice-lead { background: color-mix(in srgb, var(--practiced-memorized) 9%, transparent); }
+.learning-practice-lead > div { display: grid; gap: 4px; }
+.learning-practice-lead span { color: var(--primary); font-size: 8px; font-weight: 700; letter-spacing: .16em; }
+.learning-practice-lead strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 22px; font-weight: 500; }
+.learning-practice-lead small { color: var(--text-soft); font-size: 9px; }
+.learning-practice-lead > svg { width: 27px; height: 27px; color: var(--primary); stroke-width: 1.4; }
+.learning-subject-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line-strong); }
+.learning-subject-actions > button { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) 14px; gap: 8px; align-items: center; min-height: 76px; padding: 14px 13px; border: 0; border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
+.learning-subject-actions > button + button { border-left: 1px solid var(--line); }
+.learning-subject-actions > button:hover:not(:disabled) { background: var(--surface-hover); }
+.learning-subject-actions > button:disabled { opacity: .45; cursor: default; }
+.learning-subject-actions span { display: grid; min-width: 0; gap: 4px; }
+.learning-subject-actions strong { font-size: 11px; font-weight: 600; }
+.learning-subject-actions small { overflow: hidden; color: var(--text-soft); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.learning-subject-actions svg { width: 13px; color: var(--primary); }
+
+.english-center-filters { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 17px 0; border-block: 1px solid var(--line-strong); }
+.english-center-filters > div, .english-type-tabs { display: flex; align-items: center; gap: 0; }
+.english-center-filters button, .english-type-tabs button { min-height: 34px; padding: 7px 16px; border: 1px solid var(--line); border-radius: 0; color: var(--text-soft); background: transparent; box-shadow: none; font-size: 10px; cursor: pointer; }
+.english-center-filters button + button, .english-type-tabs button + button { border-left: 0; }
+.english-center-filters button.active, .english-type-tabs button.active { color: var(--on-inverse); border-color: var(--inverse); background: var(--inverse); }
+.english-center-filters label { display: flex; align-items: center; gap: 10px; color: var(--text-soft); font-size: 9px; }
+.english-center-filters select { min-width: 105px; height: 34px; padding: 0 30px 0 12px; border: 1px solid var(--line); border-radius: 0; color: var(--text); background: var(--surface); font: inherit; font-size: 10px; }
+.english-type-tabs { padding: 18px 0 4px; }
+.english-center-groups { margin-top: 15px; border-top: 1px solid var(--line); }
+.english-center-groups > button { display: grid; width: 100%; min-height: 70px; grid-template-columns: minmax(0, 1fr) 18px; gap: 18px; align-items: center; padding: 11px 4px 11px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
+.english-center-groups > button:hover { padding-left: 8px; background: var(--surface-hover); }
+.english-center-groups > button > span { display: grid; min-width: 0; gap: 4px; }
+.english-center-groups small { color: var(--primary); font-size: 8px; letter-spacing: .08em; }
+.english-center-groups strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
+.english-center-groups em { color: var(--text-soft); font-size: 9px; font-style: normal; }
+.english-center-groups svg { width: 14px; color: var(--primary); }
+.english-center-groups .learning-empty { border-top: 0; }
+
+@media (max-width: 960px) {
+  .learning-center-header { grid-template-columns: 1fr; }
+  .learning-center-intro { min-height: 145px; padding-right: 24px; }
+  .reader-domain-tabs.learning-domain-tabs { min-height: 122px; border-top: 1px solid var(--line-strong); border-left: 0; }
+  .reader-domain-tabs.learning-domain-tabs button { padding: 21px 18px; }
+  .reader-domain-tabs.learning-domain-tabs button + button { padding-left: 18px; }
+  .reader-domain-tabs.learning-domain-tabs button > svg { top: 20px; right: 17px; }
+  .learning-subject-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .learning-subject-actions > button:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
+  .learning-subject-actions > button:nth-child(5) { border-top: 1px solid var(--line); }
+}
+
+@media (max-width: 680px) {
+  .learning-center-header { margin: 0 0 34px; }
+  .learning-center-intro { min-height: 136px; padding: 23px 18px 22px 0; }
+  .learning-center-intro h2 { font-size: 31px; }
+  .learning-center-intro .eyebrow { margin-bottom: 15px; }
+  .reader-domain-tabs.learning-domain-tabs { min-height: 92px; }
+  .reader-domain-tabs.learning-domain-tabs button { grid-template-rows: auto auto; gap: 7px; padding: 15px 10px; }
+  .reader-domain-tabs.learning-domain-tabs button + button { padding-left: 10px; }
+  .reader-domain-tabs.learning-domain-tabs button > span, .reader-domain-tabs.learning-domain-tabs button > svg, .reader-domain-tabs.learning-domain-tabs button small { display: none; }
+  .reader-domain-tabs.learning-domain-tabs button strong { margin-top: 0; font-size: 17px; }
+  .learning-center-section { padding-bottom: 38px; }
+  .learning-center-section + .learning-center-section { padding-top: 34px; }
+  .learning-section-heading { grid-template-columns: 23px minmax(0, 1fr) auto; gap: 10px; margin-bottom: 20px; }
+  .learning-section-heading h3 { font-size: 22px; }
+  .learning-section-heading p { line-height: 1.55; }
+  .learning-section-heading nav { gap: 7px; }
+  .learning-section-heading nav small { display: none; }
+  .learning-rail { gap: 18px; }
+  .learning-book-card > .reader-book-cover { padding: 16px 12px 12px 16px; }
+  .learning-book-card > .reader-book-cover strong { font-size: 17px; }
+  .learning-practice-lead { min-height: 100px; padding: 18px; }
+  .learning-subject-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .learning-subject-actions > button:nth-child(3), .learning-subject-actions > button:nth-child(5) { border-left: 0; }
+  .learning-subject-actions > button:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .learning-subject-actions > button:nth-child(4) { border-left: 1px solid var(--line); }
+  .english-center-filters { align-items: stretch; flex-direction: column; gap: 12px; }
+  .english-center-filters > div { display: grid; grid-template-columns: repeat(2, 1fr); }
+  .english-center-filters label { justify-content: space-between; }
+  .english-center-filters select { flex: 1; }
+  .english-type-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .english-center-filters button, .english-type-tabs button { padding-inline: 9px; }
+}

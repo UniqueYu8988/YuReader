@@ -8,6 +8,28 @@ from pathlib import Path
 import app
 
 
+class LearningCenterFrontendContractTests(unittest.TestCase):
+    """The learning center keeps three domain-specific paths without reviving weekly UI."""
+
+    @classmethod
+    def setUpClass(cls):
+        static = Path(__file__).resolve().parents[1] / "static"
+        cls.html = (static / "index.html").read_text(encoding="utf-8")
+        cls.javascript = (static / "app.js").read_text(encoding="utf-8")
+
+    def test_center_exposes_three_domains_and_no_search_or_weekly_editor(self):
+        for label in ("医学", "政治", "英语"):
+            self.assertIn(f"<strong>{label}</strong>", self.html)
+        for removed_id in ("librarySearch", "englishNotebook", "englishNotebookEditor"):
+            self.assertNotIn(f'id="{removed_id}"', self.html)
+
+    def test_center_keeps_real_section_boundaries(self):
+        for title in ("名词解释", "优题库基础篇", "优题库拔高篇", "真题训练", "翻译与写作"):
+            self.assertIn(title, self.javascript)
+        self.assertIn('start >= 21 && start <= 40 : start >= 41', self.javascript)
+        self.assertIn('openOralFocusIndex(subjectId = "", type = "")', self.javascript)
+
+
 class DomainFallbackTests(unittest.TestCase):
     """Runtime must safely fall back when existing packages have no domain fields."""
 
