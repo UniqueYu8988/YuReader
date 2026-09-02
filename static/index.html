@@ -70,6 +70,7 @@
               <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
             </header>
             <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
+            <section class="domain-study-overview" id="domainStudyOverview" aria-label="学科学习概览"></section>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习库还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
             <section class="english-hub hidden" id="englishHub" aria-label="英语学习">
               <header class="english-hub-heading"><div><p class="eyebrow">ENGLISH WORKSPACE</p><h3>把输入、训练与沉淀放在一起</h3></div><p>不同资料使用不同的学习方式，不把英语重新塞进普通教材目录。</p></header>
@@ -111,6 +112,7 @@
             <section class="resource-facts" id="resourceFacts" aria-label="学习摘要"></section>
             <button class="resource-continue" id="resourceContinue" type="button"><span><small>继续学习</small><strong id="resourceContinueTitle"></strong></span><i data-lucide="arrow-right"></i></button>
             <section class="resource-practice hidden" id="resourcePractice" aria-label="综合练习"></section>
+            <section class="resource-learning-loop" id="resourceLearningLoop" aria-label="本资料学习路径"></section>
             <section class="resource-directory" id="resourceDirectory" aria-label="完整分层目录"></section>
           </section>
 
@@ -137,7 +139,7 @@
 
               <nav class="section-guide hidden" id="sectionGuide" aria-label="本节内容导航"></nav>
               <div class="knowledge-article" id="knowledgeArticle"></div>
-              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
+              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="reader-session-exit" id="readerFinishSession" type="button"><span>结束本次阅读</span></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
             </div>
           </article>
         </div>
@@ -151,7 +153,12 @@
               <div class="practice-progress-copy"><strong id="practiceEyebrow">真实题库</strong><span id="practiceProgressText">0 / 0</span></div>
               <div class="practice-progress-track" aria-hidden="true"><i id="practiceProgressBar"></i></div>
             </div>
+            <button class="icon-button practice-map-toggle" id="practiceMapToggle" type="button" title="打开题组导航" aria-label="打开题组导航" aria-expanded="false"><i data-lucide="list-ordered"></i></button>
           </header>
+          <section class="practice-session-map hidden" id="practiceSessionMap" aria-label="题组导航">
+            <header><div><span>题组导航</span><small id="practiceSessionState">0 题已答</small></div><button type="button" id="practiceFinishSession">完成本组</button></header>
+            <div class="practice-unit-map" id="practiceUnitMap"></div>
+          </section>
           <article class="practice-question-surface" id="practiceQuestionSurface">
             <div class="practice-question-meta"><span id="practiceQuestionType"></span><i aria-hidden="true"></i><strong id="practiceQuestionNumber"></strong><span class="practice-source" id="practiceTitle">练习</span></div>
             <p class="practice-bank-meta" id="practiceMeta">正在读取题目…</p>
@@ -163,6 +170,7 @@
               <section class="practice-question-pane">
                 <header class="practice-pane-heading"><div><span>全部题目</span><small id="practiceReadingProgress">0 / 0 已答</small></div><i data-lucide="list-checks"></i></header>
                 <div class="practice-reading-questions" id="practiceReadingQuestions"></div>
+                <button class="practice-reading-finish" id="practiceReadingFinish" type="button"><span>完成本篇</span><i data-lucide="arrow-right"></i></button>
               </section>
             </div>
             <details class="practice-context hidden" id="practiceContext">
@@ -180,6 +188,11 @@
             <section class="review-result-editor practice-personal-analysis"><header><div><strong>个人解析</strong><small id="practiceAnalysisSaved">粘贴侧边栏的分析，自动保存</small></div><a class="note-icon-button" id="practiceObsidian" href="obsidian://open" aria-label="在 Obsidian 中打开练习笔记"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="practicePersonalAnalysis" rows="9" placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程"></textarea></section>
           </section>
           <nav class="practice-pagination" id="practicePagination" aria-label="题目切换"><button class="practice-page-button" id="practicePrevious" type="button"><i data-lucide="arrow-left"></i><span>上一题</span></button><button class="practice-page-button next" id="practiceNext" type="button"><span>下一题</span><i data-lucide="arrow-right"></i></button></nav>
+          <section class="practice-session-summary hidden" id="practiceSessionSummary" aria-live="polite">
+            <p class="eyebrow">本次练习</p><h2>这一组先到这里</h2><p id="practiceSummaryLead">作答状态已经保存在本机，可以随时回来继续。</p>
+            <div class="practice-summary-facts" id="practiceSummaryFacts"></div>
+            <div class="practice-summary-actions"><button class="secondary-button hidden" id="practiceReviewWrong" type="button"><i data-lucide="rotate-ccw"></i><span>查看错题</span></button><button class="primary-button" id="practiceLeaveSession" type="button"><span>返回学习资料</span><i data-lucide="arrow-right"></i></button></div>
+          </section>
         </div>
         <section class="subjective-practice-workspace hidden" id="subjectivePracticeWorkspace" aria-label="翻译与写作练习">
           <header class="subjective-practice-toolbar">
@@ -205,6 +218,7 @@
             </section>
           </div>
           <section class="subjective-reference-panel hidden" id="subjectiveReferencePanel"><header class="practice-pane-heading"><div><span>参考解析</span><small>完成独立作答后再展开，对照而不替代你的思考</small></div><i data-lucide="book-open-check"></i></header><article class="knowledge-article note-stream" id="subjectiveReferenceBody"></article></section>
+          <footer class="subjective-session-actions"><span>作答与个人解析会保留在当前题型记录中</span><button type="button" id="subjectiveFinishSession"><span>结束本次练习</span><i data-lucide="arrow-right"></i></button></footer>
         </section>
       </section>
 

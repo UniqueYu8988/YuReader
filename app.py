@@ -32,7 +32,7 @@ ACTIVITY_TYPES = {"read", "objective_practice", "subjective_practice", "notebook
 MIN_MEANINGFUL_ACTIVITY_SECONDS = 60
 STATIC_DIR = ROOT / "static"
 HOST = "127.0.0.1"
-VERSION = "0.11.1"
+VERSION = "0.12.0"
 REVIEW_PAGE_CHARACTERS = 5000
 DOMAIN_LABELS = {"medicine": "医学", "politics": "政治", "english": "英语"}
 VALID_DOMAINS = set(DOMAIN_LABELS)
@@ -2448,6 +2448,11 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     recent_resources: list[dict] = []
     seen_resources: set[tuple[str, str]] = set()
     for item in reversed(activity_summaries):
+        # A review is a daily workflow, not a reusable learning resource.  Its
+        # source resource_id only anchors provenance and must not become a
+        # phantom book on the home page or in a subject workspace.
+        if item.get("activity_type") == "review":
+            continue
         key = (str(item.get("domain") or ""), str(item.get("resource_id") or ""))
         if not key[1] or key in seen_resources:
             continue

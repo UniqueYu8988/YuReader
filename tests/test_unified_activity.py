@@ -473,6 +473,42 @@ class UnifiedActivityTests(unittest.TestCase):
         self.assertEqual(stats["review_pending"]["date"], source_day)
         self.assertTrue(next(item for item in stats["days"] if item["date"] == today)["active"])
 
+    def test_review_anchor_does_not_appear_as_recent_learning_resource(self):
+        today = date.today().isoformat()
+        activities = [
+            {
+                "activity_id": "read-resource",
+                "activity_type": "read",
+                "domain": "medicine",
+                "subject_id": "口腔医学",
+                "resource_id": "book-x",
+                "item_id": self.section_id,
+                "duration_seconds": 60,
+                "last_active_at": f"{today}T10:00:00+08:00",
+                "resume_target": {"view": "reader", "resource_id": "book-x", "item_id": self.section_id},
+                "output_refs": [],
+                "result_state": "in_progress",
+            },
+            {
+                "activity_id": "review-anchor",
+                "activity_type": "review",
+                "domain": "medicine",
+                "subject_id": "daily-review",
+                "resource_id": "book-x",
+                "item_id": (date.today() - timedelta(days=1)).isoformat(),
+                "duration_seconds": 60,
+                "last_active_at": f"{today}T11:00:00+08:00",
+                "resume_target": {"view": "review", "resource_id": "book-x", "item_id": (date.today() - timedelta(days=1)).isoformat()},
+                "output_refs": [],
+                "result_state": "has_output",
+            },
+        ]
+        app.atomic_write(app.ACTIVITY_PATH, json.dumps({"schema_version": 3, "migration": {"legacy_activity_backfill": "v2"}, "days": {today: {"activities": activities}}}, ensure_ascii=False))
+        recent = app.learning_stats(self.books, self.sections, weeks=1)["recent_resources"]
+        self.assertEqual(len(recent), 1)
+        self.assertEqual(recent[0]["resume_target"]["view"], "reader")
+        self.assertEqual(recent[0]["title"], "测试书")
+
     def test_daily_learning_record_is_local_without_obsidian(self):
         day = (date.today() - timedelta(days=1)).isoformat()
         app.atomic_write(
