@@ -52,13 +52,11 @@
 
       <section class="view active" id="homeView" data-view="home">
         <div class="reader-home">
-          <section class="reader-home-review-panel" aria-label="待回顾"><header><div><p class="eyebrow">待回顾</p><h3 id="homeReviewTitle">暂时没有待回顾</h3></div><button class="reader-home-secondary" id="homeOpenReview" type="button">打开回顾 <i data-lucide="arrow-right"></i></button></header><p id="homeReviewMeta">新的学习日会在这里等待整理</p></section>
+          <section class="reader-home-review-panel hidden" id="homeReviewPanel" aria-label="待回顾"><button id="homeOpenReview" type="button"><i data-lucide="history"></i><span><strong id="homeReviewTitle">待回顾</strong><small id="homeReviewMeta"></small></span><i data-lucide="arrow-right"></i></button></section>
           <section class="reader-home-lead">
-            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText">学习库已经准备好，选择一个学科开始今天的学习。</p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习库选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
-            <div class="reader-home-today"><span>今日学习</span><strong id="homeTodayDuration">0分</strong><small>有效学习时长</small><div><span id="homeTodaySections">0 个活动</span><span id="homeTodayNotes">0 节笔记</span></div></div>
+            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习库选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
           </section>
-          <section class="reader-home-trace-panel" aria-label="今日轨迹"><header><div><p class="eyebrow">今日轨迹</p><h3>已经发生的学习</h3></div><button class="reader-home-secondary" id="homeOpenStats" type="button">查看记录 <i data-lucide="arrow-right"></i></button></header><div class="reader-home-trace-list" id="homeTraceList"><div class="reader-home-trace-empty"><i data-lucide="sun-medium"></i><strong>今天还没有学习轨迹</strong><span>从一个学科开始，阅读、练习和笔记会在这里汇合。</span></div></div><div class="reader-home-recent"><p class="eyebrow">最近资料</p><div id="homeRecentList"><span class="reader-home-recent-empty">完成一次学习后，最近资料会显示在这里。</span></div></div></section>
-          <section class="reader-home-entry-panel" aria-label="学习库"><header><div><p class="eyebrow">学习库</p><h3>按学科进入</h3></div><span>医学、政治、英语保持各自清晰</span></header><nav class="reader-home-entry-grid" aria-label="三科学习库"><button type="button" data-home-shelf="medicine"><span class="reader-action-icon"><i data-lucide="stethoscope"></i></span><span><strong>医学</strong><small id="homeMedicineMeta">教材章节精读</small></span><i data-lucide="arrow-up-right"></i></button><button type="button" data-home-shelf="politics"><span class="reader-action-icon"><i data-lucide="landmark"></i></span><span><strong>政治</strong><small id="homePoliticsMeta">讲义与练习联动</small></span><i data-lucide="arrow-up-right"></i></button><button type="button" data-home-shelf="english"><span class="reader-action-icon"><i data-lucide="languages"></i></span><span><strong>英语</strong><small id="homeEnglishMeta">方法课与词汇</small></span><i data-lucide="arrow-up-right"></i></button></nav></section>
+          <section class="reader-home-trace-panel hidden" id="homeTracePanel" aria-label="今日学习"><header><h3>今天</h3><button class="icon-button" id="homeOpenStats" type="button" title="查看记录" aria-label="查看记录"><i data-lucide="arrow-up-right"></i></button></header><div class="reader-home-trace-list" id="homeTraceList"></div></section>
         </div>
       </section>
 
@@ -66,11 +64,10 @@
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="学习库">
             <header class="knowledge-index-header reader-library-header">
-              <div class="knowledge-index-heading"><h2>学习库</h2><nav class="reader-domain-tabs" id="domainTabs" aria-label="学习学科"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><span><strong>医学</strong><small>教材章节精读</small></span><em id="domainCountMedicine">0</em></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><span><strong>政治</strong><small>讲义习题联动</small></span><em id="domainCountPolitics">0</em></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><span><strong>英语</strong><small>资料、真题与笔记</small></span><em id="domainCountEnglish">0</em></button></nav></div>
+              <nav class="reader-domain-tabs" id="domainTabs" aria-label="学习学科"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button></nav>
               <label class="knowledge-search" for="librarySearch"><i data-lucide="search"></i><input id="librarySearch" type="search" placeholder="搜索书名或章节" aria-label="搜索书名或章节"></label>
             </header>
             <button class="knowledge-resume hidden" id="knowledgeResume" type="button"><span class="knowledge-resume-label">最近阅读</span><span class="knowledge-resume-copy"><strong id="knowledgeResumeTitle"></strong><small id="knowledgeResumeMeta"></small></span><span class="knowledge-resume-action">继续 <i data-lucide="arrow-right"></i></span></button>
-            <section class="domain-study-overview" id="domainStudyOverview" aria-label="学科学习概览"></section>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习库还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
             <section class="english-hub hidden" id="englishHub" aria-label="英语学习">
               <header class="english-hub-heading"><div><p class="eyebrow">ENGLISH WORKSPACE</p><h3>把输入、训练与沉淀放在一起</h3></div><p>不同资料使用不同的学习方式，不把英语重新塞进普通教材目录。</p></header>
@@ -109,10 +106,9 @@
               <div class="resource-heading-copy"><p class="eyebrow" id="resourceDomainLabel">医学 · 教材</p><h2 id="resourceTitle"></h2><p id="resourceMeta"></p></div>
             </header>
             <div class="resource-progress-track" id="resourceProgressTrack" aria-hidden="true"><i id="resourceProgressBar"></i></div>
-            <section class="resource-facts" id="resourceFacts" aria-label="学习摘要"></section>
+            <section class="resource-status hidden" id="resourceStatus" aria-live="polite"></section>
             <button class="resource-continue" id="resourceContinue" type="button"><span><small>继续学习</small><strong id="resourceContinueTitle"></strong></span><i data-lucide="arrow-right"></i></button>
             <section class="resource-practice hidden" id="resourcePractice" aria-label="综合练习"></section>
-            <section class="resource-learning-loop" id="resourceLearningLoop" aria-label="本资料学习路径"></section>
             <section class="resource-directory" id="resourceDirectory" aria-label="完整分层目录"></section>
           </section>
 
@@ -134,12 +130,12 @@
 
               <header class="reader-heading">
                 <p class="reader-source" id="readerSectionNumber">章节</p>
-                <div class="reader-title-row"><div><h2 id="readerTitle"></h2><div class="reader-metrics"><span id="readerBookMeta">清洗正文</span><span id="readerNoteMeta">暂无笔记</span></div></div><button class="reader-practice-link hidden" id="readerPractice" type="button"><i data-lucide="circle-dot-dashed"></i><span>本节练习</span></button></div>
+                <div class="reader-title-row"><div><h2 id="readerTitle"></h2><div class="reader-metrics"><span id="readerBookMeta">清洗正文</span><span id="readerNoteMeta">暂无笔记</span></div></div><button class="reader-practice-link hidden" id="readerPractice" type="button" title="本节练习" aria-label="本节练习"><i data-lucide="circle-dot-dashed"></i></button></div>
               </header>
 
               <nav class="section-guide hidden" id="sectionGuide" aria-label="本节内容导航"></nav>
               <div class="knowledge-article" id="knowledgeArticle"></div>
-              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="reader-session-exit" id="readerFinishSession" type="button"><span>结束本次阅读</span></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
+              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="reader-session-exit" id="readerFinishSession" type="button" title="结束本次阅读" aria-label="结束本次阅读"><i data-lucide="check"></i></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
             </div>
           </article>
         </div>
@@ -189,7 +185,7 @@
           </section>
           <nav class="practice-pagination" id="practicePagination" aria-label="题目切换"><button class="practice-page-button" id="practicePrevious" type="button"><i data-lucide="arrow-left"></i><span>上一题</span></button><button class="practice-page-button next" id="practiceNext" type="button"><span>下一题</span><i data-lucide="arrow-right"></i></button></nav>
           <section class="practice-session-summary hidden" id="practiceSessionSummary" aria-live="polite">
-            <p class="eyebrow">本次练习</p><h2>这一组先到这里</h2><p id="practiceSummaryLead">作答状态已经保存在本机，可以随时回来继续。</p>
+            <h2>本组结果</h2><p class="hidden" id="practiceSummaryLead"></p>
             <div class="practice-summary-facts" id="practiceSummaryFacts"></div>
             <div class="practice-summary-actions"><button class="secondary-button hidden" id="practiceReviewWrong" type="button"><i data-lucide="rotate-ccw"></i><span>查看错题</span></button><button class="primary-button" id="practiceLeaveSession" type="button"><span>返回学习资料</span><i data-lucide="arrow-right"></i></button></div>
           </section>
@@ -263,6 +259,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="/vendor/lucide.min.js"></script>
+  <script src="/markdown.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

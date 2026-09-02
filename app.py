@@ -14,6 +14,16 @@ from pathlib import Path
 from threading import Lock
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
+from yureader.utils import (
+    atomic_write,
+    first_title,
+    safe_domain,
+    safe_note_component,
+    safe_resource_type,
+    stable_id,
+    starts_at_first_chapter,
+)
+
 
 ROOT = Path(__file__).resolve().parent
 CONTENT_DIR = Path(os.environ.get("YUREADER_CONTENT_DIR", ROOT / "content")).resolve()
@@ -54,11 +64,6 @@ LEGACY_ROUTE_REDIRECTS = {
     "/stats": "records/stats",
     "/statistics": "records/stats",
 }
-FIRST_CHAPTER_TITLE = re.compile(
-    r"^\s*(?:第[0-9０-９一二三四五六七八九十百千万零〇两]+章(?:\s|$)|"
-    r"chapter\s*(?:1|one)\b)",
-    re.IGNORECASE,
-)
 ACTIVITY_LOCK = Lock()
 CATALOG_LOCK = Lock()
 CATALOG_RECHECK_SECONDS = 2.0
@@ -82,16 +87,6 @@ PRACTICE_LOCK = Lock()
 BOOK_ASSETS: dict[str, dict] = {}
 
 
-def safe_domain(value: object) -> str:
-    domain = str(value or "medicine").strip().lower()
-    return domain if domain in VALID_DOMAINS else "medicine"
-
-
-def safe_resource_type(value: object) -> str:
-    resource_type = str(value or "book").strip().lower()
-    return resource_type if resource_type in VALID_RESOURCE_TYPES else "book"
-
-
 def public_question_bank_title(title: object, bank_id: str, subject: object = "", domain: object = "") -> str:
     """Return a stable reader-facing title for a published question bank.
 
@@ -111,21 +106,6 @@ def public_question_bank_title(title: object, bank_id: str, subject: object = ""
         track = exam_id.group(2) or exam_id.group(3)
         return f"{year} 年考研英语{'二' if track == '2' else '一'}真题"
     return re.sub(r"\s*(?:（候选）|\(候选\)|客观题候选包)\s*$", "", value).strip() or value
-
-
-def stable_id(relative_path: str, offset: int) -> str:
-    value = f"{relative_path}\0{offset}".encode("utf-8")
-    return hashlib.sha1(value).hexdigest()[:12]
-
-
-def first_title(markdown: str, fallback: str) -> str:
-    match = re.search(r"^#\s+(.+?)\s*$", markdown, re.MULTILINE)
-    return match.group(1).strip() if match else fallback
-
-
-def starts_at_first_chapter(title: str) -> bool:
-    """Reject packages that expose preface material as formal book content."""
-    return bool(FIRST_CHAPTER_TITLE.search(str(title or "").strip()))
 
 
 def sections_for(path: Path) -> list[dict]:
@@ -1335,13 +1315,6 @@ def unarchived_learning_records(sections: dict[str, dict]) -> dict:
     }
 
 
-def safe_note_component(value: object, fallback: str) -> str:
-    """Produce a human-readable, Windows-safe folder/file component."""
-    cleaned = re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", "-", str(value or "").strip())
-    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .-")
-    return (cleaned[:80].rstrip(" .-") or fallback)
-
-
 def section_note_target(book: dict, section: dict) -> tuple[Path, str, str]:
     """Map one stable reader section to a browsable Obsidian note location."""
     domain = safe_domain(book.get("domain"))
@@ -1397,13 +1370,6 @@ def dated_note_path(directory: Path, day: str, section_id: str | None = None) ->
     if not re.fullmatch(r"[0-9a-f]{12}", section_id):
         raise ValueError("invalid section id")
     return directory / day / f"{section_id}.md"
-
-
-def atomic_write(target: Path, content: str) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(target.suffix + ".tmp")
-    temporary.write_text(content + ("\n" if content else ""), encoding="utf-8")
-    temporary.replace(target)
 
 
 def load_activity() -> dict:

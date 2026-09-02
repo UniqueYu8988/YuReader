@@ -18,7 +18,7 @@ const BOOK_COVER_LABELS = {
   "politics-modern-history": "史纲",
   "politics-xi": "习中特",
 };
-const state = { books: [], questionBanks: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, domainResumeTarget: null, resource: null, resourceBookId: null, resourceCache: new Map(), resourceLoads: new Map(), englishNotebook: null, englishNotebookSaveTimer: null, englishExamOverview: null, englishExamOverviewBankId: "", readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, homeContinueTarget: null, homeResumeTargets: new Map(), readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, readingFlushKey: "", workspaceActivity: null, workspaceActive: false, workspaceLastTick: Date.now(), workspaceLastActive: 0, workspacePendingSeconds: 0, workspaceFlushSequence: 0, workspaceFlushKey: "", homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceOverviewBankId: "", practiceAnalysisSaveTimer: null, practiceReadingItems: [], practiceReadingToken: 0, subjectivePractice: null, subjectiveSaveTimer: null };
+const state = { books: [], questionBanks: [], sections: new Map(), current: null, libraryBookId: null, libraryDomain: "medicine", inlineBookId: null, resource: null, resourceBookId: null, resourceCache: new Map(), resourceLoads: new Map(), englishNotebook: null, englishNotebookSaveTimer: null, englishExamOverview: null, englishExamOverviewBankId: "", readerOriginBookId: null, material: "cleaned", saveTimer: null, noteOpen: false, noteTrigger: null, openRequest: 0, review: null, reviewSummarySaveTimer: null, logs: null, weekly: null, weeklySaveTimer: null, stats: null, homeContinueTarget: null, homeResumeTargets: new Map(), readingActive: false, readingSectionId: "", readingLastTick: Date.now(), readingLastScroll: 0, readingPendingSeconds: 0, readingFlushKey: "", workspaceActivity: null, workspaceActive: false, workspaceLastTick: Date.now(), workspaceLastActive: 0, workspacePendingSeconds: 0, workspaceFlushSequence: 0, workspaceFlushKey: "", homeResizeTimer: null, practice: null, practiceIndex: 0, practiceReturn: "reader", practiceOverviewBankId: "", practiceAnalysisSaveTimer: null, practiceReadingItems: [], practiceReadingToken: 0, subjectivePractice: null, subjectiveSaveTimer: null };
 const $ = (id) => document.getElementById(id);
 const READING_IDLE_MS = 10 * 60 * 1000;
 const READING_FLUSH_SECONDS = 15;
@@ -73,87 +73,7 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 }
 
-function inlineMarkdown(value, imageBase = "") {
-  let output = escapeHtml(value);
-  output = output.replace(/&lt;br\s*\/??&gt;/gi, "<br>");
-  output = output.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
-    if (imageBase && /^(?:\.\/)?images\//.test(url)) url = `${imageBase}${url.replace(/^(?:\.\/)+/, "")}`;
-    return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}">`;
-  });
-  output = output.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${label}</a>`);
-  output = output.replace(/`([^`]+)`/g, "<code>$1</code>");
-  output = output.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  output = output.replace(/__([^_]+)__/g, "<strong>$1</strong>");
-  output = output.replace(/==([^=]+)==/g, "<mark>$1</mark>");
-  return output;
-}
-
-function splitTableRow(line, imageBase = "") {
-  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => inlineMarkdown(cell.trim(), imageBase));
-}
-
-
-
-function isTableSeparator(line) {
-  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
-}
-
-function sanitizeTableHtml(value) {
-  const documentNode = new DOMParser().parseFromString(String(value), "text/html");
-  const table = documentNode.body.querySelector("table");
-  if (!table) return `<p>${escapeHtml(value)}</p>`;
-  const allowed = new Set(["table", "thead", "tbody", "tfoot", "tr", "th", "td", "br", "sup", "sub"]);
-  function sanitizeNode(node) {
-    if (node.nodeType === Node.TEXT_NODE) return escapeHtml(node.textContent || "");
-    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-    const tag = node.tagName.toLowerCase();
-    if (!allowed.has(tag)) return [...node.childNodes].map(sanitizeNode).join("");
-    let attrs = "";
-    if (tag === "td" || tag === "th") {
-      ["rowspan", "colspan"].forEach((name) => {
-        const raw = node.getAttribute(name);
-        if (/^[1-9]\d?$/.test(raw || "")) attrs += ` ${name}="${raw}"`;
-      });
-    }
-    if (tag === "br") return "<br>";
-    return `<${tag}${attrs}>${[...node.childNodes].map(sanitizeNode).join("")}</${tag}>`;
-  }
-  return `<div class="knowledge-table-wrap">${sanitizeNode(table)}</div>`;
-}
-
-function renderMarkdown(markdown, imageBase = "") {
-  const lines = String(markdown || "").replace(/\r/g, "").split("\n");
-  const blocks = [];
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index];
-    if (!line.trim()) { index += 1; continue; }
-    const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    if (heading) { const level = Math.min(6, heading[1].length); blocks.push(`<h${level}>${inlineMarkdown(heading[2], imageBase)}</h${level}>`); index += 1; continue; }
-    if (/^\s*<table\b/i.test(line)) {
-      const tableLines = [line]; index += 1;
-      while (index < lines.length && !/<\/table>\s*$/i.test(tableLines[tableLines.length - 1])) tableLines.push(lines[index++]);
-      blocks.push(sanitizeTableHtml(tableLines.join("\n"))); continue;
-    }
-    if (/^\s*>/.test(line)) { const quote = []; while (index < lines.length && /^\s*>/.test(lines[index])) quote.push(lines[index++].replace(/^\s*>\s?/, "")); blocks.push(`<blockquote>${inlineMarkdown(quote.join(" "), imageBase)}</blockquote>`); continue; }
-    if (/^\s*\|/.test(line) && index + 1 < lines.length && isTableSeparator(lines[index + 1])) {
-      const rows = []; while (index < lines.length && /^\s*\|/.test(lines[index])) rows.push(splitTableRow(lines[index++], imageBase));
-      const head = rows[0] || []; const body = rows.slice(2);
-      blocks.push(`<div class="knowledge-table-wrap"><table><thead><tr>${head.map((cell) => `<th>${cell}</th>`).join("")}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
-      continue;
-    }
-    const list = line.match(/^\s*([-*+] |\d+[.)]\s+)(.+)$/);
-    if (list) {
-      const ordered = /^\d/.test(list[1]); const items = [];
-      while (index < lines.length) { const item = lines[index].match(/^\s*([-*+] |\d+[.)]\s+)(.+)$/); if (!item || /^\d/.test(item[1]) !== ordered) break; items.push(`<li>${inlineMarkdown(item[2], imageBase)}</li>`); index += 1; }
-      blocks.push(`<${ordered ? "ol" : "ul"}>${items.join("")}</${ordered ? "ol" : "ul"}>`); continue;
-    }
-    const paragraph = [line.trim()]; index += 1;
-    while (index < lines.length && lines[index].trim() && !/^(#{1,6})\s/.test(lines[index]) && !/^\s*<table\b/i.test(lines[index]) && !/^\s*([-*+] |\d+[.)]\s+|>|\|)/.test(lines[index])) paragraph.push(lines[index++].trim());
-    blocks.push(`<p>${inlineMarkdown(paragraph.join(" "), imageBase)}</p>`);
-  }
-  return blocks.join("") || `<div class="section-material-empty"><i data-lucide="file-text"></i><strong>暂无内容</strong><span>这一节还没有可以展示的 Markdown。</span></div>`;
-}
+const { inlineMarkdown, renderMarkdown } = window.YuReaderMarkdown.create(escapeHtml);
 
 function normalizeSectionHeading(value) {
   return String(value || "").normalize("NFKC").replace(/[*_`~#]/g, "").replace(/[\s·•:：,，。.!！?？()（）\[\]【】]/g, "").toLowerCase();
@@ -446,41 +366,23 @@ function renderHome() {
   const continuation = stats.continue_activity;
   const continueTarget = stats.continue_target || null;
   state.homeContinueTarget = continueTarget;
-  $("homeLeadText").textContent = continuation ? `上次在${continuation.activity_label}中停在“${continuation.title}”。` : "学习库已经准备好，选择一个学科开始今天的学习。";
+  $("homeLeadText").textContent = continuation ? `上次停在“${continuation.title}”` : "选择一本书，开始今天的学习";
   $("homeContinueLabel").textContent = continuation?.activity_label ? `继续${continuation.activity_label}` : "继续学习";
   $("homeContinueTitle").textContent = continuation?.title || "进入学习库选择内容";
-  $("homeTodayDuration").textContent = formatDuration(stats.today_activity_seconds, true);
-  $("homeTodaySections").textContent = `${formatInteger(stats.today_activity_count)} 个活动`;
-  $("homeTodayNotes").textContent = `${formatInteger(stats.today_note_count)} 节笔记`;
-
   const pending = stats.review_pending;
-  $("homeReviewTitle").textContent = pending ? `${reviewDateLabel(pending.date)}待回顾` : "暂时没有待回顾";
-  $("homeReviewMeta").textContent = pending ? `${formatDuration(pending.duration_seconds)} · ${formatInteger(pending.activity_count)} 条活动 · ${formatInteger(pending.note_count)} 节笔记` : "新的学习日会在这里等待整理";
+  $("homeReviewPanel").classList.toggle("hidden", !pending);
+  $("homeReviewTitle").textContent = pending ? `${reviewDateLabel(pending.date)}待回顾` : "待回顾";
+  $("homeReviewMeta").textContent = pending ? `${formatInteger(pending.activity_count)} 条学习记录` : "";
   $("homeOpenReview").disabled = !pending;
 
   state.homeResumeTargets.clear();
   const todayActivities = stats.today_activities || [];
-  $("homeTraceList").innerHTML = todayActivities.length ? todayActivities.map((item, index) => {
+  $("homeTracePanel").classList.toggle("hidden", !todayActivities.length);
+  $("homeTraceList").innerHTML = todayActivities.map((item, index) => {
     const key = homeActivityTargetKey("activity", index); state.homeResumeTargets.set(key, item.resume_target);
     return `<button class="reader-home-trace-row" type="button" data-home-resume="${key}"><span><strong>${escapeHtml(item.activity_label || activityTypeLabel(item.activity_type))}</strong><small>${escapeHtml(item.title || item.item_id || "学习条目")} · ${escapeHtml(item.subject_id || item.domain || "")}</small></span><span>${formatDuration(item.duration_seconds, true)}</span><i data-lucide="arrow-up-right"></i></button>`;
-  }).join("") : `<div class="reader-home-trace-empty"><i data-lucide="sun-medium"></i><strong>今天还没有学习轨迹</strong><span>从一个学科开始，阅读、练习和笔记会在这里汇合。</span></div>`;
+  }).join("");
   $("homeTraceList").querySelectorAll("[data-home-resume]").forEach((button) => button.addEventListener("click", () => resumeActivityTarget(state.homeResumeTargets.get(button.dataset.homeResume))));
-
-  const recent = stats.recent_resources || [];
-  $("homeRecentList").innerHTML = recent.length ? recent.map((item, index) => {
-    const key = homeActivityTargetKey("resource", index); state.homeResumeTargets.set(key, item.resume_target);
-    return `<button class="reader-home-recent-row" type="button" data-home-resume="${key}"><span><strong>${escapeHtml(item.title || item.resource_id || "学习资料")}</strong><small>${escapeHtml(item.subject_id || item.domain || "")}</small></span><i data-lucide="arrow-right"></i></button>`;
-  }).join("") : `<span class="reader-home-recent-empty">完成一次学习后，最近资料会显示在这里。</span>`;
-  $("homeRecentList").querySelectorAll("[data-home-resume]").forEach((button) => button.addEventListener("click", () => resumeActivityTarget(state.homeResumeTargets.get(button.dataset.homeResume))));
-
-  const counts = {
-    medicine: state.books.filter((book) => (book.domain || "medicine") === "medicine").length,
-    politics: state.books.filter((book) => (book.domain || "medicine") === "politics").length,
-    english: englishShelfBooks().length,
-  };
-  $("homeMedicineMeta").textContent = `${formatInteger(counts.medicine)} 本书 · 教材章节精读`;
-  $("homePoliticsMeta").textContent = `${formatInteger(counts.politics)} 本书 · 讲义与练习联动`;
-  $("homeEnglishMeta").textContent = `${formatInteger(counts.english)} 本书 · 方法课与词汇`;
   refreshIcons();
 }
 
@@ -682,44 +584,6 @@ function renderDomainTabs() {
   });
 }
 
-const DOMAIN_STUDY_COPY = {
-  medicine: { eyebrow: "MEDICINE", title: "从教材的一节进入", description: "正文、章节笔记和 Obsidian 保持在同一个稳定位置；练习只在存在真实关联时出现。", icon: "stethoscope", output: "章节笔记" },
-  politics: { eyebrow: "POLITICS", title: "讲义与对应练习并行", description: "先按五科目录阅读，再从章节的稳定知识位置进入真实题库，避免讲义与题目失去上下文。", icon: "landmark", output: "个人解析" },
-  english: { eyebrow: "ENGLISH", title: "输入、训练与沉淀", description: "方法课、词汇、历年真题和英语周记使用各自合适的工作台，但共享同一套学习记录。", icon: "languages", output: "周记与主观题" },
-};
-
-function domainActivityCandidate(domain) {
-  const continuation = state.stats?.continue_activity;
-  if (continuation?.domain === domain && continuation.activity_type !== "review") return continuation;
-  return (state.stats?.recent_resources || []).find((item) => item.domain === domain && item.resume_target?.view !== "review") || null;
-}
-
-function renderDomainStudyOverview() {
-  const container = $("domainStudyOverview"); if (!container) return;
-  const domain = state.libraryDomain; const copy = DOMAIN_STUDY_COPY[domain] || DOMAIN_STUDY_COPY.medicine;
-  const books = domain === "english" ? englishShelfBooks() : state.books.filter((book) => (book.domain || "medicine") === domain);
-  const banks = state.questionBanks.filter((bank) => bank.domain === domain);
-  const candidate = domainActivityCandidate(domain); state.domainResumeTarget = candidate?.resume_target || null;
-  const seconds = Number(state.stats?.activity_domain_totals?.[domain] || 0);
-  const activityCount = Number(state.stats?.activity_domain_counts?.[domain] || 0);
-  const recent = (state.stats?.today_activities || []).filter((item) => item.domain === domain && item.activity_type !== "review").slice(0, 3);
-  const practiceCopy = domain === "politics" && banks.length
-    ? `${formatInteger(banks.reduce((sum, bank) => sum + Number(bank.question_count || 0), 0))} 道真实题 · 从对应章节进入`
-    : domain === "english" && banks.length ? `${formatInteger(banks.length)} 套历年真题` : "只显示真实关联的练习";
-  container.innerHTML = `<section class="domain-study-lead">
-      <div class="domain-study-copy"><p class="eyebrow">${copy.eyebrow}</p><h3>${copy.title}</h3><p>${copy.description}</p></div>
-      <button class="domain-study-continue${candidate ? "" : " unavailable"}" type="button" ${candidate ? "" : "disabled"}><span><small>${candidate ? `继续${escapeHtml(candidate.activity_label || activityTypeLabel(candidate.activity_type))}` : "尚无学习记录"}</small><strong>${escapeHtml(candidate?.title || "从下方选择一份资料")}</strong></span><i data-lucide="arrow-right"></i></button>
-    </section>
-    <section class="domain-study-facts" aria-label="学科摘要">
-      <div><span>学习资料</span><strong>${formatInteger(books.length)}</strong><small>${domain === "english" ? "本方法与词汇资料" : "本正式资料"}</small></div>
-      <div><span>练习连接</span><strong>${domain === "medicine" ? "按章节" : formatInteger(banks.length)}</strong><small>${practiceCopy}</small></div>
-      <div><span>累计投入</span><strong>${formatDuration(seconds, true)}</strong><small>${formatInteger(activityCount)} 次有效活动</small></div>
-      <div><span>最近产出</span><strong>${copy.output}</strong><small>${recent.length ? recent.map((item) => item.title).join("、") : "今天还没有新的产出"}</small></div>
-    </section>`;
-  container.querySelector(".domain-study-continue")?.addEventListener("click", () => resumeActivityTarget(state.domainResumeTarget));
-  refreshIcons();
-}
-
 function formatEnglishDate(value) {
   const parsed = new Date(`${String(value || "")}T12:00:00`);
   return Number.isNaN(parsed.getTime()) ? String(value || "") : parsed.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
@@ -733,7 +597,6 @@ function englishPanel(mode = "") {
   $("englishExams")?.classList.toggle("hidden", !isExams);
   $("englishExamOverview")?.classList.toggle("hidden", !isExamOverview);
   $("bookTree")?.classList.toggle("hidden", isHub || isNotebook || isExams || isExamOverview);
-  $("domainStudyOverview")?.classList.toggle("hidden", isNotebook || isExams || isExamOverview);
   if (search) search.classList.toggle("hidden", isHub || isNotebook || isExams || isExamOverview);
 }
 
@@ -749,28 +612,27 @@ function englishResource(kind) {
   return books.find((book) => /阅读|方法|reading/i.test(`${book.title} ${book.subject || ""}`)) || null;
 }
 
-function englishModuleHtml({ kind, eyebrow, title, description, icon, resource, bank, count, action }) {
+function englishModuleHtml({ kind, title, icon, resource, bank, count }) {
   const available = Boolean(resource || bank) || kind === "notebook";
   const attr = bank ? "data-english-exams" : resource ? `data-english-resource="${escapeHtml(resource.id)}"` : kind === "notebook" ? "data-english-notebook" : "disabled";
   return `<button class="english-module-row ${kind}${available ? "" : " unavailable"}" type="button" ${attr}>
     <span class="english-module-index"><i data-lucide="${icon}"></i></span>
-    <span class="english-module-copy"><small>${eyebrow}</small><strong>${title}</strong><em>${description}</em></span>
-    <span class="english-module-status">${count ? `<small>${escapeHtml(count)}</small>` : ""}<strong>${available ? action : "资料制作中"}</strong></span>
+    <span class="english-module-copy"><strong>${title}</strong></span>
+    <span class="english-module-status"><small>${escapeHtml(available ? count || "" : "资料制作中")}</small></span>
     <i data-lucide="${available ? "arrow-up-right" : "clock-3"}"></i>
   </button>`;
 }
 
 function renderEnglishHub() {
   englishPanel("hub");
-  renderDomainStudyOverview();
   const exam = englishResource("exam"); const method = englishResource("method"); const vocabulary = englishResource("vocabulary");
   const examBanks = state.questionBanks.filter((bank) => bank.domain === "english");
   const examBank = examBanks[0] || null;
   const modules = [
-    { kind: "exam", eyebrow: "01 · PRACTICE", title: "真题训练", description: "按年份完成题目，题干、答案和个人解析彼此独立。", icon: "file-check-2", resource: exam, bank: examBank, count: examBanks.length ? `${examBanks.length} 个题库` : exam ? `${exam.sections.length} 个单元` : "", action: "进入真题" },
-    { kind: "method", eyebrow: "02 · METHOD", title: "方法课", description: "语法、长难句与阅读方法按课程目录连续学习。", icon: "route", resource: method, count: method ? `${method.sections.length} 节` : "", action: "开始课程" },
-    { kind: "vocabulary", eyebrow: "03 · VOCABULARY", title: "词汇本", description: "以 Unit 为单位积累，不把每个单词拆成孤立页面。", icon: "text-cursor-input", resource: vocabulary, count: vocabulary ? `${vocabulary.sections.length} 个单元` : "", action: "打开词表" },
-    { kind: "notebook", eyebrow: "04 · WEEKLY NOTE", title: "英语周记", description: "周一到周日共用一份 Markdown，承接侧边栏生成的内容。", icon: "notebook-pen", resource: null, count: "每周一份", action: "打开本周" },
+    { kind: "exam", title: "真题训练", icon: "file-check-2", resource: exam, bank: examBank, count: examBanks.length ? `${examBanks.length} 套` : exam ? `${exam.sections.length} 个单元` : "" },
+    { kind: "method", title: "方法课", icon: "route", resource: method, count: method ? `${method.sections.length} 节` : "" },
+    { kind: "vocabulary", title: "词汇本", icon: "text-cursor-input", resource: vocabulary, count: vocabulary ? `${vocabulary.sections.length} 个单元` : "" },
+    { kind: "notebook", title: "英语周记", icon: "notebook-pen", resource: null, count: "本周" },
   ];
   $("englishModuleList").innerHTML = modules.map(englishModuleHtml).join("");
   $("englishModuleList").querySelectorAll("[data-english-resource]").forEach((button) => button.addEventListener("click", () => openResource(button.dataset.englishResource)));
@@ -974,8 +836,6 @@ function renderBooks(filter = "") {
   if (state.libraryDomain === "english") { renderEnglishHub(); return; }
   englishPanel("");
   const query = filter.trim().toLowerCase(); const tree = $("bookTree");
-  $("domainStudyOverview").classList.toggle("hidden", Boolean(query));
-  if (!query) renderDomainStudyOverview();
   const matchedBooks = domainBooks().filter((book) => !query || searchableBook(book).includes(query));
   if (!matchedBooks.length) {
     tree.innerHTML = query
@@ -983,7 +843,7 @@ function renderBooks(filter = "") {
       : `<div class="knowledge-index-empty"><i data-lucide="library"></i><strong>${escapeHtml(DOMAIN_LABELS[state.libraryDomain] || "医学")}学习库还是空的</strong><span>这个领域还没有正式资料，放入学习库后刷新页面。</span></div>`;
     refreshIcons(); return;
   }
-  const covers = matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong><em>${escapeHtml(book.edition || "")}</em></span></button>`).join("");
+  const covers = matchedBooks.map((book) => `<button class="reader-book-overview ${book.id === state.resourceBookId ? "active" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="打开《${escapeHtml(book.title)}》资料学习主页" aria-label="打开《${escapeHtml(book.title)}》资料学习主页"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong></span></button>`).join("");
   let directory = "";
   if (query) {
     const selectedBookId = matchedBooks.some((book) => book.id === state.inlineBookId) ? state.inlineBookId : matchedBooks[0].id;
@@ -995,7 +855,7 @@ function renderBooks(filter = "") {
         ${chapterListHtml(selected, chapters, { openAll: true })}
       </section>`;
   }
-  tree.innerHTML = `${query ? "" : `<section class="domain-resource-section"><header><div><p class="eyebrow">学习资料</p><h3>${escapeHtml(DOMAIN_LABELS[state.libraryDomain] || "医学")}资料</h3></div><span>${matchedBooks.length} 本 · 点击进入资料主页</span></header>`}<div class="reader-cover-shelf" aria-label="图书列表">${covers}</div>${query ? "" : "</section>"}${directory}`;
+  tree.innerHTML = `<div class="reader-cover-shelf" aria-label="图书列表">${covers}</div>${directory}`;
   tree.querySelectorAll("[data-library-book]").forEach((button) => button.addEventListener("click", () => {
     const bookId = button.dataset.libraryBook;
     if (query) { state.inlineBookId = state.inlineBookId === bookId ? null : bookId; renderBooks($("librarySearch").value); }
@@ -1009,46 +869,24 @@ function renderBooks(filter = "") {
   refreshIcons();
 }
 
-function formatDateTime(value) {
-  const parsed = new Date(String(value || ""));
-  if (Number.isNaN(parsed.getTime())) return String(value || "");
-  const day = parsed.toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
-  const clock = parsed.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  return `${day} ${clock}`;
-}
-
 function renderResource() {
   const payload = state.resource; const book = payload?.book; const summary = payload?.summary || {};
-  if (!book) { $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`; return; }
+  if (!book) return;
   $("resourcePanel").classList.remove("is-loading");
-  $("resourceFacts").classList.remove("is-loading"); $("resourceFacts").removeAttribute("aria-busy"); $("resourceFacts").removeAttribute("aria-label");
+  $("resourceStatus").classList.add("hidden"); $("resourceStatus").textContent = "";
   $("resourceProgressTrack").classList.remove("is-loading");
   $("resourceDomainLabel").textContent = `${book.domain_label || DOMAIN_LABELS[book.domain] || "医学"} · ${book.resource_type_label || book.resource_type || "教材"}`;
   $("resourceTitle").textContent = book.title;
   $("resourceMeta").textContent = `${book.edition ? `${book.edition} · ` : ""}${book.subject}`;
   const lastSection = summary.last_section;
-  const lastText = lastSection ? `${lastSection.chapter_title}　${lastSection.title}` : "还没有学习记录";
   const progress = Number(summary.progress || 0);
   const progressText = `${progress.toFixed(progress % 1 ? 1 : 0)}%`;
   $("resourceProgressBar").style.width = `${Math.min(100, Math.max(0, progress))}%`;
   $("resourceProgressTrack").title = `阅读进度 ${progressText}（已学习小节 / 全部小节）`;
-  const learnedCount = Number(summary.learned_section_count || 0);
-  const totalCount = Number(summary.section_count || 0);
-  const noteCount = Number(summary.note_count || 0);
-  const readingSeconds = Number(summary.reading_seconds || 0);
-  const studiedAt = summary.last_studied_at ? formatDateTime(summary.last_studied_at) : "暂无记录";
-  $("resourceFacts").innerHTML =
-    `<div class="resource-fact-location"><span>上次学习位置</span><strong class="resource-location">${escapeHtml(lastText)}</strong></div>`
-    + `<div><span>阅读进度</span><strong class="resource-value">${progressText}</strong><em>${learnedCount} / ${totalCount} 小节</em></div>`
-    + `<div><span>已学习小节</span><strong class="resource-value">${formatInteger(learnedCount)}</strong><em>${noteCount ? `${formatInteger(noteCount)} 节笔记` : "暂无章节笔记"}</em></div>`
-    + `<div><span>最近学习时间</span><strong class="resource-location">${escapeHtml(studiedAt)}</strong><em>${readingSeconds ? `阅读 ${formatDuration(readingSeconds)}` : "暂无阅读时长"}</em></div>`;
   $("resourceContinueTitle").textContent = lastSection ? `${lastSection.title} · ${lastSection.chapter_title}` : `从 ${book.sections[0] ? book.sections[0].title : "第一章"} 开始阅读`;
   $("resourceContinue").dataset.sectionId = lastSection?.id || book.sections[0]?.id || "";
-  $("resourceLearningLoop").innerHTML = `<header><div><p class="eyebrow">学习路径</p><h3>围绕同一节形成结果</h3></div><span>侧边栏 AI 读取当前页面，不改写原文</span></header><div class="resource-loop-steps"><div><em>01</em><span><strong>阅读一节</strong><small>按原书自然小节保持完整上下文</small></span></div><div><em>02</em><span><strong>留下理解</strong><small>${noteCount ? `${noteCount} 节笔记已进入本地与 Obsidian` : "章节笔记会自动保存并镜像"}</small></span></div><div id="resourceLoopPractice"><em>03</em><span><strong>对应练习</strong><small>仅在稳定知识位置存在真实题目时出现</small></span></div></div>`;
   const chapters = bookToc(book).filter((chapter) => chapter.sections.length);
-  $("resourceDirectory").innerHTML =
-    `<header class="resource-directory-heading"><div><p class="eyebrow">分层目录</p><h3>${escapeHtml(book.title)}</h3></div><span>${book.toc?.length || chapters.length} 章 · ${book.sections.length} 个学习小节</span></header>`
-    + `<section class="reader-directory resource-directory-list">${chapterListHtml(book, chapters)}</section>`;
+  $("resourceDirectory").innerHTML = `<section class="reader-directory resource-directory-list">${chapterListHtml(book, chapters)}</section>`;
   $("resourceDirectory").querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = state.resourceBookId; openSection(button.dataset.sectionId); }));
   refreshIcons();
 }
@@ -1059,10 +897,6 @@ function renderResourceLoading(book) {
   $("resourcePanel").classList.add("is-loading");
   $("resourceProgressTrack").classList.add("is-loading");
   $("resourceProgressTrack").title = "正在读取本地学习记录";
-  $("resourceFacts").classList.add("is-loading");
-  $("resourceFacts").setAttribute("aria-busy", "true");
-  $("resourceFacts").setAttribute("aria-label", "正在读取本地学习记录");
-  $("resourceFacts").innerHTML = ["上次学习位置", "阅读进度", "已学习小节", "最近学习时间"].map((label, index) => `<div${index === 0 ? ' class="resource-fact-location"' : ""}><span>${label}</span><i class="resource-loading-line ${index === 0 ? "wide" : ""}" aria-hidden="true"></i><i class="resource-loading-line short" aria-hidden="true"></i></div>`).join("");
 }
 
 function fetchResource(bookId, force = false) {
@@ -1104,8 +938,8 @@ async function openResource(bookId) {
     if (state.resourceBookId !== bookId) return;
     if (cached) { state.resource = cached.payload; renderResource(); }
     else {
-      $("resourcePanel").classList.remove("is-loading"); $("resourceProgressTrack").classList.remove("is-loading"); $("resourceFacts").classList.remove("is-loading"); $("resourceFacts").removeAttribute("aria-busy");
-      $("resourceFacts").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取这份资料</strong><span>请确认书架服务正在运行。</span></div>`;
+      $("resourcePanel").classList.remove("is-loading"); $("resourceProgressTrack").classList.remove("is-loading");
+      $("resourceStatus").classList.remove("hidden"); $("resourceStatus").textContent = "暂时无法读取这份资料，请确认本地服务正在运行。";
     }
   }
   renderBooks($("librarySearch").value); window.scrollTo({ top: 0, behavior: "auto" });
@@ -1313,7 +1147,8 @@ async function loadSectionPractice() {
     if (!response.ok || state.current?.id !== sectionId) return;
     const payload = await response.json(); const entry = payload.entries?.[0];
     if (!entry) return;
-    fresh.classList.remove("hidden"); fresh.querySelector("span").textContent = `${practiceEntryLabel(entry)} · ${entry.question_count}题`;
+    const label = `${practiceEntryLabel(entry)}，${entry.question_count}题`;
+    fresh.classList.remove("hidden"); fresh.title = label; fresh.setAttribute("aria-label", label);
     fresh.addEventListener("click", () => openPractice(entry, "reader")); refreshIcons();
   } catch { /* A missing practice package must not disturb reading. */ }
 }
@@ -1325,7 +1160,6 @@ async function loadResourcePractice(bookId) {
     if (!response.ok || state.resourceBookId !== bookId) return;
     const payload = await response.json(); const entry = payload.entries?.[0];
     if (!entry) return;
-    const loop = $("resourceLoopPractice"); if (loop) { loop.classList.add("available"); loop.querySelector("small").textContent = `${practiceEntryLabel(entry)} · ${entry.question_count} 道真实题`; }
     let groups = [];
     if (entry.match_level === "comprehensive") {
       try {
@@ -1337,7 +1171,7 @@ async function loadResourcePractice(bookId) {
     }
     container.classList.remove("hidden");
     if (groups.length > 1) {
-      container.innerHTML = `<header><div><p class="eyebrow">对应练习</p><h3>按测试单元完成</h3></div><span>${groups.length} 组 · 每组独立保存进度</span></header><div class="resource-practice-list">${groups.map((group, index) => `<button type="button" data-practice-group="${index}"><span><small>${escapeHtml(group.part || "真实题库")}</small><strong>${escapeHtml(group.label)}</strong></span><span><small>${group.answered_count || 0} / ${group.question_count} 已答</small><strong>进入 ${group.question_count} 题</strong></span><i data-lucide="arrow-right"></i></button>`).join("")}</div>`;
+      container.innerHTML = `<div class="resource-practice-list">${groups.map((group, index) => `<button type="button" data-practice-group="${index}"><i data-lucide="circle-dot-dashed"></i><span><strong>${escapeHtml(group.label)}</strong><small>${group.answered_count || 0} / ${group.question_count} 已答</small></span><i data-lucide="arrow-right"></i></button>`).join("")}</div>`;
       container.querySelectorAll("[data-practice-group]").forEach((button) => button.addEventListener("click", () => { const group = groups[Number(button.dataset.practiceGroup)]; openPractice({ ...entry, unit_label: group.label, unit_key: group.key }, "resource"); }));
     } else {
       container.innerHTML = `<button class="resource-continue" type="button"><span><small>真实题库</small><strong>${practiceEntryLabel(entry)} · ${entry.question_count} 题</strong></span><i data-lucide="arrow-right"></i></button>`;
@@ -1407,7 +1241,6 @@ function finishPracticeSession() {
   const stats = practiceSessionStats(); stopWorkspaceTimer();
   $("practiceSessionMap").classList.add("hidden"); $("practiceMapToggle").setAttribute("aria-expanded", "false");
   $("practiceQuestionSurface").classList.add("hidden"); $("practiceResult").classList.add("hidden"); $("practicePagination").classList.add("hidden"); $("practiceSessionSummary").classList.remove("hidden");
-  $("practiceSummaryLead").textContent = stats.unanswered ? `还有 ${stats.unanswered} 题未作答，记录已经保留，下次可以继续。` : "这一组已经完成，答案与个人解析都已保存。";
   $("practiceSummaryFacts").innerHTML = `<div><span>已完成</span><strong>${stats.answered}</strong><small>共 ${stats.total} 题</small></div><div><span>回答正确</span><strong>${stats.correct}</strong><small>${stats.answered ? `${Math.round((stats.correct / stats.answered) * 100)}% 正确率` : "尚未作答"}</small></div><div><span>需要梳理</span><strong>${stats.wrong}</strong><small>可直接回到错题</small></div><div><span>未作答</span><strong>${stats.unanswered}</strong><small>下次继续完成</small></div>`;
   $("practiceReviewWrong").classList.toggle("hidden", !stats.wrong); loadStats(); refreshIcons(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
