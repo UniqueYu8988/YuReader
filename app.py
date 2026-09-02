@@ -1785,6 +1785,80 @@ def activity_records_payload(day: str = "", activity_type: str = "") -> dict:
     }
 
 
+def coalesce_activity_records(records: object) -> list[dict]:
+    """Merge timer and durable-output rows for the same logical learning item.
+
+    Workspace timers use a session activity ID while answer/note saves use a
+    stable output activity ID. Both rows remain in the append-compatible local
+    index, but user-facing summaries should show one question or notebook once.
+    Durations are accumulated and the durable-output row supplies the more
+    specific subject, result state, and resume target.
+    """
+    items = records if isinstance(records, list) else []
+    merged: dict[tuple[str, ...], dict] = {}
+    order: list[tuple[str, ...]] = []
+    result_rank = {"in_progress": 0, "has_output": 1, "completed": 2}
+
+    def preferred_rank(item: dict) -> int:
+        state_rank = result_rank.get(str(item.get("result_state") or ""), 0)
+        has_output = any(isinstance(ref, dict) for ref in (item.get("output_refs") or []))
+        return max(state_rank, 1 if has_output else 0)
+
+    for position, raw in enumerate(items):
+        if not isinstance(raw, dict):
+            continue
+        item = dict(raw)
+        activity_type = str(item.get("activity_type") or "")
+        resource_id = str(item.get("resource_id") or "")
+        item_id = str(item.get("item_id") or "")
+        day = str(item.get("date") or "")
+        if activity_type and resource_id and item_id:
+            key = (day, activity_type, resource_id, item_id)
+        else:
+            key = ("activity", str(item.get("activity_id") or position))
+        if key not in merged:
+            item["duration_seconds"] = max(0, int(item.get("duration_seconds") or 0))
+            item["output_refs"] = [dict(ref) for ref in (item.get("output_refs") or []) if isinstance(ref, dict)]
+            item["_preferred_rank"] = preferred_rank(item)
+            merged[key] = item
+            order.append(key)
+            continue
+
+        current = merged[key]
+        current["duration_seconds"] = max(0, int(current.get("duration_seconds") or 0)) + max(0, int(item.get("duration_seconds") or 0))
+        existing_refs = {
+            (str(ref.get("kind") or ""), str(ref.get("id") or ""), str(ref.get("path") or ""))
+            for ref in current.get("output_refs") or []
+            if isinstance(ref, dict)
+        }
+        for ref in item.get("output_refs") or []:
+            if not isinstance(ref, dict):
+                continue
+            ref_key = (str(ref.get("kind") or ""), str(ref.get("id") or ""), str(ref.get("path") or ""))
+            if ref_key not in existing_refs:
+                current.setdefault("output_refs", []).append(dict(ref))
+                existing_refs.add(ref_key)
+        started = [str(value) for value in (current.get("started_at"), item.get("started_at")) if str(value or "")]
+        active = [str(value) for value in (current.get("last_active_at"), item.get("last_active_at")) if str(value or "")]
+        if started:
+            current["started_at"] = min(started)
+        if active:
+            current["last_active_at"] = max(active)
+        candidate_rank = preferred_rank(item)
+        if candidate_rank > int(current.get("_preferred_rank") or 0):
+            for field in ("activity_id", "domain", "subject_id", "result_state", "resume_target"):
+                if item.get(field) not in (None, "", {}):
+                    current[field] = item[field]
+            current["_preferred_rank"] = candidate_rank
+
+    result: list[dict] = []
+    for key in order:
+        item = merged[key]
+        item.pop("_preferred_rank", None)
+        result.append(item)
+    return result
+
+
 def meaningful_activity(item: object, *, include_review: bool = True) -> bool:
     """Return whether one indexed activity represents deliberate learning.
 
@@ -1828,7 +1902,7 @@ def meaningful_learning_day(value: object, records: list[dict], *, include_revie
 def effective_activity_payload(day: str = "", *, include_review: bool = True) -> dict:
     """Return the public activity aggregate after applying the effective rule."""
     raw = activity_records_payload(day)
-    records = [item for item in raw.get("activities", []) if meaningful_activity(item, include_review=include_review)]
+    records = [item for item in coalesce_activity_records(raw.get("activities", [])) if meaningful_activity(item, include_review=include_review)]
     by_type: dict[str, int] = {}
     by_domain: dict[str, int] = {}
     for item in records:
@@ -2258,7 +2332,8 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     raw_days = activity.get("days") if isinstance(activity.get("days"), dict) else {}
     unified_payload = activity_records_payload()
     raw_unified_activities = unified_payload.get("activities", [])
-    unified_activities = [item for item in raw_unified_activities if meaningful_activity(item)]
+    coalesced_unified_activities = coalesce_activity_records(raw_unified_activities)
+    unified_activities = [item for item in coalesced_unified_activities if meaningful_activity(item)]
     unified_by_day: dict[str, list[dict]] = {}
     for item in unified_activities:
         unified_by_day.setdefault(str(item.get("date") or ""), []).append(item)
@@ -2385,7 +2460,7 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         streak_anchor -= timedelta(days=1)
 
     section_to_book = {section["id"]: book for book in books for section in book.get("sections", [])}
-    activity_summaries = [activity_home_summary(item, sections, section_to_book) for item in raw_unified_activities if isinstance(item, dict)]
+    activity_summaries = [activity_home_summary(item, sections, section_to_book) for item in coalesced_unified_activities if isinstance(item, dict)]
     activity_summaries.sort(key=lambda item: (item.get("last_active_at") or item.get("started_at") or item.get("date") or "", item.get("activity_id") or ""))
     for item in activity_summaries:
         if completed_review_activity(item) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(item.get("item_id") or "")):
@@ -2394,7 +2469,14 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     today_iso = today.isoformat()
     today_activities = [item for item in activity_summaries if item.get("date") == today_iso and meaningful_activity(item)]
     continuation = next(
-        (item for item in reversed(activity_summaries) if isinstance(item.get("resume_target"), dict) and item["resume_target"].get("view") and item["resume_target"].get("item_id")),
+        (
+            item
+            for item in reversed(activity_summaries)
+            if isinstance(item.get("resume_target"), dict)
+            and item["resume_target"].get("view")
+            and item["resume_target"].get("item_id")
+            and not completed_review_activity(item)
+        ),
         None,
     )
     valid_learning_days = {
@@ -2909,7 +2991,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
         for section in book.get("sections", [])
     }
     note_files = section_note_records(sections)
-    records = [item for item in activity_records_payload(day).get("activities", []) if meaningful_activity(item, include_review=False)]
+    records = [item for item in coalesce_activity_records(activity_records_payload(day).get("activities", [])) if meaningful_activity(item, include_review=False)]
     raw_activity = load_activity()
     raw_day = (raw_activity.get("days") or {}).get(day, {}) if isinstance(raw_activity.get("days"), dict) else {}
     sources: list[dict] = []
@@ -3269,8 +3351,9 @@ def logs_payload(selected_day: str = "") -> dict:
     learning_files = learning_record_files()
     all_days = set(daily_files) | set(learning_files)
     activity_payload = activity_records_payload()
+    activity_records = coalesce_activity_records(activity_payload.get("activities", []))
     activity_by_day: dict[str, list[dict]] = {}
-    for item in activity_payload.get("activities", []):
+    for item in activity_records:
         if isinstance(item, dict):
             activity_by_day.setdefault(str(item.get("date") or ""), []).append(item)
 
@@ -3313,7 +3396,7 @@ def logs_payload(selected_day: str = "") -> dict:
         )
     activity_days = {
         str(item.get("date"))
-        for item in activity_payload.get("activities", [])
+        for item in activity_records
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(item.get("date") or "")) and meaningful_activity(item)
     }
     raw_days = load_activity().get("days")

@@ -335,6 +335,63 @@ class UnifiedActivityTests(unittest.TestCase):
         self.assertIn("正确答案：B", source["markdown"])
         self.assertIn("混淆了两个概念", source["markdown"])
 
+    def test_objective_timer_and_output_are_one_review_source(self):
+        day = (date.today() - timedelta(days=1)).isoformat()
+        question_id = "politics-question-1"
+        timer_activity = {
+            "activity_id": "objective-session-timer",
+            "activity_type": "objective_practice",
+            "domain": "politics",
+            "subject_id": "考研政治（思想政治理论）",
+            "resource_id": "politics-bank",
+            "item_id": question_id,
+            "started_at": f"{day}T10:00:00+08:00",
+            "last_active_at": f"{day}T10:01:15+08:00",
+            "duration_seconds": 75,
+            "resume_target": {"view": "practice", "resource_id": "politics-bank", "item_id": question_id},
+            "output_refs": [],
+            "result_state": "in_progress",
+        }
+        output_activity = {
+            "activity_id": "objective-answer-output",
+            "activity_type": "objective_practice",
+            "domain": "politics",
+            "subject_id": "马克思主义基本原理",
+            "resource_id": "politics-bank",
+            "item_id": question_id,
+            "started_at": f"{day}T10:01:00+08:00",
+            "last_active_at": f"{day}T10:01:00+08:00",
+            "duration_seconds": 0,
+            "resume_target": {"view": "practice", "resource_id": "politics-bank", "item_id": question_id, "question_id": question_id},
+            "output_refs": [{"kind": "objective_attempt", "id": question_id, "path": "attempts.json"}],
+            "result_state": "has_output",
+        }
+        app.atomic_write(
+            app.ACTIVITY_PATH,
+            json.dumps({"schema_version": 3, "migration": {"legacy_activity_backfill": "v2"}, "days": {day: {"activities": [timer_activity, output_activity]}}}, ensure_ascii=False),
+        )
+        question = {"question_id": question_id, "local_number": 1, "stem_md": "哲学的基本问题是？", "options": [], "correct_answers": ["C"]}
+
+        def practice_store(kind):
+            if kind == "attempts":
+                return {"items": {question_id: {"selected_answers": ["C"], "correct": True}}}
+            return {"items": {}}
+
+        with patch.object(app, "load_bank_questions", return_value=[question]), patch.object(app, "load_practice_store", side_effect=practice_store):
+            effective = app.effective_activity_payload(day, include_review=False)
+            review = app.review_payload(day, self.books, self.sections)
+
+        self.assertEqual(effective["count"], 1)
+        self.assertEqual(effective["duration_seconds"], 75)
+        self.assertEqual(effective["activities"][0]["subject_id"], "马克思主义基本原理")
+        self.assertEqual(review["activity_count"], 1)
+        self.assertEqual(review["source_count"], 1)
+        self.assertEqual(review["subject_count"], 1)
+        self.assertEqual(review["sources"][0]["subject_key"], "politics:马克思主义基本原理")
+        self.assertEqual(review["sources"][0]["duration_seconds"], 75)
+        entry = next(item for item in app.logs_payload()["entries"] if item["date"] == day)
+        self.assertEqual(entry["subject_count"], 1)
+
     def test_weekly_notebook_review_extracts_only_requested_day(self):
         markdown = "## 周二 · 9/1\n\nTuesday note\n\n## 周三 · 9/2\n\nWednesday note"
         extracted = app._english_notebook_day_markdown(markdown, "2026-09-01")
@@ -508,6 +565,44 @@ class UnifiedActivityTests(unittest.TestCase):
         self.assertEqual(len(recent), 1)
         self.assertEqual(recent[0]["resume_target"]["view"], "reader")
         self.assertEqual(recent[0]["title"], "测试书")
+
+    def test_completed_review_does_not_override_learning_continuation(self):
+        today = date.today().isoformat()
+        source_day = (date.today() - timedelta(days=1)).isoformat()
+        activities = [
+            {
+                "activity_id": "read-before-review",
+                "activity_type": "read",
+                "domain": "medicine",
+                "subject_id": "口腔医学",
+                "resource_id": "book-x",
+                "item_id": self.section_id,
+                "duration_seconds": 60,
+                "last_active_at": f"{today}T10:00:00+08:00",
+                "resume_target": {"view": "reader", "resource_id": "book-x", "item_id": self.section_id},
+                "output_refs": [],
+                "result_state": "in_progress",
+            },
+            {
+                "activity_id": "completed-review",
+                "activity_type": "review",
+                "domain": "medicine",
+                "subject_id": "daily-review",
+                "resource_id": "book-x",
+                "item_id": source_day,
+                "duration_seconds": 60,
+                "last_active_at": f"{today}T11:00:00+08:00",
+                "resume_target": {"view": "review", "resource_id": "book-x", "item_id": source_day},
+                "output_refs": [{"kind": "review_note", "id": source_day, "path": "review.md"}],
+                "result_state": "has_output",
+            },
+        ]
+        app.atomic_write(app.ACTIVITY_PATH, json.dumps({"schema_version": 3, "migration": {"legacy_activity_backfill": "v2"}, "days": {today: {"activities": activities}}}, ensure_ascii=False))
+        stats = app.learning_stats(self.books, self.sections, weeks=1)
+        self.assertEqual(stats["continue_target"]["view"], "reader")
+        self.assertEqual(stats["continue_target"]["item_id"], self.section_id)
+        self.assertEqual(len(stats["today_activities"]), 2)
+        self.assertTrue(any(item["activity_type"] == "review" for item in stats["today_activities"]))
 
     def test_daily_learning_record_is_local_without_obsidian(self):
         day = (date.today() - timedelta(days=1)).isoformat()
