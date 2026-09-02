@@ -28,6 +28,7 @@
   </script>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/reader.css">
+  <link rel="stylesheet" href="/oral-focus.css">
 </head>
 <body>
   <div class="app-shell">
@@ -138,6 +139,57 @@
               <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="reader-session-exit" id="readerFinishSession" type="button" title="结束本次阅读" aria-label="结束本次阅读"><i data-lucide="check"></i></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section class="view" id="oralFocusView" data-view="oral-focus">
+        <div class="oral-focus-shell">
+          <section class="oral-focus-directory" id="oralFocusDirectory">
+            <header class="oral-focus-lead">
+              <button class="review-back-link" id="oralFocusBackToLibrary" type="button"><i data-lucide="arrow-left"></i> 返回医学学习库</button>
+              <div><p class="eyebrow">医学 · 口腔重点</p><h2>一页一道题</h2><p id="oralFocusSummary">按学科和章节进入，逐题理解、口述与记忆。</p></div>
+            </header>
+            <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
+            <div class="oral-focus-chapters" id="oralFocusChapters"></div>
+          </section>
+
+          <section class="oral-focus-question hidden" id="oralFocusQuestion" aria-label="口腔重点单题学习">
+            <header class="oral-focus-question-head">
+              <button class="review-back-link" id="oralFocusBackToDirectory" type="button"><i data-lucide="arrow-left"></i> 返回目录</button>
+              <div class="oral-focus-question-meta"><span id="oralFocusQuestionType">名词解释</span><span id="oralFocusQuestionStars"></span><span id="oralFocusQuestionLocation"></span></div>
+            </header>
+            <article class="oral-focus-card">
+              <p class="eyebrow">当前题目</p>
+              <h2 id="oralFocusQuestionTitle"></h2>
+              <div class="oral-focus-source-note" id="oralFocusSourceNote"></div>
+              <div class="oral-focus-ai-actions" aria-label="Gemini 侧边栏提示词">
+                <button type="button" data-oral-prompt="understand"><i data-lucide="sparkles"></i><span>理解这道题</span></button>
+                <button type="button" data-oral-prompt="recall"><i data-lucide="mic"></i><span>闭卷口述</span></button>
+                <button class="hidden" type="button" data-oral-prompt="grade" id="oralFocusGradePrompt"><i data-lucide="scan-text"></i><span>按点批改</span></button>
+              </div>
+            </article>
+            <section class="oral-focus-editor">
+              <header><div><strong>我的作答</strong><small id="oralFocusSaved">输入后自动保存</small></div></header>
+              <textarea id="oralFocusAnswer" rows="9" placeholder="先闭卷写下或口述自己的答案，再查看参考答案"></textarea>
+              <button class="primary-button oral-focus-reveal" id="oralFocusReveal" type="button"><span>显示参考答案</span><i data-lucide="arrow-down"></i></button>
+            </section>
+            <section class="oral-focus-reference hidden" id="oralFocusReference">
+              <header><div><p class="eyebrow">来源参考</p><h3>参考答案</h3></div><span>揭示后可让 Gemini 按评分点批改</span></header>
+              <article class="knowledge-article" id="oralFocusReferenceBody"></article>
+            </section>
+            <section class="oral-focus-editor oral-focus-memory">
+              <header><div><strong>漏点与记忆</strong><small>只保留自己的修正，不复制整段 AI 回答</small></div></header>
+              <textarea id="oralFocusMemory" rows="6" placeholder="漏点、易混点、20秒口述版、下次提示"></textarea>
+              <div class="oral-focus-mastery" id="oralFocusMastery" aria-label="掌握状态">
+                <button type="button" data-mastery="learning">不会</button><button type="button" data-mastery="fuzzy">模糊</button><button type="button" data-mastery="mastered">已掌握</button>
+              </div>
+            </section>
+            <nav class="oral-focus-pagination" aria-label="题目切换">
+              <button type="button" id="oralFocusPrevious"><i data-lucide="arrow-left"></i><span>上一题</span></button>
+              <span id="oralFocusPosition">1 / 1</span>
+              <button type="button" id="oralFocusNext"><span>下一题</span><i data-lucide="arrow-right"></i></button>
+            </nav>
+          </section>
         </div>
       </section>
 

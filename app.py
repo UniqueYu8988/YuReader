@@ -36,6 +36,9 @@ LOGS_DIR = DATA_DIR / "logs"
 WEEKLY_DIR = DATA_DIR / "weekly-reports"
 ENGLISH_NOTEBOOK_DIR = DATA_DIR / "english-weekly"
 SUBJECTIVE_DIR = DATA_DIR / "subjective"
+ORAL_FOCUS_DIR = DATA_DIR / "oral-focus"
+ORAL_FOCUS_CONTENT_PATH = ORAL_FOCUS_DIR / "content.json"
+ORAL_FOCUS_PROGRESS_PATH = ORAL_FOCUS_DIR / "progress.json"
 ACTIVITY_PATH = DATA_DIR / "activity.json"
 ACTIVITY_SCHEMA_VERSION = 3
 ACTIVITY_TYPES = {"read", "objective_practice", "subjective_practice", "notebook", "review"}
@@ -80,6 +83,8 @@ QUESTION_BANK_CACHE: dict = {
     "banks": [],
 }
 PRACTICE_LOCK = Lock()
+ORAL_FOCUS_LOCK = Lock()
+ORAL_FOCUS_CACHE: dict = {"mtime_ns": None, "payload": None, "items": {}}
 # Read-only image assets are served per published book package.  BOOK_ASSETS
 # records the manifest-declared asset names and SHA-256 file list for each
 # book_id so the /api/book-assets endpoint can only expose files that a
@@ -868,6 +873,180 @@ def subjective_mode(prompt_meta: dict, section: dict) -> str:
     if "writing-b" in value or "图表" in value or "图画" in value:
         return "writing-b"
     return "combined"
+
+
+def load_oral_focus() -> tuple[dict, dict[str, dict]]:
+    """Load the ignored local focus dataset and index items without mutating it."""
+    if not ORAL_FOCUS_CONTENT_PATH.is_file():
+        return {"schema_version": 1, "summary": {}, "subjects": []}, {}
+    mtime_ns = ORAL_FOCUS_CONTENT_PATH.stat().st_mtime_ns
+    if ORAL_FOCUS_CACHE.get("mtime_ns") == mtime_ns and isinstance(ORAL_FOCUS_CACHE.get("payload"), dict):
+        return ORAL_FOCUS_CACHE["payload"], ORAL_FOCUS_CACHE.get("items", {})
+    payload = json.loads(ORAL_FOCUS_CONTENT_PATH.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict) or int(payload.get("schema_version") or 0) != 1 or not isinstance(payload.get("subjects"), list):
+        raise ValueError("invalid oral focus dataset")
+    items: dict[str, dict] = {}
+    for subject in payload["subjects"]:
+        if not isinstance(subject, dict):
+            continue
+        for chapter in subject.get("chapters") if isinstance(subject.get("chapters"), list) else []:
+            if not isinstance(chapter, dict):
+                continue
+            for item in chapter.get("items") if isinstance(chapter.get("items"), list) else []:
+                if not isinstance(item, dict):
+                    continue
+                item_id = str(item.get("id") or "")
+                if not re.fullmatch(r"oral-focus-[a-f0-9]{16}", item_id) or item_id in items:
+                    raise ValueError("invalid oral focus item id")
+                items[item_id] = {**item, "subject": subject, "chapter": chapter}
+    ORAL_FOCUS_CACHE.update({"mtime_ns": mtime_ns, "payload": payload, "items": items})
+    return payload, items
+
+
+def load_oral_focus_progress() -> dict:
+    if not ORAL_FOCUS_PROGRESS_PATH.is_file():
+        return {"schema_version": 1, "items": {}}
+    try:
+        payload = json.loads(ORAL_FOCUS_PROGRESS_PATH.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"schema_version": 1, "items": {}}
+    if not isinstance(payload, dict) or not isinstance(payload.get("items"), dict):
+        return {"schema_version": 1, "items": {}}
+    return payload
+
+
+def oral_focus_index_payload() -> dict:
+    dataset, _items = load_oral_focus()
+    progress = load_oral_focus_progress().get("items", {})
+    subjects: list[dict] = []
+    for subject in dataset.get("subjects") or []:
+        chapters: list[dict] = []
+        for chapter in subject.get("chapters") or []:
+            public_items = []
+            for item in chapter.get("items") or []:
+                state = progress.get(str(item.get("id") or ""), {})
+                public_items.append(
+                    {
+                        key: item.get(key)
+                        for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image")
+                    }
+                    | {"mastery": str((state if isinstance(state, dict) else {}).get("mastery") or "unseen")}
+                )
+            chapters.append(
+                {
+                    key: chapter.get(key)
+                    for key in ("id", "order", "title", "definition_count", "essay_count", "starred_count")
+                }
+                | {"items": public_items}
+            )
+        subject_progress = [progress.get(item["id"], {}) for chapter in chapters for item in chapter["items"]]
+        subjects.append(
+            {
+                key: subject.get(key)
+                for key in ("id", "short_title", "title", "book_id", "item_count", "chapter_count")
+            }
+            | {
+                "studied_count": sum(isinstance(item, dict) and item.get("mastery") not in (None, "", "unseen") for item in subject_progress),
+                "mastered_count": sum(isinstance(item, dict) and item.get("mastery") == "mastered" for item in subject_progress),
+                "chapters": chapters,
+            }
+        )
+    return {"available": bool(subjects), "summary": dataset.get("summary") or {}, "subjects": subjects}
+
+
+def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
+    if not re.fullmatch(r"oral-focus-[a-f0-9]{16}", str(item_id or "")):
+        raise ValueError("invalid oral focus item id")
+    _dataset, items = load_oral_focus()
+    record = items.get(item_id)
+    if not record:
+        raise ValueError("oral focus item not found")
+    subject = record["subject"]
+    chapter = record["chapter"]
+    progress = load_oral_focus_progress().get("items", {}).get(item_id, {})
+    progress = progress if isinstance(progress, dict) else {}
+    public = {
+        key: record.get(key)
+        for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image", "source_files", "source_paragraph")
+    }
+    public.update(
+        {
+            "subject": {key: subject.get(key) for key in ("id", "short_title", "title", "book_id")},
+            "chapter": {key: chapter.get(key) for key in ("id", "order", "title")},
+            "progress": {
+                "answer": str(progress.get("answer") or ""),
+                "memory_note": str(progress.get("memory_note") or ""),
+                "mastery": str(progress.get("mastery") or "unseen"),
+                "updated_at": str(progress.get("updated_at") or ""),
+            },
+            "reference_revealed": bool(reveal),
+        }
+    )
+    if reveal:
+        public["answer_markdown"] = str(record.get("answer_markdown") or "")
+    return public
+
+
+def oral_focus_notes_target(subject: dict) -> tuple[Path, str, str]:
+    subject_name = safe_note_component(subject.get("title") or subject.get("id"), "口腔重点")
+    vault = obsidian_vault()
+    if vault:
+        root = (vault / "YuReader" / "医学" / subject_name).resolve()
+        target = (root / "重点背诵.md").resolve()
+        if target.parent != root:
+            raise ValueError("oral focus note path escapes Obsidian vault")
+        return target, "obsidian", f"obsidian://open?path={quote(str(target.relative_to(vault)).replace(os.sep, '/'))}"
+    target = (ORAL_FOCUS_DIR / "notes" / f"{subject.get('id')}.md").resolve()
+    if ORAL_FOCUS_DIR.resolve() not in target.parents:
+        raise ValueError("oral focus note path escapes data directory")
+    return target, "local", "obsidian://open"
+
+
+def write_oral_focus_notes(subject_id: str, progress_payload: dict) -> tuple[Path, str, str]:
+    dataset, items = load_oral_focus()
+    subject = next((entry for entry in dataset.get("subjects") or [] if entry.get("id") == subject_id), None)
+    if not subject:
+        raise ValueError("oral focus subject not found")
+    lines = [f"# {subject.get('title')} · 重点背诵", "", "> 只保存个人作答与记忆修正；原始题目和参考答案仍留在本地重点数据中。"]
+    progress_items = progress_payload.get("items") if isinstance(progress_payload.get("items"), dict) else {}
+    for item_id, state in progress_items.items():
+        record = items.get(str(item_id))
+        if not record or record["subject"].get("id") != subject_id or not isinstance(state, dict):
+            continue
+        answer = str(state.get("answer") or "").strip()
+        memory_note = str(state.get("memory_note") or "").strip()
+        mastery = str(state.get("mastery") or "unseen")
+        if not answer and not memory_note and mastery == "unseen":
+            continue
+        lines.extend(["", f"## {record.get('title')}", "", f"- 章节：{record['chapter'].get('title')}", f"- 题型：{record.get('type_label')}", f"- 掌握：{mastery}"])
+        if answer:
+            lines.extend(["", "### 我的作答", "", answer])
+        if memory_note:
+            lines.extend(["", "### 漏点与记忆", "", memory_note])
+    target, storage, uri = oral_focus_notes_target(subject)
+    atomic_write(target, "\n".join(lines).strip() + "\n")
+    return target, storage, uri
+
+
+def save_oral_focus_progress(item_id: str, answer: str, memory_note: str, mastery: str) -> dict:
+    item = oral_focus_item_payload(item_id)
+    if mastery not in {"unseen", "learning", "fuzzy", "mastered"}:
+        raise ValueError("invalid oral focus mastery")
+    answer = str(answer or "").replace("\r\n", "\n").strip()
+    memory_note = str(memory_note or "").replace("\r\n", "\n").strip()
+    if len(answer) > 50000 or len(memory_note) > 30000:
+        raise ValueError("oral focus response is too long")
+    with ORAL_FOCUS_LOCK:
+        payload = load_oral_focus_progress()
+        payload.setdefault("items", {})[item_id] = {
+            "answer": answer,
+            "memory_note": memory_note,
+            "mastery": mastery,
+            "updated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        }
+        atomic_write(ORAL_FOCUS_PROGRESS_PATH, json.dumps(payload, ensure_ascii=False, indent=2))
+        target, storage, uri = write_oral_focus_notes(item["subject"]["id"], payload)
+    return {"saved": bool(answer or memory_note or mastery != "unseen"), "progress": payload["items"][item_id], "path": str(target), "storage": storage, "obsidian_uri": uri}
 
 
 def subjective_response_path(section_id: str) -> Path:
@@ -1975,6 +2154,11 @@ def activity_home_summary(item: dict, sections: dict[str, dict], section_to_book
     if activity_type in {"read", "subjective_practice"}:
         section = sections.get(item_id)
         title = str((section or {}).get("title") or item_id)
+        if activity_type == "subjective_practice" and item_id.startswith("oral-focus-"):
+            try:
+                title = str(oral_focus_item_payload(item_id).get("title") or title)
+            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                pass
     elif activity_type == "objective_practice":
         question_number = target.get("question_number")
         title = f"第 {question_number} 题" if question_number else f"题目 {item_id}"
@@ -1996,6 +2180,8 @@ def activity_home_summary(item: dict, sections: dict[str, dict], section_to_book
         resource_title = "英语周记"
     elif activity_type == "review":
         resource_title = str(item.get("subject_id") or resource_title)
+    elif activity_type == "subjective_practice" and item_id.startswith("oral-focus-"):
+        resource_title = str(item.get("subject_id") or "口腔重点")
     return {
         "date": str(item.get("date") or ""),
         "activity_id": str(item.get("activity_id") or ""),
@@ -3116,6 +3302,29 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
             )
             continue
         if activity_type == "subjective_practice":
+            if str(item_id).startswith("oral-focus-"):
+                try:
+                    focus = oral_focus_item_payload(str(item_id))
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    focus = {}
+                focus_progress = focus.get("progress") if isinstance(focus.get("progress"), dict) else {}
+                body_lines: list[str] = []
+                if str(focus_progress.get("answer") or "").strip():
+                    body_lines.extend(["#### 我的作答", "", str(focus_progress["answer"]).strip()])
+                if str(focus_progress.get("memory_note") or "").strip():
+                    body_lines.extend(["", "#### 漏点与记忆", "", str(focus_progress["memory_note"]).strip()])
+                add_source(
+                    source_type="subjective_practice",
+                    domain="medicine",
+                    subject_id=(focus.get("subject") or {}).get("title") or subject_id,
+                    resource_id=resource_id,
+                    item_id=item_id,
+                    title=str(focus.get("title") or "口腔重点题"),
+                    markdown="\n".join(body_lines) or "- 已进入口腔重点题，个人作答仍保留在重点学习记录中。",
+                    duration_seconds=duration,
+                    resume_target={"view": "oral_focus", "resource_id": resource_id, "item_id": item_id},
+                )
+                continue
             response = load_subjective_response(str(item_id))
             section = sections.get(str(item_id), {})
             body_lines: list[str] = []
@@ -3813,6 +4022,20 @@ class ReaderHandler(BaseHTTPRequestHandler):
             except (ValueError, OSError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
+        if path == "/api/oral-focus":
+            try:
+                self.send_json(oral_focus_index_payload())
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/oral-focus/item":
+            try:
+                query = parse_qs(parsed.query)
+                reveal = query.get("reveal", ["0"])[0] in {"1", "true", "yes"}
+                self.send_json(oral_focus_item_payload(query.get("item_id", [""])[0], reveal=reveal))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
         books, sections = catalog()
         if path == "/api/bootstrap":
             question_banks = question_bank_catalog()
@@ -3976,7 +4199,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/subjective/response"}:
+        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/oral-focus/progress", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/subjective/response"}:
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
             return
         try:
@@ -4020,6 +4243,35 @@ class ReaderHandler(BaseHTTPRequestHandler):
                     idempotency_key=idempotency_key,
                 )
                 self.send_json({"ok": True, "recorded": recorded, "activities": activity_records_payload(date.today().isoformat(), activity_type)["activities"]})
+                return
+            if parsed.path == "/api/oral-focus/progress":
+                item_id = str(body.get("item_id") or "").strip()
+                answer = str(body.get("answer") or "")
+                memory_note = str(body.get("memory_note") or "")
+                mastery = str(body.get("mastery") or "unseen").strip()
+                item = oral_focus_item_payload(item_id)
+                saved = save_oral_focus_progress(item_id, answer, memory_note, mastery)
+                subject = item.get("subject") if isinstance(item.get("subject"), dict) else {}
+                resource_id = f"oral-focus:{subject.get('id')}"
+                has_output = bool(answer.strip() or memory_note.strip() or mastery != "unseen")
+                record_activity(
+                    "subjective_practice",
+                    activity_type="subjective_practice",
+                    context={
+                        "domain": "medicine",
+                        "subject_id": str(subject.get("title") or subject.get("id") or "口腔重点"),
+                        "resource_id": resource_id,
+                        "item_id": item_id,
+                        "resume_target": {"view": "oral_focus", "resource_id": resource_id, "item_id": item_id},
+                    },
+                    activity_id=activity_stable_id(date.today().isoformat(), "subjective_practice", resource_id, item_id),
+                    result_state="has_output" if has_output else "in_progress",
+                    output_refs=[
+                        _activity_output_ref("oral_focus_progress", item_id, ORAL_FOCUS_PROGRESS_PATH),
+                        _activity_output_ref("oral_focus_note", item_id, saved["path"]),
+                    ] if has_output else [],
+                )
+                self.send_json({"ok": True, **saved, "item": oral_focus_item_payload(item_id)})
                 return
             if parsed.path == "/api/practice/answer":
                 bank_id = str(body.get("bank_id") or "")

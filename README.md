@@ -34,6 +34,7 @@ YuReader 是用户本人使用的本地个人学习平台，以阅读为核心�
 - 阅读页、英语整篇阅读和主观题工作台都有明确的完成出口；结束阅读会回到当前资料主页并刷新最近位置、进度和时长，不要求依赖浏览器后退来完成一次学习。
 - 个人解析自动保存到本地 `data/practice/`，并按当前题目的稳定学科标签分别重建聚合解析；检测到 Obsidian vault 时写入 `YuReader/<领域>/<学科>/练习解析.md`，否则回退到 `data/practice-notes/`，不会把跨学科题目错误混入题库第一本书，也不会生成一题一个 Markdown 文件。
 - 翻译 / 作文的独立作答保存在 `data/subjective/`（状态）与 `data/subjective-notes/`（本机 Markdown 回退），连接 Obsidian 时按年份、题型写入 `YuReader/英语/<科目>/主观题/<试卷>/<题型>·练习.md`；它与选择题判分、原题和参考解析保持独立。
+- 医学书架提供独立的“口腔重点”入口：将本地 DOCX 重点资料整理为口外、口组、牙体、牙周、修复五科目录，每次只显示一道名词解释或简答论述题。参考答案在用户主动揭示前不会发送到浏览器；页面提供“理解这道题 / 闭卷口述 / 按点批改”三类 Gemini 侧边栏提示词，并自动保存闭卷作答、漏点记忆和掌握状态。
 
 - 首页以继续学习为唯一常驻主动作；只有实际存在待回顾或今日活动时才显示对应行，不再重复铺设统计、最近资料和学科入口。“当前阅读”不占用独立导航，阅读页与完整目录统一归入“学习库”。
 - 同一日期、活动类型、资源与条目的前台计时和持久产出会在首页、回顾、记录与统计中合并为一条有效活动，时长相加、产出引用合并，原始 `activity.json` 索引不被重写；已完成的回顾保留在今日轨迹与记录中，但不会覆盖阅读或练习的主继续入口。
@@ -75,6 +76,12 @@ powershell -ExecutionPolicy Bypass -File tools/create_desktop_shortcut.ps1
 启动器源码位于 `tools/launcher/`；若需重建原生入口，可运行 `dotnet publish tools/launcher/YuReaderLauncher.csproj -c Release -p:PublishAot=true -o tools/launcher/publish`，再将生成的 `YuReader.exe` 放回项目根目录。
 
 把书籍 Markdown 放入 `content/` 后刷新书架即可。内容、章节笔记、统一学习记录和周报默认只保存在本机与用户自己的 Obsidian vault。学习活动仅将日期、稳定资源/条目 ID、活动类型、时长、产出引用和恢复目标写入 `data/activity.json`，不复制书籍正文、题目、答案或笔记内容。旧阅读字段继续保留；无法安全映射到统一条目的历史时长会单独标注，不伪造定位。
+
+口腔 DOCX 重点资料使用确定性本地导入器生成运行时索引，源文件不会被改写，生成的内容和学习进度均由 `.gitignore` 排除：
+
+```powershell
+python tools/import_oral_focus.py "C:\Users\Yu\Downloads\口腔"
+```
 
 导入规则：YuReader 只展示从原书第一个可靠“第一章”标题开始的章节。书籍信息、版权页、前言和目录等第一章以前的内容不会进入正式书架，但仍保留在 YuBuilder/YuReader 工作区的原始归档和来源映射中；没有可识别第一章的包不会被加载。
 
