@@ -736,16 +736,11 @@ function domainBooks() {
 }
 
 function renderDomainTabs() {
-  const counts = {
-    medicine: state.books.filter((book) => (book.domain || "medicine") === "medicine").length + (state.oralFocus?.available ? 1 : 0),
-    politics: state.books.filter((book) => (book.domain || "medicine") === "politics").length,
-    english: englishShelfBooks().length,
-  };
   document.querySelectorAll("[data-shelf]").forEach((button) => {
     const shelf = button.dataset.shelf;
-    button.classList.toggle("active", shelf === state.libraryDomain);
-    const badge = button.querySelector("em");
-    if (badge) badge.textContent = String(counts[shelf] ?? "");
+    const active = shelf === state.libraryDomain;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
   });
 }
 
@@ -855,9 +850,9 @@ function chapterListHtml(book, chapters, { openAll = false } = {}) {
 }
 
 const LEARNING_CENTER_COPY = {
-  medicine: ["医学学习", "教材阅读、名词解释与论述背诵，按真实资料分别组织。"],
-  politics: ["政治学习", "五科讲义建立知识骨架，基础篇和拔高篇承担两层训练。"],
-  english: ["英语学习", "方法资料负责输入，历年真题与翻译写作分别训练。"],
+  medicine: ["医学", "教材、名词解释与论述。"],
+  politics: ["政治", "五科讲义、基础训练与拔高训练。"],
+  english: ["英语", "方法资料、历年真题与翻译写作。"],
 };
 
 const POLITICS_SUBJECTS = [
@@ -866,8 +861,8 @@ const POLITICS_SUBJECTS = [
 
 function learningRailSize() {
   if (window.innerWidth <= 680) return 2;
-  if (window.innerWidth <= 960) return 4;
-  return 6;
+  if (window.innerWidth <= 960) return 3;
+  return 5;
 }
 
 function recentFirstBooks(books, domain) {
@@ -881,7 +876,7 @@ function recentFirstBooks(books, domain) {
 }
 
 function learningSectionHeader(index, title, meta, railId = "") {
-  return `<header class="learning-section-heading"><span>${String(index).padStart(2, "0")}</span><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(meta)}</p></div>${railId ? `<nav aria-label="${escapeHtml(title)}翻页"><button type="button" data-rail-move="${escapeHtml(railId)}:-1" aria-label="上一组"><i data-lucide="arrow-left"></i></button><small data-rail-position="${escapeHtml(railId)}"></small><button type="button" data-rail-move="${escapeHtml(railId)}:1" aria-label="下一组"><i data-lucide="arrow-right"></i></button></nav>` : ""}</header>`;
+  return `<header class="learning-section-heading"><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(meta)}</p></div>${railId ? `<nav aria-label="${escapeHtml(title)}翻页"><small data-rail-position="${escapeHtml(railId)}"></small><button type="button" data-rail-move="${escapeHtml(railId)}:-1" aria-label="上一组"><i data-lucide="arrow-left"></i></button><button type="button" data-rail-move="${escapeHtml(railId)}:1" aria-label="下一组"><i data-lucide="arrow-right"></i></button></nav>` : ""}</header>`;
 }
 
 function learningBookCard(book, recentId = "") {
@@ -926,7 +921,7 @@ function politicsPracticeSection(index, bankId, title, description, tone) {
     const units = (bank.knowledge_ids || []).filter((id) => id.startsWith(prefix) && id.includes(matcher)).length;
     return `<button type="button" ${knowledgeId ? `data-politics-bank="${escapeHtml(bank.id)}" data-politics-knowledge="${escapeHtml(knowledgeId)}" data-politics-level="${tone === "advanced" ? "comprehensive" : "chapter"}"` : "disabled"}><span><strong>${label}</strong><small>${units ? `${units} 个训练单元` : "暂无匹配题组"}</small></span><i data-lucide="arrow-up-right"></i></button>`;
   }).join("");
-  return `<section class="learning-center-section learning-practice-section ${tone}">${learningSectionHeader(index, title, `${formatInteger(bank.question_count)} 道正式题 · ${description}`)}<div class="learning-practice-lead"><div><span>${tone === "advanced" ? "ADVANCED" : "FOUNDATION"}</span><strong>${escapeHtml(title)}</strong><small>${tone === "advanced" ? `${formatInteger(bank.test_count || 0)} 组综合测试` : "按五科章节稳定映射"}</small></div><i data-lucide="${tone === "advanced" ? "sparkles" : "layers-3"}"></i></div><div class="learning-subject-actions">${subjectButtons}</div></section>`;
+  return `<section class="learning-center-section learning-practice-section ${tone}">${learningSectionHeader(index, title, `${formatInteger(bank.question_count)} 道正式题 · ${description}${tone === "advanced" ? ` · ${formatInteger(bank.test_count || 0)} 组综合测试` : ""}`)}<div class="learning-subject-actions">${subjectButtons}</div></section>`;
 }
 
 function renderPoliticsCenter() {
@@ -1011,7 +1006,11 @@ function bindLearningCenter() {
   }));
   tree.querySelectorAll("[data-rail-pages]").forEach((marker) => {
     const label = tree.querySelector(`[data-rail-position="${marker.dataset.railPages}"]`);
-    if (label) label.textContent = `${Number(marker.dataset.page || 0) + 1} / ${Number(marker.dataset.pageCount || 1)}`;
+    if (label) {
+      const pageCount = Number(marker.dataset.pageCount || 1);
+      label.textContent = `${Number(marker.dataset.page || 0) + 1} / ${pageCount}`;
+      label.closest("nav")?.classList.toggle("single-page", pageCount <= 1);
+    }
   });
   tree.querySelectorAll("[data-politics-bank]").forEach((button) => button.addEventListener("click", () => openPractice({ bank_id: button.dataset.politicsBank, knowledge_id: button.dataset.politicsKnowledge, match_level: button.dataset.politicsLevel }, "learning-center")));
   tree.querySelectorAll("[data-english-track]").forEach((button) => button.addEventListener("click", () => { state.englishCenterTrack = Number(button.dataset.englishTrack); state.englishCenterYear = ""; renderBooks(); }));

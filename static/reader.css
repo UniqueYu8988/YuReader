@@ -1012,3 +1012,105 @@
   .english-type-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
   .english-center-filters button, .english-type-tabs button { padding-inline: 9px; }
 }
+
+/* Yu Design refinement: the learning center is a working index, not a hero. */
+.learning-center-header { position: static; display: flex; align-items: flex-end; justify-content: space-between; gap: 36px; margin: 10px 0 44px; padding: 0 0 22px; border: 0; border-bottom: 1px solid var(--line-strong); isolation: auto; }
+.learning-center-header::before { content: none; }
+.learning-center-intro { min-height: 0; padding: 0; }
+.learning-center-intro .eyebrow { margin: 0 0 7px; color: var(--primary); font-size: 9px; letter-spacing: 0; }
+.learning-center-intro h2 { font-size: 34px; letter-spacing: 0; }
+.learning-center-intro > p:last-child { margin-top: 8px; font-size: 10px; line-height: 1.6; }
+.reader-domain-tabs.learning-domain-tabs { display: grid; width: 300px; height: 44px; flex: 0 0 300px; grid-template-columns: repeat(3, 1fr); align-self: auto; padding: 3px; border: 0; border-radius: var(--radius-sm); background: var(--surface-muted); }
+.reader-domain-tabs.learning-domain-tabs button,
+.reader-domain-tabs.learning-domain-tabs button + button { display: flex; min-width: 0; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--radius-xs); color: var(--text-soft); background: transparent; box-shadow: none; text-align: center; }
+.reader-domain-tabs.learning-domain-tabs button:hover { color: var(--text); background: var(--surface-hover); }
+.reader-domain-tabs.learning-domain-tabs button.active { color: var(--text); background: var(--surface-strong); box-shadow: var(--shadow); }
+.reader-domain-tabs.learning-domain-tabs button strong { margin: 0; font-family: inherit; font-size: 11px; font-weight: 600; }
+
+.reader-book-list { padding-bottom: 64px; }
+.learning-center-section { padding-bottom: 40px; }
+.learning-center-section + .learning-center-section { padding-top: 38px; border-top: 1px solid var(--line-strong); }
+.learning-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; margin-bottom: 18px; }
+.learning-section-heading > div { gap: 4px; }
+.learning-section-heading h3 { font-size: 21px; letter-spacing: 0; }
+.learning-section-heading p { font-size: 9px; line-height: 1.55; }
+.learning-section-heading nav { gap: 4px; }
+.learning-section-heading nav small { order: -1; min-width: 38px; margin-right: 5px; }
+.learning-section-heading nav.single-page { display: none; }
+.learning-section-heading nav button { width: 40px; height: 40px; border: 0; border-radius: 0; background: transparent; }
+.learning-section-heading nav button:hover { color: var(--primary-strong); background: var(--surface-hover); }
+
+.learning-rail { gap: clamp(12px, 1.8vw, 22px); }
+.learning-book-card { grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 96px; padding: 9px 8px 9px 0; border-block: 1px solid var(--line); transition: color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), padding var(--motion-fast) var(--ease-out); }
+.learning-book-card:hover { padding-left: 6px; color: var(--primary-strong); background: var(--surface-hover); }
+.learning-book-card > .reader-book-cover { width: 56px; height: 78px; aspect-ratio: auto; padding: 10px 7px 8px 10px; border-color: color-mix(in srgb, var(--primary) 22%, var(--line)); border-radius: 1px 4px 4px 1px; box-shadow: -2px 3px 0 color-mix(in srgb, var(--line-strong) 60%, transparent); }
+.learning-book-card:hover > .reader-book-cover { border-color: color-mix(in srgb, var(--primary) 42%, var(--line)); box-shadow: -2px 3px 0 color-mix(in srgb, var(--line-strong) 68%, transparent); transform: translateY(-1px); }
+.learning-book-card > .reader-book-cover::before { left: 5px; }
+.learning-book-card > .reader-book-cover strong { display: -webkit-box; overflow: hidden; font-size: 12px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+.learning-book-card.recent > .reader-book-cover::after { top: 7px; right: 7px; width: 5px; height: 5px; }
+.learning-book-card > span:last-child { gap: 5px; }
+.learning-book-card > span:last-child strong { font-size: 11px; line-height: 1.5; -webkit-line-clamp: 3; }
+.learning-book-card > span:last-child small { font-size: 8px; }
+.learning-focus-card > .reader-book-cover { background: color-mix(in srgb, var(--primary-soft) 42%, var(--surface)); }
+.learning-focus-card > .reader-book-cover small { font-size: 8px; letter-spacing: 0; }
+.learning-focus-card > .reader-book-cover strong { font-size: 15px; }
+.learning-empty { min-height: 74px; padding: 14px 0; }
+
+.learning-subject-actions { border-block: 1px solid var(--line-strong); }
+.learning-subject-actions > button { min-height: 68px; padding: 12px 14px 12px 0; }
+.learning-subject-actions > button + button { padding-left: 14px; }
+.learning-subject-actions > button:hover:not(:disabled) { background: var(--surface-hover); }
+.learning-subject-actions strong { font-size: 11px; }
+.learning-subject-actions small { font-size: 8px; }
+
+.english-center-filters { padding: 12px 0; }
+.english-center-filters > div,
+.english-type-tabs { gap: 0; padding: 3px; border-radius: var(--radius-xs); background: var(--surface-muted); }
+.english-center-filters button,
+.english-center-filters button + button,
+.english-type-tabs button,
+.english-type-tabs button + button { min-height: 34px; padding: 6px 15px; border: 0; border-radius: 4px; color: var(--text-soft); background: transparent; box-shadow: none; }
+.english-center-filters button.active,
+.english-type-tabs button.active { color: var(--text); background: var(--surface-strong); box-shadow: var(--shadow); }
+.english-center-filters select { height: 34px; border: 0; border-bottom: 1px solid var(--line-strong); background-color: transparent; }
+.english-type-tabs { display: inline-flex; margin-top: 16px; }
+.english-center-groups { margin-top: 12px; }
+.english-center-groups > button { min-height: 64px; transition: color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), padding var(--motion-fast) var(--ease-out); }
+.english-center-groups > button:hover { padding-left: 6px; color: var(--primary-strong); }
+
+@media (max-width: 960px) {
+  .learning-center-header { grid-template-columns: none; }
+  .learning-center-intro { min-height: 0; padding: 0; }
+  .reader-domain-tabs.learning-domain-tabs { min-height: 0; border: 0; }
+  .reader-domain-tabs.learning-domain-tabs button,
+  .reader-domain-tabs.learning-domain-tabs button + button { padding: 0; }
+  .learning-subject-actions > button:nth-child(4),
+  .learning-subject-actions > button:nth-child(5) { border-top-color: var(--line); }
+}
+
+@media (max-width: 680px) {
+  .learning-center-header { display: grid; gap: 20px; margin-bottom: 32px; padding-bottom: 20px; }
+  .learning-center-intro { min-height: 0; padding: 0; }
+  .learning-center-intro h2 { font-size: 29px; }
+  .reader-domain-tabs.learning-domain-tabs { width: 100%; height: 42px; min-height: 0; flex-basis: auto; }
+  .reader-domain-tabs.learning-domain-tabs button,
+  .reader-domain-tabs.learning-domain-tabs button + button { display: flex; padding: 0; }
+  .reader-domain-tabs.learning-domain-tabs button strong { margin: 0; font-size: 11px; }
+  .learning-center-section { padding-bottom: 32px; }
+  .learning-center-section + .learning-center-section { padding-top: 30px; }
+  .learning-section-heading { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-bottom: 14px; }
+  .learning-section-heading h3 { font-size: 19px; }
+  .learning-section-heading nav { gap: 0; }
+  .learning-section-heading nav button { width: 40px; height: 40px; }
+  .learning-rail { gap: 12px; }
+  .learning-book-card { grid-template-columns: 44px minmax(0, 1fr); gap: 9px; min-height: 82px; padding-right: 4px; }
+  .learning-book-card > .reader-book-cover { width: 44px; height: 62px; padding: 8px 5px 7px 8px; }
+  .learning-book-card > .reader-book-cover strong { font-size: 10px; }
+  .learning-book-card > span:last-child strong { font-size: 10px; line-height: 1.45; }
+  .learning-book-card > span:last-child small { white-space: normal; }
+  .learning-focus-card > .reader-book-cover strong { font-size: 12px; }
+  .english-center-filters { gap: 10px; }
+  .english-center-filters > div { display: grid; padding: 3px; }
+  .english-center-filters label { min-height: 38px; }
+  .english-type-tabs { display: grid; width: 100%; padding: 3px; }
+}
