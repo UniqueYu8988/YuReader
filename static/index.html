@@ -423,12 +423,94 @@
 
       <section class="view" id="reviewView" data-view="review">
         <div class="review-workspace">
-          <header class="review-heading">
-            <div><p class="eyebrow">学习回顾</p><h2 id="reviewTitle">回顾</h2><p id="reviewSummary">正在整理最近尚未回顾的学习日…</p></div>
-            <div class="review-page-state"><strong id="reviewProgressText">待回顾</strong><span>统一流程</span></div>
+          <header class="review-top-bar">
+            <button class="review-back-link" id="reviewReportBack" type="button"><i data-lucide="arrow-left"></i> 返回今日</button>
+            <div class="review-heading-center">
+              <h2 id="reviewTitle">学习回顾</h2>
+              <p id="reviewSummary">昨日核心笔记与思考沉淀</p>
+            </div>
+            <div class="review-status-badge">
+              <strong id="reviewProgressText">待回顾</strong>
+            </div>
           </header>
-          <div class="review-empty hidden" id="reviewEmpty"><i data-lucide="coffee"></i><strong>暂时没有待回顾的学习日</strong><span>这里仅收集实际发生的学习活动与用户产出，不会混入原书正文。</span></div>
-          <section class="review-report-panel hidden" id="reviewReportPanel"><header><button class="review-back-link" id="reviewReportBack" type="button"><i data-lucide="arrow-left"></i> 返回今日</button><div><p class="eyebrow">本次回顾</p><h2>本次回顾</h2><p>按学科汇集当天来源；原始笔记、题目和作答仍保留在各自文件。</p></div></header><article class="knowledge-article note-stream review-combined-document" id="reviewCombinedDocument"></article><section class="review-result-editor"><header><div><strong>本次回顾结果</strong><small id="reviewSummarySaved">粘贴后自动保存为独立学习记录</small></div><a class="note-icon-button" id="reviewLogObsidian" href="obsidian://open" aria-label="在 Obsidian 中打开学习记录"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="reviewDailySummary" rows="9" placeholder="粘贴一次 Markdown 回顾，或直接标记已回顾"></textarea><button class="secondary-button review-no-text-button" id="reviewMarkNoText" type="button">标记已回顾（无文本）</button></section></section>
+
+          <div class="review-empty hidden" id="reviewEmpty">
+            <i data-lucide="coffee"></i>
+            <strong>暂时没有待回顾的学习日</strong>
+            <span>昨天未产生学习活动，或所有学习日均已完成回顾。</span>
+          </div>
+
+          <section class="review-report-panel hidden" id="reviewReportPanel">
+            <!-- 1. 昨日三科总览看板 -->
+            <div class="review-overview-card" id="reviewOverviewCard">
+              <div class="review-overview-main">
+                <div class="review-overview-lead">
+                  <span class="eyebrow">昨日概览</span>
+                  <div class="review-overview-stat-row">
+                    <span class="review-stat-item">有效时长 <strong id="reviewTotalDuration">0 小时</strong></span>
+                    <span class="review-stat-divider">·</span>
+                    <span class="review-stat-item">沉淀笔记 <strong id="reviewTotalNotes">0 条</strong></span>
+                  </div>
+                </div>
+                <button type="button" class="primary-button review-copy-prompt-btn" id="reviewCopyPromptBtn">
+                  <i data-lucide="sparkles"></i>
+                  <span>复制笔记摘要（发给侧边栏）</span>
+                </button>
+              </div>
+              <div class="review-domain-grid" id="reviewDomainGrid">
+                <div class="review-domain-col" data-domain="medicine">
+                  <div class="domain-col-header"><i data-lucide="stethoscope"></i><strong>医学</strong></div>
+                  <span class="domain-col-metric" id="reviewMedMetric">0 小时 · 0 条笔记</span>
+                </div>
+                <div class="review-domain-col" data-domain="politics">
+                  <div class="domain-col-header"><i data-lucide="landmark"></i><strong>政治</strong></div>
+                  <span class="domain-col-metric" id="reviewPolMetric">0 小时 · 0 条笔记</span>
+                </div>
+                <div class="review-domain-col" data-domain="english">
+                  <div class="domain-col-header"><i data-lucide="languages"></i><strong>英语</strong></div>
+                  <span class="domain-col-metric" id="reviewEngMetric">0 小时 · 0 条笔记</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. 学科筛选选项卡 -->
+            <div class="review-filter-bar">
+              <div class="review-domain-tabs" id="reviewDomainTabs" role="group" aria-label="学科筛选">
+                <button type="button" class="filter-tab active" data-review-filter="all">全部笔记 <span id="reviewFilterAllCount">(0)</span></button>
+                <button type="button" class="filter-tab" data-review-filter="medicine">医学 <span id="reviewFilterMedCount">(0)</span></button>
+                <button type="button" class="filter-tab" data-review-filter="politics">政治 <span id="reviewFilterPolCount">(0)</span></button>
+                <button type="button" class="filter-tab" data-review-filter="english">英语 <span id="reviewFilterEngCount">(0)</span></button>
+              </div>
+            </div>
+
+            <!-- 3. 结构化笔记卡片流 -->
+            <div class="review-notes-container" id="reviewNotesContainer">
+              <!-- Populated dynamically by review.js -->
+            </div>
+
+            <!-- 隐藏保留的 reviewCombinedDocument 保证兼容 -->
+            <article class="knowledge-article note-stream review-combined-document hidden" id="reviewCombinedDocument"></article>
+
+            <!-- 4. 今日复盘与 AI 总结沉淀区 -->
+            <section class="review-result-card" id="reviewResultSection">
+              <header class="review-result-header">
+                <div>
+                  <div class="review-result-title-row">
+                    <i data-lucide="check-circle-2"></i>
+                    <strong>今日复盘与 AI 总结</strong>
+                  </div>
+                  <small id="reviewSummarySaved">粘贴侧边栏 Gemini 的复盘总结，自动保存为当日独立学习记录</small>
+                </div>
+                <a class="note-icon-button" id="reviewLogObsidian" href="obsidian://open" title="在 Obsidian 中打开学习记录" aria-label="在 Obsidian 中打开学习记录">
+                  <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                </a>
+              </header>
+              <textarea id="reviewDailySummary" rows="8" placeholder="在此粘贴侧边栏 Gemini 对昨日笔记生成的知识框架与复盘总结，自动同步至 Obsidian 独立记录…"></textarea>
+              <div class="review-result-actions">
+                <button class="secondary-button review-no-text-button" id="reviewMarkNoText" type="button">标记已回顾（无总结文本）</button>
+              </div>
+            </section>
+          </section>
         </div>
       </section>
 

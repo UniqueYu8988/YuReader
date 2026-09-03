@@ -447,6 +447,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
         markdown: str,
         duration_seconds: int = 0,
         resume_target: dict | None = None,
+        note_text: str = "",
         section_id: str = "",
         book_id: str = "",
         book_title: str = "",
@@ -469,6 +470,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                 "item_id": clean_item,
                 "title": str(title or clean_item),
                 "markdown": body,
+                "note_text": str(note_text or "").strip(),
                 "character_count": len(body),
                 "duration_seconds": max(0, int(duration_seconds or 0)),
                 "resume_target": resume_target if isinstance(resume_target, dict) else {},
@@ -508,6 +510,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                 item_id=canonical or item_id,
                 title=(section or {}).get("title") or item_id,
                 markdown=body,
+                note_text=body if body else "",
                 duration_seconds=duration,
                 resume_target={"view": "reader", "resource_id": (book or {}).get("id") or resource_id, "item_id": canonical or item_id},
                 section_id=canonical or "",
@@ -540,8 +543,9 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
             correct_answers = [str(value) for value in (question or {}).get("correct_answers") or [] if str(value)]
             if correct_answers:
                 body_lines.append(f"- 正确答案：{', '.join(correct_answers)}")
-            if str(analysis.get("content") or "").strip():
-                body_lines.extend(["", "#### 个人解析", "", str(analysis["content"]).strip()])
+            personal_note = str(analysis.get("content") or "").strip()
+            if personal_note:
+                body_lines.extend(["", "#### 个人解析", "", personal_note])
             add_source(
                 source_type="objective_practice",
                 domain=domain,
@@ -550,6 +554,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                 item_id=item_id,
                 title=f"第 {question_number} 题" if question_number else f"题目 {item_id}",
                 markdown="\n".join(body_lines),
+                note_text=personal_note,
                 duration_seconds=duration,
                 resume_target=target,
             )
@@ -562,10 +567,15 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                     focus = {}
                 focus_progress = focus.get("progress") if isinstance(focus.get("progress"), dict) else {}
                 body_lines: list[str] = []
-                if str(focus_progress.get("answer") or "").strip():
-                    body_lines.extend(["#### 我的作答", "", str(focus_progress["answer"]).strip()])
-                if str(focus_progress.get("memory_note") or "").strip():
-                    body_lines.extend(["", "#### 漏点与记忆", "", str(focus_progress["memory_note"]).strip()])
+                focus_notes: list[str] = []
+                ans = str(focus_progress.get("answer") or "").strip()
+                mem = str(focus_progress.get("memory_note") or "").strip()
+                if ans:
+                    body_lines.extend(["#### 我的作答", "", ans])
+                    focus_notes.append(f"**我的作答**：\n{ans}")
+                if mem:
+                    body_lines.extend(["", "#### 漏点与记忆", "", mem])
+                    focus_notes.append(f"**漏点与记忆**：\n{mem}")
                 add_source(
                     source_type="subjective_practice",
                     domain="medicine",
@@ -574,6 +584,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                     item_id=item_id,
                     title=str(focus.get("title") or "口腔重点题"),
                     markdown="\n".join(body_lines) or "- 已进入口腔重点题，个人作答仍保留在重点学习记录中。",
+                    note_text="\n\n".join(focus_notes),
                     duration_seconds=duration,
                     resume_target={"view": "oral_focus", "resource_id": resource_id, "item_id": item_id},
                 )
@@ -581,10 +592,15 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
             response = load_subjective_response(str(item_id))
             section = sections.get(str(item_id), {})
             body_lines: list[str] = []
-            if str(response.get("answer") or "").strip():
-                body_lines.extend(["#### 我的作答", "", str(response["answer"]).strip()])
-            if str(response.get("reflection") or "").strip():
-                body_lines.extend(["", "#### 反思", "", str(response["reflection"]).strip()])
+            subj_notes: list[str] = []
+            sub_ans = str(response.get("answer") or "").strip()
+            sub_ref = str(response.get("reflection") or "").strip()
+            if sub_ans:
+                body_lines.extend(["#### 我的作答", "", sub_ans])
+                subj_notes.append(f"**我的作答**：\n{sub_ans}")
+            if sub_ref:
+                body_lines.extend(["", "#### 反思", "", sub_ref])
+                subj_notes.append(f"**反思解析**：\n{sub_ref}")
             add_source(
                 source_type="subjective_practice",
                 domain=domain,
@@ -593,6 +609,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                 item_id=item_id,
                 title=str(section.get("title") or response.get("title") or "主观题"),
                 markdown="\n".join(body_lines) or "- 已保存主观题活动，答案仍保留在原始作答文件。",
+                note_text="\n\n".join(subj_notes),
                 duration_seconds=duration,
                 resume_target=target,
             )
@@ -605,6 +622,7 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                     content = notebook_path.read_text(encoding="utf-8-sig")
                 except OSError:
                     content = ""
+            nb_body = _review_snippet(_english_notebook_day_markdown(content, day))
             add_source(
                 source_type="notebook",
                 domain="english",
@@ -612,7 +630,8 @@ def review_source_records(day: str, books: list[dict], sections: dict[str, dict]
                 resource_id="english-notebook",
                 item_id=item_id,
                 title=f"{item_id} · 英语周记",
-                markdown=_review_snippet(_english_notebook_day_markdown(content, day)),
+                markdown=nb_body,
+                note_text=nb_body,
                 duration_seconds=duration,
                 resume_target=target,
             )
@@ -680,6 +699,77 @@ def write_daily_learning_record(review: dict) -> tuple[Path, str, str, str]:
     content = daily_learning_record_markdown(review)
     atomic_write(target, content)
     return target, storage, uri, content
+
+
+def extract_domain_note_items(sources: list[dict]) -> dict[str, list[dict]]:
+    notes_by_domain: dict[str, list[dict]] = {
+        "medicine": [],
+        "politics": [],
+        "english": [],
+    }
+    for source in sources:
+        note_text = str(source.get("note_text") or "").strip()
+        if not note_text and source.get("source_type") == "section_note":
+            note_text = str(source.get("markdown") or "").strip()
+        if not note_text:
+            continue
+        domain = source.get("domain") or "medicine"
+        if domain not in notes_by_domain:
+            notes_by_domain[domain] = []
+
+        tags: list[str] = []
+        subject_name = str(source.get("book_title") or source.get("subject_id") or "").strip()
+        if subject_name and subject_name != "未分类":
+            tags.append(subject_name)
+        item_title = str(source.get("title") or "").strip()
+        if item_title and item_title not in tags:
+            tags.append(item_title)
+        source_label = str(source.get("source_label") or "").strip()
+        if source_label and source_label not in tags:
+            tags.append(source_label)
+
+        notes_by_domain[domain].append({
+            "id": str(source.get("item_id") or ""),
+            "domain": domain,
+            "domain_label": DOMAIN_LABELS.get(domain, domain),
+            "source_type": source.get("source_type"),
+            "source_label": source_label,
+            "title": item_title or subject_name,
+            "tags": tags,
+            "markdown": note_text,
+            "resume_target": source.get("resume_target") or {},
+        })
+    return notes_by_domain
+
+
+def generate_review_ai_prompt(day: str, notes_by_domain: dict[str, list[dict]]) -> str:
+    prompt_lines = [
+        f"这是我在 {day} 学习中记录的核心笔记与思考（已按医学、政治、英语整理归类）：",
+        "",
+    ]
+    has_any = False
+    for dom_key in ("medicine", "politics", "english"):
+        dom_notes = notes_by_domain.get(dom_key, [])
+        if not dom_notes:
+            continue
+        has_any = True
+        prompt_lines.append(f"## 【{DOMAIN_LABELS.get(dom_key, dom_key)}】（共 {len(dom_notes)} 条笔记）")
+        for idx, note in enumerate(dom_notes, 1):
+            tag_str = " · ".join(note.get("tags") or [])
+            prompt_lines.append(f"### {idx}. {note.get('title')}（{tag_str}）")
+            prompt_lines.append(note.get("markdown", "").strip())
+            prompt_lines.append("")
+    if not has_any:
+        prompt_lines.append("昨日主要进行了教材阅读与题目练习，未记录较多独立文字笔记。")
+        prompt_lines.append("")
+    prompt_lines.extend([
+        "---",
+        "请作为我的考研复习督导与学科顾问，针对上述昨日笔记：",
+        "1. 串联梳理今日笔记涉及的核心知识框架与逻辑脉络；",
+        "2. 针对重点知识提炼出 3 个最核心或最易混淆的遗忘薄弱点，给出 3 道抽背检测题；",
+        "3. 输出一段结构化精练的当日复盘总结（适合直接归档到 Obsidian）。",
+    ])
+    return "\n".join(prompt_lines).strip()
 
 
 def review_payload(day: str, books: list[dict], sections: dict[str, dict]) -> dict:
@@ -772,10 +862,34 @@ def review_payload(day: str, books: list[dict], sections: dict[str, dict]) -> di
     elif review_no_text:
         lines.extend(["", "## 本次回顾结果", "", "（已标记为无文本回顾。）"])
     record_target, record_storage, record_uri = daily_learning_record_target(day)
+    domain_notes = extract_domain_note_items(sources)
+    domain_stats = {
+        "medicine": {
+            "label": "医学",
+            "duration_seconds": int((activity_day.get("by_domain") or {}).get("medicine") or 0),
+            "note_count": len(domain_notes.get("medicine", [])),
+        },
+        "politics": {
+            "label": "政治",
+            "duration_seconds": int((activity_day.get("by_domain") or {}).get("politics") or 0),
+            "note_count": len(domain_notes.get("politics", [])),
+        },
+        "english": {
+            "label": "英语",
+            "duration_seconds": int((activity_day.get("by_domain") or {}).get("english") or 0),
+            "note_count": len(domain_notes.get("english", [])),
+        },
+    }
+    ai_prompt = generate_review_ai_prompt(day, domain_notes)
+    total_notes = sum(len(items) for items in domain_notes.values())
     result = {
         "review_date": day,
         "review_note_date": date.today().isoformat(),
         "note_count": sum(1 for source in sources if source.get("source_type") == "section_note"),
+        "notes_by_domain": domain_notes,
+        "domain_stats": domain_stats,
+        "total_notes": total_notes,
+        "ai_summary_prompt": ai_prompt,
         "source_count": len(sources),
         "subject_count": len(subjects),
         "page_count": len(pages),

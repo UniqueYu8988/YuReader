@@ -1428,3 +1428,455 @@
 .practice-session-summary h2,
 .english-hub-heading h3,
 .english-notebook-heading h3 { font-size: clamp(22px, 2.2vw, 28px); }
+
+/* ==========================================================================
+   Upgraded Review Workspace (回顾板块)
+   ========================================================================== */
+.review-workspace {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px 20px 60px;
+}
+
+.review-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-top-bar .review-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+.review-top-bar .review-back-link:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.review-top-bar .review-back-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.review-heading-center {
+  text-align: center;
+}
+.review-heading-center h2 {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+.review-heading-center p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.review-status-badge {
+  display: inline-flex;
+  align-items: center;
+}
+.review-status-badge strong {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+/* 1. Overview Card */
+.review-overview-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow);
+}
+.review-overview-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.review-overview-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.review-overview-lead .eyebrow {
+  margin: 0;
+  font-size: 10px;
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.review-overview-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.review-overview-stat-row strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+.review-stat-divider {
+  color: var(--line-strong);
+}
+
+.review-copy-prompt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+.review-copy-prompt-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+.review-copy-prompt-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.review-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.review-domain-col {
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.review-domain-col .domain-col-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+.review-domain-col .domain-col-header svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary);
+}
+.review-domain-col .domain-col-metric {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* 2. Filter Bar */
+.review-filter-bar {
+  margin-bottom: 20px;
+}
+.review-domain-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-muted);
+  padding: 3px;
+  border-radius: var(--radius-xs);
+}
+.review-domain-tabs .filter-tab {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+.review-domain-tabs .filter-tab:hover {
+  color: var(--text);
+}
+.review-domain-tabs .filter-tab.active {
+  background: var(--surface-strong);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.review-domain-tabs .filter-tab span {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+/* 3. Notes Container & Cards */
+.review-notes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-bottom: 36px;
+}
+
+.review-domain-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.review-domain-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.review-domain-section-head .domain-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.review-domain-section-head .domain-head-title h3 {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.review-domain-section-head .domain-head-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+}
+.review-domain-badge {
+  font-size: 11px;
+  color: var(--text-soft);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+}
+
+.review-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.review-note-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+.review-note-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--line));
+  box-shadow: var(--shadow);
+}
+.review-note-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+.review-note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.review-tag-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-muted));
+  border-radius: 3px;
+}
+.review-card-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms var(--ease-out);
+}
+.review-card-jump-btn:hover {
+  color: var(--primary-strong);
+  border-color: var(--primary);
+  background: var(--surface-hover);
+}
+.review-card-jump-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.review-note-card-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.review-note-card-body p {
+  margin: 0 0 8px;
+}
+.review-note-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+.review-domain-empty {
+  padding: 16px;
+  text-align: center;
+  background: var(--surface-muted);
+  border-radius: var(--radius-xs);
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.review-no-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  gap: 8px;
+}
+.review-no-notes svg {
+  width: 32px;
+  height: 32px;
+  color: var(--text-soft);
+}
+.review-no-notes strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.review-no-notes span {
+  font-size: 12px;
+  color: var(--text-soft);
+  max-width: 480px;
+}
+
+/* 4. Result / Summary Card */
+.review-result-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.review-result-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.review-result-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.review-result-title-row strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.review-result-title-row svg {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+}
+.review-result-header small {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.review-result-card textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+.review-result-card textarea:focus {
+  border-color: var(--primary);
+  background: var(--surface-strong);
+}
+.review-result-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.review-no-text-button {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: var(--radius-xs);
+}
+
+@media (max-width: 680px) {
+  .review-domain-grid {
+    grid-template-columns: 1fr;
+  }
+  .review-overview-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .review-copy-prompt-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .review-domain-tabs {
+    display: flex;
+    overflow-x: auto;
+    width: 100%;
+  }
+}
