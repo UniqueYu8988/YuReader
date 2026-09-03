@@ -137,8 +137,15 @@
               <div><h2 id="oralFocusDirectoryTitle">口腔重点</h2><span id="oralFocusSummary">0 / 0</span></div>
             </header>
             <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
-            <div class="oral-focus-question-list" id="oralFocusItems"></div>
-            <nav class="oral-focus-list-pagination" aria-label="题目列表翻页"><button type="button" id="oralFocusListPrevious"><i data-lucide="arrow-left"></i><span>上一页</span></button><span id="oralFocusListPosition">1 / 1</span><button type="button" id="oralFocusListNext"><span>下一页</span><i data-lucide="arrow-right"></i></button></nav>
+            <div class="oral-focus-chapter-list" id="oralFocusChapterList"></div>
+            <section class="oral-focus-chapter-panel hidden" id="oralFocusChapterPanel" aria-label="章节题卡">
+              <header class="oral-focus-chapter-head">
+                <button class="review-back-link" id="oralFocusBackToChapters" type="button"><i data-lucide="arrow-left"></i> 返回章节</button>
+                <div><h3 id="oralFocusChapterTitle">章节</h3><span id="oralFocusChapterSummary">0 / 0</span></div>
+                <button class="oral-focus-answer-toggle" id="oralFocusChapterAnswerToggle" type="button" role="switch" aria-checked="false"><span>只看题目</span><i aria-hidden="true"></i></button>
+              </header>
+              <div class="oral-focus-card-grid" id="oralFocusItems"></div>
+            </section>
           </section>
 
           <section class="oral-focus-question hidden" id="oralFocusQuestion" aria-label="口腔重点单题学习">
@@ -294,6 +301,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="/vendor/lucide.min.js"></script>
   <script src="/markdown.js"></script>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

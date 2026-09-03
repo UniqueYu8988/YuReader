@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import app  # noqa: E402
-from yureader.oral_focus import SUBJECT_SOURCES, build_dataset, normalize_definition_title  # noqa: E402
+from yureader.oral_focus import SUBJECT_SOURCES, build_dataset, split_bilingual_definition_title  # noqa: E402
 
 
 class OralFocusHandler(app.ReaderHandler):
@@ -50,6 +50,10 @@ class OralFocusImportTests(unittest.TestCase):
                         if item_type == "definition":
                             document.add_paragraph("1.test term：测试术语")
                             document.add_paragraph("（1）这是定义。微信搜索银河研旅公众号，记乎app搜索途中口腔医学考研2班")
+                            document.add_paragraph("答案末尾未正确换段 2.inline term：行内术语★★")
+                            document.add_paragraph("（1）这是行内题目的答案。")
+                            document.add_paragraph("3.next term：下一术语★")
+                            document.add_paragraph("（1）这是跳号后的独立定义。")
                         else:
                             document.add_paragraph("1．测试论述题★★")
                             document.add_paragraph("（1）第一评分点")
@@ -71,27 +75,35 @@ class OralFocusImportTests(unittest.TestCase):
     def test_import_keeps_tables_joins_split_files_and_removes_promotions(self):
         payload = build_dataset(self.root)
         self.assertEqual(payload["summary"]["subject_count"], 5)
-        self.assertEqual(payload["summary"]["definition_count"], 5)
+        self.assertEqual(payload["summary"]["definition_count"], 15)
         self.assertEqual(payload["summary"]["essay_count"], 7)
         self.assertEqual(payload["summary"]["table_item_count"], 5)
         self.assertGreaterEqual(payload["summary"]["excluded_promotion_blocks"], 5)
         oral_surgery = payload["subjects"][0]
-        first_definition = next(item for chapter in oral_surgery["chapters"] for item in chapter["items"] if item["type"] == "definition")
-        self.assertEqual(first_definition["title"], "测试术语")
-        self.assertEqual(first_definition["aliases"], ["test term"])
+        definitions = [item for chapter in oral_surgery["chapters"] for item in chapter["items"] if item["type"] == "definition"]
+        first_definition, inline_definition, skipped_number_definition = definitions
+        self.assertEqual(first_definition["title"], "test term")
+        self.assertEqual(first_definition["definition_translation"], "测试术语")
         self.assertEqual(first_definition["source_title"], "test term：测试术语")
-        self.assertEqual(payload["summary"]["normalized_definition_title_count"], 5)
+        self.assertEqual(first_definition["answer_markdown"], "（1）这是定义。\n\n答案末尾未正确换段")
+        self.assertEqual(inline_definition["title"], "inline term")
+        self.assertEqual(inline_definition["definition_translation"], "行内术语")
+        self.assertEqual(inline_definition["answer_markdown"], "（1）这是行内题目的答案。")
+        self.assertEqual(skipped_number_definition["title"], "next term")
+        self.assertEqual(skipped_number_definition["definition_translation"], "下一术语")
+        self.assertNotIn("next term", first_definition["answer_markdown"])
+        self.assertEqual(payload["summary"]["bilingual_definition_title_count"], 15)
         first_essay = next(item for chapter in oral_surgery["chapters"] for item in chapter["items"] if item["type"] == "essay")
         self.assertIn("| 项目 | 内容 |", first_essay["answer_markdown"])
         self.assertIn("上一卷的续文", first_essay["answer_markdown"])
         self.assertNotIn("银河研旅", json.dumps(payload, ensure_ascii=False))
 
-    def test_definition_title_normalization_is_narrow_and_source_preserving(self):
-        self.assertEqual(normalize_definition_title("anesthesia：麻醉"), ("麻醉", "anesthesia"))
-        self.assertEqual(normalize_definition_title("Vesicle/blister：疱"), ("疱", "Vesicle/blister"))
-        self.assertEqual(normalize_definition_title("Ante's law: Ante 法则"), ("Ante 法则", "Ante's law"))
-        self.assertEqual(normalize_definition_title("牙根拔除术（exodontia）"), ("牙根拔除术（exodontia）", ""))
-        self.assertEqual(normalize_definition_title("guided tissue regeneration, GTR"), ("guided tissue regeneration, GTR", ""))
+    def test_bilingual_definition_title_keeps_the_english_recall_prompt(self):
+        self.assertEqual(split_bilingual_definition_title("anesthesia：麻醉"), ("anesthesia", "麻醉"))
+        self.assertEqual(split_bilingual_definition_title("Vesicle/blister：疱"), ("Vesicle/blister", "疱"))
+        self.assertEqual(split_bilingual_definition_title("Ante's law: Ante 法则"), ("Ante's law", "Ante 法则"))
+        self.assertEqual(split_bilingual_definition_title("牙根拔除术（exodontia）"), ("牙根拔除术（exodontia）", ""))
+        self.assertEqual(split_bilingual_definition_title("guided tissue regeneration, GTR"), ("guided tissue regeneration, GTR", ""))
 
 
 class OralFocusRuntimeTests(unittest.TestCase):
@@ -170,6 +182,13 @@ class OralFocusRuntimeTests(unittest.TestCase):
         self.assertEqual(hidden["obsidian_uri"], "obsidian://open")
         revealed = app.oral_focus_item_payload(self.item_id, reveal=True)
         self.assertIn("正确取材", revealed["answer_markdown"])
+
+    def test_chapter_payload_keeps_answers_out_until_global_reveal(self):
+        hidden = app.oral_focus_chapter_payload("oral-surgery", "oral-surgery-ch02", "essay")
+        self.assertEqual(len(hidden["items"]), 1)
+        self.assertNotIn("answer_markdown", hidden["items"][0])
+        revealed = app.oral_focus_chapter_payload("oral-surgery", "oral-surgery-ch02", "essay", reveal=True)
+        self.assertIn("正确取材", revealed["items"][0]["answer_markdown"])
 
     def test_progress_enters_subjective_activity_and_review(self):
         handler = OralFocusHandler({"item_id": self.item_id, "answer": "我的闭卷答案", "memory_note": "漏了结合临床", "mastery": "fuzzy"})

@@ -968,16 +968,9 @@ def oral_focus_index_payload() -> dict:
     return {"available": bool(subjects), "summary": dataset.get("summary") or {}, "subjects": subjects}
 
 
-def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
-    if not re.fullmatch(r"oral-focus-[a-f0-9]{16}", str(item_id or "")):
-        raise ValueError("invalid oral focus item id")
-    _dataset, items = load_oral_focus()
-    record = items.get(item_id)
-    if not record:
-        raise ValueError("oral focus item not found")
+def _oral_focus_public_record(record: dict, progress: dict, *, reveal: bool = False) -> dict:
     subject = record["subject"]
     chapter = record["chapter"]
-    progress = load_oral_focus_progress().get("items", {}).get(item_id, {})
     progress = progress if isinstance(progress, dict) else {}
     _note_target, note_storage, note_uri = oral_focus_notes_target(subject)
     public = {
@@ -1001,7 +994,48 @@ def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
     )
     if reveal:
         public["answer_markdown"] = str(record.get("answer_markdown") or "")
+        public["definition_translation"] = str(record.get("definition_translation") or "")
     return public
+
+
+def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
+    if not re.fullmatch(r"oral-focus-[a-f0-9]{16}", str(item_id or "")):
+        raise ValueError("invalid oral focus item id")
+    _dataset, items = load_oral_focus()
+    record = items.get(item_id)
+    if not record:
+        raise ValueError("oral focus item not found")
+    progress = load_oral_focus_progress().get("items", {}).get(item_id, {})
+    return _oral_focus_public_record(record, progress, reveal=reveal)
+
+
+def oral_focus_chapter_payload(subject_id: str, chapter_id: str, item_type: str, *, reveal: bool = False) -> dict:
+    if not re.fullmatch(r"[a-z0-9-]+", str(subject_id or "")) or not re.fullmatch(r"[a-z0-9-]+", str(chapter_id or "")):
+        raise ValueError("invalid oral focus chapter")
+    if item_type not in {"", "definition", "essay"}:
+        raise ValueError("invalid oral focus type")
+    dataset, items = load_oral_focus()
+    subject = next((entry for entry in dataset.get("subjects") or [] if entry.get("id") == subject_id), None)
+    if not subject:
+        raise ValueError("oral focus subject not found")
+    chapter = next((entry for entry in subject.get("chapters") or [] if entry.get("id") == chapter_id), None)
+    if not chapter:
+        raise ValueError("oral focus chapter not found")
+    progress_items = load_oral_focus_progress().get("items", {})
+    public_items = []
+    for item in chapter.get("items") or []:
+        if item_type and item.get("type") != item_type:
+            continue
+        record = items.get(str(item.get("id") or ""))
+        if record:
+            public_items.append(_oral_focus_public_record(record, progress_items.get(record["id"], {}), reveal=reveal))
+    return {
+        "subject": {key: subject.get(key) for key in ("id", "short_title", "title", "book_id")},
+        "chapter": {key: chapter.get(key) for key in ("id", "order", "title")},
+        "type": item_type,
+        "reference_revealed": bool(reveal),
+        "items": public_items,
+    }
 
 
 def oral_focus_notes_target(subject: dict) -> tuple[Path, str, str]:
@@ -4050,6 +4084,21 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 query = parse_qs(parsed.query)
                 reveal = query.get("reveal", ["0"])[0] in {"1", "true", "yes"}
                 self.send_json(oral_focus_item_payload(query.get("item_id", [""])[0], reveal=reveal))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/oral-focus/chapter":
+            try:
+                query = parse_qs(parsed.query)
+                reveal = query.get("reveal", ["0"])[0] in {"1", "true", "yes"}
+                self.send_json(
+                    oral_focus_chapter_payload(
+                        query.get("subject_id", [""])[0],
+                        query.get("chapter_id", [""])[0],
+                        query.get("type", [""])[0],
+                        reveal=reveal,
+                    )
+                )
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return

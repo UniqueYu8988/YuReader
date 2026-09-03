@@ -1,0 +1,314 @@
+import { setActiveView, setLibraryMode, setReaderMode } from "../core/router.js";
+import { $, DOMAIN_LABELS, state } from "../core/state.js";
+import { stopReadingTimer } from "../core/timer.js";
+import { bookCoverTitle, bookToc, escapeHtml, formatCharacters, prepareSectionMarkdown, refreshIcons, renderMarkdown, renderSectionGuide, showToast } from "../core/utils.js";
+import { bindEnglishCenterGroups, englishPanel, englishShelfBooks, loadEnglishCenterOverview, renderEnglishCenter, selectedEnglishBank } from "../domains/english.js";
+import { renderMedicineCenter } from "../domains/medicine.js";
+import { renderPoliticsCenter } from "../domains/politics.js";
+import { openOralFocusIndex } from "../modules/oral_focus.js";
+import { loadResourcePractice, loadSectionPractice, openPractice } from "../modules/practice.js";
+import { loadStats } from "./logs.js";
+
+export function domainBooks() {
+  if (state.libraryDomain === "english") return englishShelfBooks();
+  return state.books.filter((book) => (book.domain || "medicine") === state.libraryDomain);
+}
+
+export function renderDomainTabs() {
+  document.querySelectorAll("[data-shelf]").forEach((button) => {
+    const shelf = button.dataset.shelf;
+    const active = shelf === state.libraryDomain;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+export function sectionEntryHtml(section) {
+  return `<button class="reader-section-entry ${section.id === state.current?.id ? "active" : ""}" type="button" data-section-id="${escapeHtml(section.id)}"><span>${String(section.section_order || 1).padStart(2, "0")}</span><span><strong>${escapeHtml(section.title)}</strong><small>${formatCharacters(section.character_count) || "阅读小节"}</small></span><i data-lucide="arrow-up-right"></i></button>`;
+}
+
+export function chapterListHtml(book, chapters, { openAll = false } = {}) {
+  return `<div class="reader-chapter-list">${chapters.map((chapter) => {
+    const chapterOpen = openAll ? true : (chapter.id === state.current?.chapter_id || chapter.order === 1);
+    return `<details class="reader-chapter-group" data-chapter-id="${escapeHtml(chapter.id)}" ${chapterOpen ? "open" : ""}>
+      <summary><span>${String(chapter.order).padStart(2, "0")}</span><strong>${escapeHtml(chapter.title)}</strong><em>${chapter.sections.length} 节</em><i data-lucide="chevron-right"></i></summary>
+      <div class="reader-section-list">${chapter.sections.map((section) => sectionEntryHtml(section)).join("")}</div>
+    </details>`;
+  }).join("")}</div>`;
+}
+
+export function learningRailSize() {
+  if (window.innerWidth <= 680) return 2;
+  if (window.innerWidth <= 960) return 3;
+  return 5;
+}
+
+export function recentFirstBooks(books, domain) {
+  const recent = (state.stats?.recent_resources || []).filter((entry) => entry.domain === domain).map((entry) => entry.resource_id);
+  const rank = new Map(recent.map((id, index) => [id, index]));
+  return [...books].sort((a, b) => {
+    const aRank = rank.has(a.id) ? rank.get(a.id) : Number.MAX_SAFE_INTEGER;
+    const bRank = rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER;
+    return aRank - bRank;
+  });
+}
+
+export function learningSectionHeader(index, title, meta, railId = "") {
+  return `<header class="learning-section-heading"><div><h3>${escapeHtml(title)}</h3></div>${railId ? `<nav aria-label="${escapeHtml(title)}翻页"><small data-rail-position="${escapeHtml(railId)}"></small><button type="button" data-rail-move="${escapeHtml(railId)}:-1" aria-label="上一组"><i data-lucide="arrow-left"></i></button><button type="button" data-rail-move="${escapeHtml(railId)}:1" aria-label="下一组"><i data-lucide="arrow-right"></i></button></nav>` : ""}</header>`;
+}
+
+export function learningBookCard(book, recentId = "") {
+  return `<button class="learning-book-card${book.id === recentId ? " recent" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong></span><span><strong>${escapeHtml(book.title)}</strong>${book.subject && book.subject !== book.title ? `<small>${escapeHtml(book.subject)}</small>` : ""}</span></button>`;
+}
+
+export function learningRailHtml(railId, items, renderItem) {
+  const size = learningRailSize(); const pageCount = Math.max(1, Math.ceil(items.length / size));
+  const page = Math.min(pageCount - 1, Math.max(0, Number(state.libraryRailPages[railId] || 0)));
+  state.libraryRailPages[railId] = page;
+  const visible = items.slice(page * size, page * size + size);
+  return `<div class="learning-rail" data-learning-rail="${escapeHtml(railId)}" style="--learning-rail-count:${Math.max(1, Math.min(size, visible.length))}">${visible.map(renderItem).join("") || `<div class="learning-empty"><strong>资料尚未导入</strong><span>板块会保留在这里，导入后自动出现。</span></div>`}</div><span class="hidden" data-rail-pages="${escapeHtml(railId)}" data-page="${page}" data-page-count="${pageCount}"></span>`;
+}
+
+export function renderLearningCenterOverview(payload, bankInfo) {
+  const objective = $("englishCenterObjectiveGroups"); const subjective = $("englishCenterSubjectiveGroups");
+  if (!objective || !subjective || state.libraryDomain !== "english" || selectedEnglishBank()?.bank.id !== bankInfo.bank.id) return;
+  const groups = (payload.groups || []).filter((group) => {
+    const start = Number(group.start_number || 0);
+    return state.englishCenterType === "cloze" ? start <= 20 : state.englishCenterType === "reading" ? start >= 21 && start <= 40 : start >= 41;
+  });
+  objective.innerHTML = groups.length ? groups.map((group) => `<button type="button" data-english-objective-bank="${escapeHtml(bankInfo.bank.id)}" data-english-objective-knowledge="${escapeHtml(group.knowledge_id || "")}" data-english-objective-start="${Number(group.start_index || 0)}"><span><small>${escapeHtml(group.part || "真题训练")}</small><strong>${escapeHtml(group.label)}</strong><em>第 ${group.start_number}–${group.end_number} 题 · ${group.answered_count || 0}/${group.question_count} 已答</em></span><i data-lucide="arrow-right"></i></button>`).join("") : `<div class="learning-empty"><strong>该题型暂无可用分组</strong><span>原始试卷结构仍保留，不会使用其他题型替代。</span></div>`;
+  const subjectiveItems = payload.subjective?.sections || [];
+  subjective.innerHTML = subjectiveItems.length ? subjectiveItems.map((item) => `<button type="button" data-english-subjective-book="${escapeHtml(item.book_id)}" data-english-subjective-section="${escapeHtml(item.section_id)}" data-english-subjective-bank="${escapeHtml(bankInfo.bank.id)}"><span><small>${bankInfo.year} · ENGLISH ${bankInfo.paper === 2 ? "II" : "I"}</small><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.range || "独立作答")}</em></span><i data-lucide="arrow-up-right"></i></button>`).join("") : `<div class="learning-empty"><strong>这个年份暂无独立主观题资料</strong><span>不会把整套试卷参考页误当作翻译或作文解析。</span></div>`;
+  bindEnglishCenterGroups(); refreshIcons();
+}
+
+export function bindLearningCenter() {
+  const tree = $("bookTree");
+  tree.querySelectorAll("[data-library-book]").forEach((button) => {
+    button.addEventListener("click", () => openResource(button.dataset.libraryBook));
+    button.addEventListener("pointerenter", () => prefetchResource(button.dataset.libraryBook), { once: true });
+    button.addEventListener("focus", () => prefetchResource(button.dataset.libraryBook), { once: true });
+  });
+  tree.querySelectorAll("[data-oral-subject]").forEach((button) => button.addEventListener("click", () => openOralFocusIndex(button.dataset.oralSubject, button.dataset.oralType)));
+  tree.querySelectorAll("[data-rail-move]").forEach((button) => button.addEventListener("click", () => {
+    const [railId, step] = button.dataset.railMove.split(":"); const marker = tree.querySelector(`[data-rail-pages="${railId}"]`);
+    const pageCount = Number(marker?.dataset.pageCount || 1); const page = Number(marker?.dataset.page || 0);
+    state.libraryRailPages[railId] = (page + Number(step) + pageCount) % pageCount; renderBooks();
+  }));
+  tree.querySelectorAll("[data-rail-pages]").forEach((marker) => {
+    const label = tree.querySelector(`[data-rail-position="${marker.dataset.railPages}"]`);
+    if (label) {
+      const pageCount = Number(marker.dataset.pageCount || 1);
+      label.textContent = `${Number(marker.dataset.page || 0) + 1} / ${pageCount}`;
+      label.closest("nav")?.classList.toggle("single-page", pageCount <= 1);
+    }
+  });
+  tree.querySelectorAll("[data-politics-bank]").forEach((button) => button.addEventListener("click", () => openPractice({ bank_id: button.dataset.politicsBank, knowledge_id: button.dataset.politicsKnowledge, match_level: button.dataset.politicsLevel }, "learning-center")));
+  tree.querySelectorAll("[data-english-track]").forEach((button) => button.addEventListener("click", () => { state.englishCenterTrack = Number(button.dataset.englishTrack); state.englishCenterYear = ""; renderBooks(); }));
+  $("englishCenterYear")?.addEventListener("change", (event) => { state.englishCenterYear = event.target.value; renderBooks(); });
+  tree.querySelectorAll("[data-english-type]").forEach((button) => button.addEventListener("click", () => { state.englishCenterType = button.dataset.englishType; renderBooks(); }));
+  bindEnglishCenterGroups();
+}
+
+export function renderBooks() {
+  renderDomainTabs(); englishPanel("");
+  const tree = $("bookTree"); tree.classList.remove("hidden");
+  tree.innerHTML = state.libraryDomain === "politics" ? renderPoliticsCenter() : state.libraryDomain === "english" ? renderEnglishCenter() : renderMedicineCenter();
+  bindLearningCenter(); refreshIcons();
+  if (state.libraryDomain === "english") loadEnglishCenterOverview();
+}
+
+export function renderResource() {
+  const payload = state.resource; const book = payload?.book; const summary = payload?.summary || {};
+  if (!book) return;
+  $("resourcePanel").classList.remove("is-loading");
+  $("resourceStatus").classList.add("hidden"); $("resourceStatus").textContent = "";
+  $("resourceProgressTrack").classList.remove("is-loading");
+  $("resourceDomainLabel").textContent = `${book.domain_label || DOMAIN_LABELS[book.domain] || "医学"} · ${book.resource_type_label || book.resource_type || "教材"}`;
+  $("resourceTitle").textContent = book.title;
+  $("resourceMeta").textContent = `${book.edition ? `${book.edition} · ` : ""}${book.subject}`;
+  const lastSection = summary.last_section;
+  const progress = Number(summary.progress || 0);
+  const progressText = `${progress.toFixed(progress % 1 ? 1 : 0)}%`;
+  $("resourceProgressBar").style.width = `${Math.min(100, Math.max(0, progress))}%`;
+  $("resourceProgressTrack").title = `阅读进度 ${progressText}（已学习小节 / 全部小节）`;
+  $("resourceContinueTitle").textContent = lastSection ? `${lastSection.title} · ${lastSection.chapter_title}` : `从 ${book.sections[0] ? book.sections[0].title : "第一章"} 开始阅读`;
+  $("resourceContinue").dataset.sectionId = lastSection?.id || book.sections[0]?.id || "";
+  const chapters = bookToc(book).filter((chapter) => chapter.sections.length);
+  $("resourceDirectory").innerHTML = `<section class="reader-directory resource-directory-list">${chapterListHtml(book, chapters)}</section>`;
+  $("resourceDirectory").querySelectorAll("[data-section-id]").forEach((button) => button.addEventListener("click", () => { state.readerOriginBookId = state.resourceBookId; openSection(button.dataset.sectionId); }));
+  refreshIcons();
+}
+
+export function renderResourceLoading(book) {
+  state.resource = { book, summary: {} };
+  renderResource();
+  $("resourcePanel").classList.add("is-loading");
+  $("resourceProgressTrack").classList.add("is-loading");
+  $("resourceProgressTrack").title = "正在读取本地学习记录";
+}
+
+export function fetchResource(bookId, force = false) {
+  const cached = state.resourceCache.get(bookId);
+  if (!force && cached && Date.now() - cached.fetchedAt < 15000) return Promise.resolve(cached.payload);
+  if (state.resourceLoads.has(bookId)) return state.resourceLoads.get(bookId);
+  const request = fetch(`/api/resource/${encodeURIComponent(bookId)}`, { cache: "no-store" })
+    .then((response) => { if (!response.ok) throw new Error("resource unavailable"); return response.json(); })
+    .then((payload) => { state.resourceCache.set(bookId, { payload, fetchedAt: Date.now() }); return payload; })
+    .finally(() => state.resourceLoads.delete(bookId));
+  state.resourceLoads.set(bookId, request);
+  return request;
+}
+
+export function prefetchResource(bookId) {
+  if (!bookId || state.resourceCache.has(bookId)) return;
+  fetchResource(bookId).catch(() => {});
+}
+
+export async function openResource(bookId) {
+  if (!bookId) return;
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  const book = state.books.find((item) => item.id === bookId);
+  if (!book) return;
+  const cached = state.resourceCache.get(bookId);
+  if (cached) { state.resource = cached.payload; renderResource(); }
+  else renderResourceLoading(book);
+  $("libraryWorkspace").classList.remove("reader-open");
+  $("libraryWorkspace").classList.add("resource-open");
+  $("readerContent").classList.add("hidden");
+  $("sectionNoteFloat").classList.add("hidden");
+  setActiveView("library");
+  state.resourceBookId = bookId;
+  try {
+    const payload = await fetchResource(bookId);
+    if (state.resourceBookId !== bookId) return;
+    state.resource = payload; renderResource(); loadResourcePractice(bookId);
+  } catch {
+    if (state.resourceBookId !== bookId) return;
+    if (cached) { state.resource = cached.payload; renderResource(); }
+    else {
+      $("resourcePanel").classList.remove("is-loading"); $("resourceProgressTrack").classList.remove("is-loading");
+      $("resourceStatus").classList.remove("hidden"); $("resourceStatus").textContent = "暂时无法读取这份资料，请确认本地服务正在运行。";
+    }
+  }
+  renderBooks(); window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+export async function openResourceSection(bookId, sectionId) {
+  if (!bookId || !sectionId) return;
+  await openResource(bookId);
+  if (state.resourceBookId !== bookId) return;
+  const book = state.books.find((item) => item.id === bookId);
+  if (!book?.sections?.some((section) => section.id === sectionId)) return;
+  state.readerOriginBookId = bookId;
+  await openSection(sectionId);
+}
+
+export async function openSection(sectionId) {
+  const requestId = ++state.openRequest;
+  const response = await fetch(`/api/sections/${encodeURIComponent(sectionId)}`, { cache: "no-store" });
+  if (requestId !== state.openRequest) return;
+  if (!response.ok) { showToast("暂时无法打开这一节"); return; }
+  const section = await response.json(); const book = state.books.find((item) => item.sections.some((entry) => entry.id === section.id));
+  if (requestId !== state.openRequest) return;
+  state.current = { ...section, book_id: book?.id }; state.libraryBookId = book?.id || null; state.sections.set(section.id, state.current); setReaderMode();
+  fetch("/api/activity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section_id: section.id }) }).then(() => loadStats()).catch(() => {});
+  const index = book?.sections.findIndex((entry) => entry.id === section.id) ?? 0;
+  const chapter = bookToc(book).find((item) => item.id === section.chapter_id); const chapterSectionCount = chapter?.sections.length || 1;
+  $("readerBook").textContent = section.book_title; $("readerChapter").textContent = section.chapter_title || "目录"; $("readerTitle").textContent = section.title; $("readerLocation").textContent = section.title; $("readerSectionNumber").textContent = `${String(section.chapter_order || 1).padStart(2, "0")} 章 · ${section.section_order || 1} / ${chapterSectionCount} 节`;
+  const materialLabel = section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown";
+  const lengthLabel = formatCharacters(section.character_count); $("readerBookMeta").textContent = `${materialLabel}${lengthLabel ? ` · ${lengthLabel}` : ""}`; $("readerBookMeta").title = section.path || materialLabel; $("readerNoteMeta").textContent = section.note?.trim() ? "已有笔记" : "暂无笔记";
+  $("sectionNote").value = section.note || ""; $("noteSavedText").textContent = section.note?.trim() ? "已保存到本节" : "输入后自动保存"; $("openObsidian").href = section.obsidian_uri || "obsidian://open";
+  state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks(); loadSectionPractice(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+export function renderSectionMenu() {
+  const menu = $("readerCrumbMenu"); const book = state.books.find((item) => item.id === state.current?.book_id);
+  if (!book) { menu.innerHTML = ""; return; }
+  menu.innerHTML = bookToc(book).map((chapter) => `<section><header><span>${String(chapter.order).padStart(2, "0")}</span><strong>${escapeHtml(chapter.title)}</strong></header>${chapter.sections.map((section) => `<button type="button" class="${section.id === state.current.id ? "active" : ""}" data-menu-section="${escapeHtml(section.id)}"><span>${String(section.section_order || 1).padStart(2, "0")} · ${escapeHtml(section.title)}</span><small>${formatCharacters(section.character_count)}</small></button>`).join("")}</section>`).join("");
+  menu.querySelectorAll("[data-menu-section]").forEach((button) => button.addEventListener("click", () => { closeSectionMenu(); openSection(button.dataset.menuSection); })); refreshIcons();
+}
+
+export function setNavigationState() {
+  const book = state.books.find((item) => item.id === state.current?.book_id); const index = book?.sections.findIndex((section) => section.id === state.current.id) ?? -1;
+  const previous = index > 0; const next = index >= 0 && index < book.sections.length - 1;
+  [$("readerPreviousSection"), $("previousSection")].forEach((button) => { if (button) button.disabled = !previous; });
+  [$("readerNextSection"), $("nextSectionLink")].forEach((button) => { if (button) button.disabled = !next; });
+}
+
+export function returnFromResource() {
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  state.resourceBookId = null;
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open");
+  $("readerContent").classList.add("hidden");
+  $("sectionNoteFloat").classList.add("hidden");
+  setActiveView("library"); window.scrollTo({ top: 0, behavior: "auto" });
+  renderBooks();
+}
+
+export function returnFromReader() {
+  if (state.readerOriginBookId) openResource(state.readerOriginBookId);
+  else setLibraryMode();
+}
+
+export function finishReaderSession() {
+  const bookId = state.current?.book_id;
+  if (bookId) openResource(bookId);
+  else setLibraryMode();
+}
+
+export function renderMaterial() {
+  const article = $("knowledgeArticle"); const source = state.material === "note" ? state.current?.note : state.current?.markdown;
+  const guide = $("sectionGuide");
+  const imageBase = state.current?.book_id ? `/api/book-assets/${encodeURIComponent(state.current.book_id)}/` : "";
+  article.classList.toggle("note-stream", state.material === "note");
+  if (state.material === "note") {
+    guide.classList.add("hidden"); guide.innerHTML = "";
+    article.innerHTML = !state.current?.note?.trim() ? `<div class="section-material-empty"><i data-lucide="notebook-pen"></i><strong>这一节还没有笔记</strong><span>打开右下角笔记入口，粘贴 AI 整理结果即可。</span></div>` : renderMarkdown(source || "暂无内容", imageBase);
+  } else {
+    const prepared = prepareSectionMarkdown(source || "暂无内容", state.current?.title || "");
+    article.innerHTML = renderMarkdown(prepared.markdown, imageBase);
+    renderSectionGuide(article, guide, prepared.guide, prepared.kind);
+  }
+  document.querySelectorAll("[data-section-material]").forEach((button) => { const active = button.dataset.sectionMaterial === state.material; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); }); refreshIcons();
+}
+
+export function navigateSection(step) {
+  const book = state.books.find((item) => item.id === state.current?.book_id); const index = book?.sections.findIndex((section) => section.id === state.current.id) ?? -1; const target = book?.sections[index + step]; if (target) openSection(target.id);
+}
+
+export function setNoteControlsExpanded(expanded) {
+  document.querySelectorAll('[aria-controls="sectionNotePopover"]').forEach((button) => {
+    button.setAttribute("aria-expanded", String(expanded));
+    button.classList.toggle("active", expanded);
+  });
+}
+
+export function openNotePopover(trigger = null) {
+  state.noteOpen = true; state.noteTrigger = trigger;
+  $("sectionNoteFloat").classList.add("note-is-open"); $("sectionNotePopover").classList.add("is-open"); $("sectionNotePopover").setAttribute("aria-hidden", "false"); setNoteControlsExpanded(true); window.setTimeout(() => $("sectionNote").focus(), 120);
+}
+
+export function closeNotePopover({ restoreFocus = false } = {}) {
+  const trigger = state.noteTrigger; state.noteOpen = false; state.noteTrigger = null;
+  $("sectionNoteFloat")?.classList.remove("note-is-open"); $("sectionNotePopover")?.classList.remove("is-open"); $("sectionNotePopover")?.setAttribute("aria-hidden", "true"); setNoteControlsExpanded(false);
+  if (restoreFocus && trigger?.isConnected) trigger.focus();
+}
+
+export function closeSectionMenu() { $("readerCrumbMenu")?.classList.add("hidden"); $("readerSectionPicker")?.classList.remove("active"); $("readerSectionPicker")?.setAttribute("aria-expanded", "false"); }
+
+
+export function scheduleNoteSave() {
+  if (!state.current) return;
+  const sectionId = state.current.id; const content = $("sectionNote").value;
+  $("noteSavedText").textContent = "保存中…"; window.clearTimeout(state.saveTimer);
+  state.saveTimer = window.setTimeout(async () => {
+    try {
+      const response = await fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section_id: sectionId, content }) });
+      if (!response.ok) throw new Error("save failed"); const result = await response.json();
+      const cached = state.sections.get(sectionId); if (cached) state.sections.set(sectionId, { ...cached, note: content });
+      if (state.current?.id !== sectionId) return;
+      state.current.note = content; $("openObsidian").href = result.obsidian_uri || "obsidian://open"; $("noteSavedText").textContent = content.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存"; $("readerNoteMeta").textContent = content.trim() ? "已有笔记" : "暂无笔记"; if (state.material === "note") renderMaterial(); loadStats();
+    } catch { if (state.current?.id === sectionId) $("noteSavedText").textContent = "保存失败，请稍后重试"; }
+  }, 420);
+}

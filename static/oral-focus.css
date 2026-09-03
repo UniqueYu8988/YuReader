@@ -70,3 +70,70 @@
   .oral-focus-card { padding-top: 14px; }
   .oral-focus-reference > header { align-items: center; }
 }
+
+/* Chapter-first card workspace */
+.oral-focus-shell { width: min(100%, 1120px); padding-top: 8px; }
+.oral-focus-directory { gap: 22px; }
+.oral-focus-lead { gap: 14px; padding-bottom: 16px; }
+.oral-focus-lead h2 { font-size: clamp(22px, 2.4vw, 27px); }
+
+.oral-focus-chapter-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 34px; border-top: 1px solid var(--line-strong); }
+.oral-focus-chapter-entry { display: grid; min-height: 84px; grid-template-columns: 34px minmax(0, 1fr) 18px; gap: 14px; align-items: center; padding: 15px 12px 15px 4px; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.oral-focus-chapter-entry:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
+.oral-focus-chapter-entry > span:nth-child(2) { display: grid; min-width: 0; gap: 7px; }
+.oral-focus-chapter-entry strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; line-height: 1.45; }
+.oral-focus-chapter-entry small, .oral-focus-chapter-number { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.oral-focus-chapter-entry > svg { width: 14px; color: var(--text-soft); }
+
+.oral-focus-chapter-panel { display: grid; gap: 22px; }
+.oral-focus-chapter-head { display: grid; grid-template-columns: 1fr auto; gap: 14px 24px; align-items: end; padding-bottom: 16px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-chapter-head > .review-back-link { grid-column: 1 / -1; }
+.oral-focus-chapter-head > div { display: flex; min-width: 0; align-items: baseline; gap: 16px; }
+.oral-focus-chapter-head h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(20px, 2.3vw, 26px); font-weight: 500; line-height: 1.4; }
+.oral-focus-chapter-head #oralFocusChapterSummary { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.oral-focus-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.oral-focus-card-grid.answers-visible { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.oral-focus-study-card { min-width: 0; border: 1px solid var(--line); border-radius: 2px; background: color-mix(in srgb, var(--surface) 74%, transparent); transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
+.oral-focus-study-card:hover, .oral-focus-study-card.is-focused { border-color: color-mix(in srgb, var(--primary) 42%, var(--line)); background: color-mix(in srgb, var(--surface) 88%, transparent); }
+.oral-focus-study-card > header { display: grid; min-height: 92px; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 18px 16px 16px; }
+.oral-focus-study-card > header > span { padding-top: 4px; color: var(--primary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.oral-focus-study-card > header > div:nth-child(2) { display: grid; gap: 7px; }
+.oral-focus-study-card h4 { margin: 0; overflow-wrap: anywhere; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 18px; font-weight: 500; line-height: 1.5; }
+.oral-focus-study-card h4:first-letter { text-transform: none; }
+.oral-focus-study-card > header small { color: var(--text-soft); font-size: 11px; line-height: 1.5; }
+.oral-focus-card-tools { display: flex; align-items: center; gap: 9px; }
+.oral-focus-card-stars { color: var(--primary); font-size: 11px; letter-spacing: .08em; white-space: nowrap; }
+.oral-focus-card-tools button { display: grid; width: 24px; height: 24px; place-items: center; padding: 0; border: 0; color: var(--text-soft); background: transparent; cursor: pointer; }
+.oral-focus-card-tools button:hover { color: var(--primary-strong); }
+.oral-focus-card-tools img { width: 15px; height: 15px; }
+.oral-focus-card-body { display: grid; gap: 18px; padding: 0 16px 20px 54px; border-top: 1px solid var(--line); }
+.oral-focus-card-tabs { display: flex; gap: 22px; padding-top: 13px; }
+.oral-focus-card-tabs button { padding: 0 0 6px; border: 0; border-bottom: 1px solid transparent; color: var(--text-soft); background: transparent; font-size: 12px; cursor: pointer; }
+.oral-focus-card-tabs button.active { border-bottom-color: var(--primary); color: var(--primary-strong); }
+.oral-focus-card-tabs button:disabled { opacity: .38; cursor: default; }
+.oral-focus-translation { display: grid; gap: 5px; margin-bottom: 18px; }
+.oral-focus-translation small { color: var(--text-soft); font-size: 11px; }
+.oral-focus-translation strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 21px; font-weight: 500; }
+.oral-focus-answer-copy, .oral-focus-card-note .knowledge-article { color: var(--text-secondary); font-size: 16px; line-height: 1.9; }
+.oral-focus-answer-copy p, .oral-focus-card-note .knowledge-article p { margin-block: 0 13px; }
+.oral-focus-answer-copy .oral-focus-structured-point { display: grid; grid-template-columns: 27px minmax(0, 1fr); gap: 8px; }
+.oral-focus-point-marker { padding-top: .12em; color: var(--primary); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-variant-numeric: tabular-nums; }
+.oral-focus-source-separator { padding-inline: .28em; color: var(--text-soft); }
+.oral-focus-card-note > p { margin: 0; color: var(--text-soft); font-size: 12px; }
+
+@media (max-width: 980px) {
+  .oral-focus-card-grid, .oral-focus-card-grid.answers-visible { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .oral-focus-shell { padding-top: 2px; }
+  .oral-focus-chapter-list, .oral-focus-card-grid, .oral-focus-card-grid.answers-visible { grid-template-columns: 1fr; }
+  .oral-focus-chapter-entry:nth-child(odd), .oral-focus-chapter-entry:nth-child(even) { padding-inline: 4px 10px; border-left: 0; }
+  .oral-focus-chapter-head { grid-template-columns: 1fr; align-items: start; }
+  .oral-focus-chapter-head > div { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .oral-focus-chapter-head > .oral-focus-answer-toggle { justify-self: start; }
+  .oral-focus-study-card > header { min-height: 82px; padding: 15px 13px; }
+  .oral-focus-card-body { padding: 0 14px 18px 51px; }
+  .oral-focus-answer-copy, .oral-focus-card-note .knowledge-article { font-size: 16px; line-height: 1.86; }
+}

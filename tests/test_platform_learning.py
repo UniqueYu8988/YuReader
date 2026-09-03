@@ -15,7 +15,7 @@ class LearningCenterFrontendContractTests(unittest.TestCase):
     def setUpClass(cls):
         static = Path(__file__).resolve().parents[1] / "static"
         cls.html = (static / "index.html").read_text(encoding="utf-8")
-        cls.javascript = (static / "app.js").read_text(encoding="utf-8")
+        cls.javascript = "\n".join(p.read_text(encoding="utf-8") for p in sorted((static / "js").glob("**/*.js")) + [(static / "app.js")])
 
     def test_center_exposes_three_domains_and_no_search_or_weekly_editor(self):
         for label in ("医学", "政治", "英语"):
@@ -27,16 +27,29 @@ class LearningCenterFrontendContractTests(unittest.TestCase):
         for title in ("名词解释", "优题库基础篇", "优题库拔高篇", "真题训练", "翻译与写作"):
             self.assertIn(title, self.javascript)
         self.assertIn('start >= 21 && start <= 40 : start >= 41', self.javascript)
-        self.assertIn('openOralFocusIndex(subjectId = "", type = "")', self.javascript)
+        self.assertIn('openOralFocusIndex(subjectId = "", type = null)', self.javascript)
 
-    def test_oral_focus_uses_question_first_list_and_simple_question_page(self):
-        self.assertIn("slice(state.oralFocusListPage * 10", self.javascript)
-        self.assertIn('id="oralFocusReferenceToggle"', self.html)
+    def test_oral_focus_uses_source_chapters_and_card_notes(self):
+        self.assertNotIn("oralFocusListPage", self.javascript)
+        self.assertIn('id="oralFocusChapterList"', self.html)
+        self.assertIn('id="oralFocusChapterAnswerToggle"', self.html)
+        self.assertIn("renderOralFocusChapterCards", self.javascript)
+        self.assertIn('data-oral-card-mode="answer"', self.javascript)
+        self.assertIn('data-oral-card-mode="note"', self.javascript)
         self.assertIn('id="oralFocusNote"', self.html)
-        self.assertIn('id="oralFocusNoteBody"', self.html)
-        self.assertIn("renderOralFocusNoteContent", self.javascript)
         for removed_id in ("oralFocusAnswer", "oralFocusMastery", "oralFocusGradePrompt"):
             self.assertNotIn(f'id="{removed_id}"', self.html)
+
+    def test_non_home_views_remove_the_global_topbar_actions(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "reader.css").read_text(encoding="utf-8")
+        self.assertIn(".main-content:not(:has(#homeView.active)) .topbar { display: none; }", css)
+
+    def test_medicine_center_uses_table_practice_actions(self):
+        self.assertIn("medicinePracticeSection", self.javascript)
+        self.assertNotIn('learningRailHtml("medicine-definitions"', self.javascript)
+        self.assertNotIn('learningRailHtml("medicine-essays"', self.javascript)
+        self.assertIn('data-oral-subject="${escapeHtml(subject.id)}"', self.javascript)
+        self.assertIn('data-oral-type="${escapeHtml(type)}"', self.javascript)
 
 
 class DomainFallbackTests(unittest.TestCase):

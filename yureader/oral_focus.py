@@ -51,6 +51,11 @@ TYPE_LABELS = {"definition": "名词解释", "essay": "简答论述"}
 CHINESE_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
 CHAPTER_RE = re.compile(r"^\s*([一二三四五六七八九十百〇零]+)\s*[、.．]\s*(.+?)\s*$")
 QUESTION_RE = re.compile(r"^\s*(\d{1,3})\s*[.．、]\s*(.+?)\s*$")
+EMBEDDED_DEFINITION_QUESTION_RE = re.compile(r"(?m)^\s*\d{1,3}\s*[.．、]\s*(?!\d)\S+")
+INLINE_DEFINITION_QUESTION_RE = re.compile(
+    r"(?<![\dA-Za-z])\d{1,3}\s*[.．、]\s*"
+    r"[A-Za-z][^：:\n]{0,140}[：:]\s*[\u3400-\u9fff][^\n]*$"
+)
 PROMOTION_RE = re.compile(
     r"(?:微信搜索(?:公众号[：:]?)?\s*银河研旅(?:公众号)?(?:，|,)?\s*)?"
     r"(?:记乎\s*app\s*搜索(?:班级[：:]?)?\s*途中口腔医学考研(?:2班)?)",
@@ -120,15 +125,15 @@ def split_embedded_definition(title: str) -> tuple[str, str]:
     return value, ""
 
 
-def normalize_definition_title(title: str) -> tuple[str, str]:
-    """Prefer the Chinese term in bilingual OCR headings and retain the English alias."""
+def split_bilingual_definition_title(title: str) -> tuple[str, str]:
+    """Keep the English recall prompt and separate its Chinese translation."""
     value = str(title or "").strip()
     match = re.match(r"^([A-Za-z][^：:]*?)\s*[：:]\s*(.*[\u3400-\u9fff].*)$", value)
     if not match:
         return value, ""
-    english_alias = re.sub(r"\s+", " ", match.group(1)).strip()
-    chinese_title = re.sub(r"\s+", " ", match.group(2)).strip(" ：:")
-    return chinese_title or value, english_alias
+    english_prompt = re.sub(r"\s+", " ", match.group(1)).strip()
+    chinese_translation = re.sub(r"\s+", " ", match.group(2)).strip(" ：:")
+    return english_prompt or value, chinese_translation
 
 
 def table_markdown(table: object) -> str:
@@ -176,7 +181,7 @@ def build_dataset(source_dir: Path | str) -> dict:
     warnings: list[dict] = []
     excluded_promotions = 0
     image_markers = 0
-    normalized_definition_titles = 0
+    bilingual_definition_titles = 0
 
     for subject_config in SUBJECT_SOURCES:
         chapter_map: dict[int, dict] = {}
@@ -199,10 +204,17 @@ def build_dataset(source_dir: Path | str) -> dict:
                 current_item["has_unreviewed_image"] = bool(current_item.pop("_has_image", False))
                 current_item["source_files"] = list(dict.fromkeys(current_item.get("source_files") or []))
                 current_item["order"] = len(current_chapter["items"]) + 1
+                if item_type == "definition" and (
+                    EMBEDDED_DEFINITION_QUESTION_RE.search(answer)
+                    or INLINE_DEFINITION_QUESTION_RE.search(answer)
+                ):
+                    raise ValueError(f"definition still contains a nested question boundary: {current_item['id']}")
                 current_chapter["items"].append(current_item)
                 subject_item_count += 1
                 if current_item["character_count"] > 5000:
                     warnings.append({"kind": "oversized_item", "item_id": current_item["id"], "characters": current_item["character_count"]})
+                elif item_type == "definition" and current_item["character_count"] > 2500:
+                    warnings.append({"kind": "oversized_definition", "item_id": current_item["id"], "characters": current_item["character_count"]})
                 current_item = None
 
             for filename in subject_config["files"][item_type]:
@@ -242,10 +254,24 @@ def build_dataset(source_dir: Path | str) -> dict:
                             current_chapter = chapter_map[number]
                             expected_question = 1
                             continue
+                        if item_type == "definition" and current_item:
+                            inline_question = INLINE_DEFINITION_QUESTION_RE.search(text)
+                            if inline_question and inline_question.start() > 0:
+                                preceding_answer = text[: inline_question.start()].strip()
+                                if preceding_answer:
+                                    current_item["_blocks"].append(preceding_answer)
+                                    current_item["source_files"].append(filename)
+                                finish_item()
+                                text = inline_question.group(0).strip()
                         question_match = QUESTION_RE.match(text)
                         question_number = int(question_match.group(1)) if question_match else 0
                         question_tail = question_match.group(2).strip() if question_match else ""
-                        if question_match and question_number == expected_question and not re.match(r"^\d", question_tail):
+                        is_question_boundary = bool(
+                            question_match
+                            and not re.match(r"^\d", question_tail)
+                            and (item_type == "definition" or question_number == expected_question)
+                        )
+                        if is_question_boundary:
                             finish_item()
                             if current_chapter is None:
                                 number = 0
@@ -256,15 +282,19 @@ def build_dataset(source_dir: Path | str) -> dict:
                             title, stars = clean_question_title(question_match.group(2))
                             embedded_answer = ""
                             source_title = title
-                            english_alias = ""
+                            id_title = title
+                            chinese_translation = ""
                             if item_type == "definition":
-                                title, embedded_answer = split_embedded_definition(title)
-                                source_title = title
-                                title, english_alias = normalize_definition_title(title)
-                                normalized_definition_titles += int(bool(english_alias))
-                            duplicate_key = (int(current_chapter["order"]), source_title)
+                                legacy_id_title, legacy_embedded_answer = split_embedded_definition(title)
+                                id_title = legacy_id_title
+                                title, chinese_translation = split_bilingual_definition_title(title)
+                                if chinese_translation:
+                                    bilingual_definition_titles += 1
+                                else:
+                                    title, embedded_answer = legacy_id_title, legacy_embedded_answer
+                            duplicate_key = (int(current_chapter["order"]), id_title)
                             duplicate_titles[duplicate_key] = duplicate_titles.get(duplicate_key, 0) + 1
-                            item_id = "oral-focus-" + _stable_id(subject_config["id"], item_type, current_chapter["id"], source_title, duplicate_titles[duplicate_key])
+                            item_id = "oral-focus-" + _stable_id(subject_config["id"], item_type, current_chapter["id"], id_title, duplicate_titles[duplicate_key])
                             current_item = {
                                 "id": item_id,
                                 "type": item_type,
@@ -279,8 +309,8 @@ def build_dataset(source_dir: Path | str) -> dict:
                                 "_has_table": False,
                                 "_has_image": False,
                             }
-                            if english_alias:
-                                current_item["aliases"] = [english_alias]
+                            if chinese_translation:
+                                current_item["definition_translation"] = chinese_translation
                                 current_item["source_title"] = source_title
                             expected_question += 1
                             continue
@@ -326,7 +356,7 @@ def build_dataset(source_dir: Path | str) -> dict:
             "unreviewed_image_item_count": sum(item["has_unreviewed_image"] for subject in subjects for chapter in subject["chapters"] for item in chapter["items"]),
             "excluded_promotion_blocks": excluded_promotions,
             "image_markers": image_markers,
-            "normalized_definition_title_count": normalized_definition_titles,
+            "bilingual_definition_title_count": bilingual_definition_titles,
         },
         "warnings": warnings,
         "subjects": subjects,
