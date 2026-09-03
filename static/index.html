@@ -101,16 +101,17 @@
             </div>
 
             <div class="reader-home-goals-grid">
+              <!-- Column 1: 医学 -->
               <div class="reader-home-goal-column">
                 <div class="reader-home-goal-column-header">
-                  <i data-lucide="book-open"></i>
-                  <h4>教材阅读指标</h4>
-                  <small>书架区累计</small>
+                  <i data-lucide="brain"></i>
+                  <h4>医学</h4>
+                  <small>教材与重点题卡</small>
                 </div>
-                <div class="reader-home-goal-list" id="homeReadingGoalList">
+                <div class="reader-home-goal-list">
                   <div class="reader-home-goal-item">
                     <div class="reader-home-goal-info">
-                      <span class="goal-item-name">医学阅读</span>
+                      <span class="goal-item-name">教材阅读</span>
                       <span class="goal-item-progress" id="homeGoalMedReadStatus">0 / 2.0 小时</span>
                     </div>
                     <div class="goal-item-edit hidden">
@@ -123,43 +124,7 @@
                   </div>
                   <div class="reader-home-goal-item">
                     <div class="reader-home-goal-info">
-                      <span class="goal-item-name">政治阅读</span>
-                      <span class="goal-item-progress" id="homeGoalPolReadStatus">0 / 0.5 小时</span>
-                    </div>
-                    <div class="goal-item-edit hidden">
-                      <input type="number" id="homeGoalPolReadInput" min="0" max="12" step="0.5" value="0.5">
-                      <span>小时</span>
-                    </div>
-                    <div class="reader-home-progress-bar mini">
-                      <div class="reader-home-progress-fill" id="homeGoalPolReadFill" style="width: 0%;"></div>
-                    </div>
-                  </div>
-                  <div class="reader-home-goal-item">
-                    <div class="reader-home-goal-info">
-                      <span class="goal-item-name">英语阅读</span>
-                      <span class="goal-item-progress" id="homeGoalEngReadStatus">0 / 0.5 小时</span>
-                    </div>
-                    <div class="goal-item-edit hidden">
-                      <input type="number" id="homeGoalEngReadInput" min="0" max="12" step="0.5" value="0.5">
-                      <span>小时</span>
-                    </div>
-                    <div class="reader-home-progress-bar mini">
-                      <div class="reader-home-progress-fill" id="homeGoalEngReadFill" style="width: 0%;"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="reader-home-goal-column">
-                <div class="reader-home-goal-column-header">
-                  <i data-lucide="check-square"></i>
-                  <h4>习题演练指标</h4>
-                  <small>题卡与题库</small>
-                </div>
-                <div class="reader-home-goal-list" id="homePracticeGoalList">
-                  <div class="reader-home-goal-item">
-                    <div class="reader-home-goal-info">
-                      <span class="goal-item-name">医学名词解释</span>
+                      <span class="goal-item-name">名词解释</span>
                       <span class="goal-item-progress" id="homeGoalMedDefStatus">0 / 20 个</span>
                     </div>
                     <div class="goal-item-edit hidden">
@@ -172,7 +137,7 @@
                   </div>
                   <div class="reader-home-goal-item">
                     <div class="reader-home-goal-info">
-                      <span class="goal-item-name">医学论述题</span>
+                      <span class="goal-item-name">论述题</span>
                       <span class="goal-item-progress" id="homeGoalMedEssayStatus">0 / 20 个</span>
                     </div>
                     <div class="goal-item-edit hidden">
@@ -183,22 +148,33 @@
                       <div class="reader-home-progress-fill" id="homeGoalMedEssayFill" style="width: 0%;"></div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Column 2: 英语 -->
+              <div class="reader-home-goal-column">
+                <div class="reader-home-goal-column-header">
+                  <i data-lucide="languages"></i>
+                  <h4>英语</h4>
+                  <small>基础与真题阅读</small>
+                </div>
+                <div class="reader-home-goal-list">
                   <div class="reader-home-goal-item">
                     <div class="reader-home-goal-info">
-                      <span class="goal-item-name">政治单元演练</span>
-                      <span class="goal-item-progress" id="homeGoalPolUnitStatus">0 / 2 单元</span>
+                      <span class="goal-item-name">基础阅读</span>
+                      <span class="goal-item-progress" id="homeGoalEngReadStatus">0 / 0.5 小时</span>
                     </div>
                     <div class="goal-item-edit hidden">
-                      <input type="number" id="homeGoalPolUnitInput" min="0" max="20" step="1" value="2">
-                      <span>单元</span>
+                      <input type="number" id="homeGoalEngReadInput" min="0" max="12" step="0.5" value="0.5">
+                      <span>小时</span>
                     </div>
                     <div class="reader-home-progress-bar mini">
-                      <div class="reader-home-progress-fill" id="homeGoalPolUnitFill" style="width: 0%;"></div>
+                      <div class="reader-home-progress-fill" id="homeGoalEngReadFill" style="width: 0%;"></div>
                     </div>
                   </div>
                   <div class="reader-home-goal-item">
                     <div class="reader-home-goal-info">
-                      <span class="goal-item-name">英语阅读理解</span>
+                      <span class="goal-item-name">阅读理解</span>
                       <span class="goal-item-progress" id="homeGoalEngReadCompStatus">0 / 2 篇</span>
                     </div>
                     <div class="goal-item-edit hidden">
@@ -207,6 +183,43 @@
                     </div>
                     <div class="reader-home-progress-bar mini">
                       <div class="reader-home-progress-fill" id="homeGoalEngReadCompFill" style="width: 0%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Column 3: 政治 -->
+              <div class="reader-home-goal-column">
+                <div class="reader-home-goal-column-header">
+                  <i data-lucide="landmark"></i>
+                  <h4>政治</h4>
+                  <small>讲义与单元练习</small>
+                </div>
+                <div class="reader-home-goal-list">
+                  <div class="reader-home-goal-item">
+                    <div class="reader-home-goal-info">
+                      <span class="goal-item-name">讲义阅读</span>
+                      <span class="goal-item-progress" id="homeGoalPolReadStatus">0 / 0.5 小时</span>
+                    </div>
+                    <div class="goal-item-edit hidden">
+                      <input type="number" id="homeGoalPolReadInput" min="0" max="12" step="0.5" value="0.5">
+                      <span>小时</span>
+                    </div>
+                    <div class="reader-home-progress-bar mini">
+                      <div class="reader-home-progress-fill" id="homeGoalPolReadFill" style="width: 0%;"></div>
+                    </div>
+                  </div>
+                  <div class="reader-home-goal-item">
+                    <div class="reader-home-goal-info">
+                      <span class="goal-item-name">单元演练</span>
+                      <span class="goal-item-progress" id="homeGoalPolUnitStatus">0 / 2 单元</span>
+                    </div>
+                    <div class="goal-item-edit hidden">
+                      <input type="number" id="homeGoalPolUnitInput" min="0" max="20" step="1" value="2">
+                      <span>单元</span>
+                    </div>
+                    <div class="reader-home-progress-bar mini">
+                      <div class="reader-home-progress-fill" id="homeGoalPolUnitFill" style="width: 0%;"></div>
                     </div>
                   </div>
                 </div>
