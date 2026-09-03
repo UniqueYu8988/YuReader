@@ -954,15 +954,30 @@ def logs_payload(selected_day: str = "") -> dict:
         unified_result = unified_review_result(day) if day in learning_files else None
         legacy_state = load_workflow_state(day)
         results = legacy_state.get("subjects") if isinstance(legacy_state.get("subjects"), dict) else {}
+        summary_text = str((unified_result or {}).get("summary") or "").strip() if unified_result is not None else str(legacy_state.get("summary") or "").strip()
+        summary_preview = (summary_text[:100] + "…") if len(summary_text) > 100 else summary_text
+        day_activities = activity_by_day.get(day, [])
+        day_duration = sum(max(0, int(item.get("duration_seconds") or 0)) for item in day_activities if isinstance(item, dict))
+        day_domains = {"medicine": 0, "politics": 0, "english": 0, "other": 0}
+        for item in day_activities:
+            if isinstance(item, dict):
+                dom = str(item.get("domain") or "")
+                dom_key = dom if dom in day_domains else "other"
+                day_domains[dom_key] += max(0, int(item.get("duration_seconds") or 0))
+
         has_summary = bool(str((unified_result or {}).get("summary") or "").strip()) or bool((unified_result or {}).get("no_text"))
         if not has_summary:
             has_summary = bool(str(legacy_state.get("summary") or "").strip())
+
         entries.append(
             {
                 "date": day,
                 "subject_count": max(activity_subject_count(day), sum(1 for value in results.values() if str(value).strip())),
                 "character_count": len(content),
+                "duration_seconds": day_duration,
+                "domain_totals": day_domains,
                 "has_summary": has_summary,
+                "summary_preview": summary_preview,
                 "updated_at": datetime.fromtimestamp(path.stat().st_mtime).astimezone().isoformat(timespec="seconds"),
                 "automatic": False,
                 "legacy_available": day in daily_files,
@@ -1218,6 +1233,43 @@ def weekly_payload(week: str = "") -> dict:
         source_lines.extend(["", f"## {item['date']}", "", item["content"] or "（当天仅保留活动索引。）"])
     source = "\n".join(source_lines)
     target, storage, uri = weekly_learning_record_target(week)
+
+    total_duration_seconds = sum(item["duration_seconds"] for item in daily_records)
+    total_hours = round(total_duration_seconds / 3600, 1)
+    med_hours = round((weekly_domain_totals.get("medicine") or 0) / 3600, 1)
+    pol_hours = round((weekly_domain_totals.get("politics") or 0) / 3600, 1)
+    eng_hours = round((weekly_domain_totals.get("english") or 0) / 3600, 1)
+
+    prompt_lines = [
+        f"你是一位专业高效的考研深度学习顾问与知识架构师。以下是用户在【{week}】（{start.isoformat()} 至 {end.isoformat()}）的周期学习数据与各日复盘汇总：",
+        "",
+        f"- **总有效学时**：{total_hours} 小时（医学 {med_hours}h · 政治 {pol_hours}h · 英语 {eng_hours}h）",
+        f"- **有效学习天数**：{len(daily_records)} 天 / 7 天",
+        f"- **已完成复盘天数**：{len(summaries)} 天",
+        "",
+        "## 各日复盘与核心笔记沉淀："
+    ]
+    if summaries:
+        for item in summaries:
+            prompt_lines.extend([
+                f"### 📅 {item['date']} 每日复盘：",
+                str(item['summary']).strip(),
+                ""
+            ])
+    else:
+        prompt_lines.append("（本周主要进行了做题与通读，未保留独立日文字总结）")
+
+    prompt_lines.extend([
+        "",
+        "---",
+        "请根据上述全周学习轨迹与各日思考，为用户生成一份深刻、结构清晰且高度提炼的【周度知识织网与成长复盘周报】：",
+        "1. **【本周全科知识脉络重构】**：提炼医学各系统、政治各专题、英语重难点的核心关联框架；",
+        "2. **【薄弱盲点与高频遗忘项诊断】**：指出本周容易产生认知模糊、解题卡壳或需要重点回炉强化的环节；",
+        "3. **【下周攻坚节奏与突破建议】**：给出具体到学科的下一阶段复习与做题侧重；",
+        "请直接输出 Markdown 内容，语言干练犀利、富于学术洞见，适合直接沉淀为独立周报。"
+    ])
+    ai_weekly_prompt = "\n".join(prompt_lines)
+
     return {
         "week": week,
         "start": start.isoformat(),
@@ -1231,9 +1283,10 @@ def weekly_payload(week: str = "") -> dict:
         ],
         "record_count": len(daily_records),
         "activity_count": sum(item["activity_count"] for item in daily_records),
-        "duration_seconds": sum(item["duration_seconds"] for item in daily_records),
+        "duration_seconds": total_duration_seconds,
         "activity_by_type": weekly_type_totals,
         "activity_by_domain": weekly_domain_totals,
+        "ai_weekly_prompt": ai_weekly_prompt,
         "source_markdown": source,
         "report": report,
         "legacy_report": legacy_report if report_path else "",

@@ -35,6 +35,7 @@ export function hideAllNoteFloats() {
   $("oralFocusNoteFloat")?.classList.add("hidden");
   $("practiceNoteFloat")?.classList.add("hidden");
   $("reviewNoteFloat")?.classList.add("hidden");
+  $("logsNoteFloat")?.classList.add("hidden");
 }
 
 export function setHomeMode() {

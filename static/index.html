@@ -558,7 +558,129 @@
         </div>
       </section>
 
-      <section class="view" id="logsView" data-view="logs"><div class="logs-workspace"><header class="logs-heading"><div><p class="eyebrow">长期记录</p><h2>学习记录</h2><p>每日学习记录、周报与统计都从真实活动中读取。</p></div><div class="logs-heading-actions"><button id="openStatsFromRecords" type="button"><i data-lucide="chart-no-axes-column-increasing"></i><span>查看统计</span></button><button id="openWeeklyReport" type="button"><i data-lucide="calendar-range"></i><span>生成周报</span></button></div></header><section class="logs-list" id="logsList"></section><section class="logs-detail hidden" id="logsDetail"><button class="review-back-link" id="logsBack" type="button"><i data-lucide="arrow-left"></i> 返回记录</button><article class="knowledge-article note-stream" id="logsArticle"></article><a class="note-icon-button" id="logsObsidianLink" href="obsidian://open" aria-label="在 Obsidian 中打开记录"><img src="/assets/obsidian.svg" alt=""></a></section><section class="weekly-report hidden" id="weeklyReport"><button class="review-back-link" id="weeklyBack" type="button"><i data-lucide="arrow-left"></i> 返回记录</button><header><p class="eyebrow">阶段归档</p><h2 id="weeklyTitle">周报</h2><p id="weeklyMeta"></p></header><article class="knowledge-article note-stream" id="weeklySource"></article><section class="review-result-editor"><header><div><strong>阶段总结</strong><small id="weeklySaved">粘贴后自动保存为独立周报</small></div><a class="note-icon-button" id="weeklyObsidianLink" href="obsidian://open" aria-label="在 Obsidian 中打开周报"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="weeklySummary" rows="10" placeholder="将侧边栏根据本周每日总结生成的阶段性复习档案粘贴到这里"></textarea></section></section></div></section>
+      <section class="view" id="logsView" data-view="logs">
+        <div class="logs-workspace">
+          <!-- 1. 顶部栏 -->
+          <header class="logs-top-bar">
+            <div class="logs-heading-center">
+              <h2 id="logsTitle">成长档案 · 知识织网</h2>
+              <p id="logsSubtitle">周期性成长脉络与长期学术沉淀</p>
+            </div>
+          </header>
+
+          <!-- 2. 本周周期看板 -->
+          <div class="logs-weekly-card" id="logsWeeklyCard">
+            <div class="logs-weekly-main">
+              <div class="logs-weekly-lead">
+                <span class="eyebrow" id="logsWeekEyebrow">本周概览</span>
+                <div class="logs-weekly-stat-row">
+                  <span class="logs-stat-item">有效时长 <strong id="logsWeekDuration">0 小时</strong></span>
+                  <span class="logs-stat-divider">·</span>
+                  <span class="logs-stat-item">学习天数 <strong id="logsWeekDays">0 天</strong></span>
+                  <span class="logs-stat-divider">·</span>
+                  <span class="logs-stat-item">完成复盘 <strong id="logsWeekSummaries">0 天</strong></span>
+                </div>
+              </div>
+              <div class="logs-overview-actions">
+                <button type="button" class="logs-copy-prompt-btn" id="logsCopyWeeklyPromptBtn">
+                  <i data-lucide="sparkles"></i>
+                  <span>生成周度织网摘要（发给侧边栏）</span>
+                </button>
+                <button type="button" class="logs-open-drawer-btn" id="logsOpenDrawerBtn">
+                  <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                  <span>本周复盘档案</span>
+                </button>
+              </div>
+            </div>
+            <div class="logs-domain-grid" id="logsDomainGrid">
+              <div class="logs-domain-col" data-domain="medicine">
+                <div class="domain-col-header"><i data-lucide="stethoscope"></i><strong>医学</strong></div>
+                <span class="domain-col-metric" id="logsMedMetric">0 小时</span>
+              </div>
+              <div class="logs-domain-col" data-domain="politics">
+                <div class="domain-col-header"><i data-lucide="landmark"></i><strong>政治</strong></div>
+                <span class="domain-col-metric" id="logsPolMetric">0 小时</span>
+              </div>
+              <div class="logs-domain-col" data-domain="english">
+                <div class="domain-col-header"><i data-lucide="languages"></i><strong>英语</strong></div>
+                <span class="domain-col-metric" id="logsEngMetric">0 小时</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 分组切换标签栏 -->
+          <div class="logs-filter-bar">
+            <div class="logs-tabs" id="logsTabs" role="group" aria-label="档案分类">
+              <button type="button" class="filter-tab active" data-logs-filter="all">全部足迹 <span id="logsFilterAllCount">(0)</span></button>
+              <button type="button" class="filter-tab" data-logs-filter="weekly">周报归档 <span id="logsFilterWeeklyCount">(0)</span></button>
+              <button type="button" class="filter-tab" data-logs-filter="daily">每日记录 <span id="logsFilterDailyCount">(0)</span></button>
+              <button type="button" class="filter-tab" data-logs-filter="stats">学时统计</button>
+            </div>
+          </div>
+
+          <!-- 4. 时间轴卡片容器 -->
+          <section class="logs-timeline-section" id="logsTimelineSection">
+            <div class="logs-timeline-container" id="logsTimelineContainer">
+              <!-- Populated dynamically by logs.js -->
+            </div>
+          </section>
+
+          <!-- 5. 内嵌学时统计容器 -->
+          <section class="logs-stats-section hidden" id="logsStatsSection">
+            <div class="logs-stats-wrapper" id="logsStatsWrapper"></div>
+          </section>
+
+          <!-- 6. 详情查看区域 -->
+          <section class="logs-detail hidden" id="logsDetail">
+            <div class="logs-detail-bar">
+              <button class="review-back-link" id="logsBack" type="button"><i data-lucide="arrow-left"></i> 返回档案流</button>
+              <a class="note-icon-button" id="logsObsidianLink" href="obsidian://open" title="在 Obsidian 中打开" aria-label="在 Obsidian 中打开记录"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a>
+            </div>
+            <article class="knowledge-article note-stream" id="logsArticle"></article>
+          </section>
+
+          <!-- 7. 周报汇编查看区域 -->
+          <section class="weekly-report hidden" id="weeklyReport">
+            <div class="logs-detail-bar">
+              <button class="review-back-link" id="weeklyBack" type="button"><i data-lucide="arrow-left"></i> 返回档案流</button>
+              <a class="note-icon-button" id="weeklyObsidianLink" href="obsidian://open" title="在 Obsidian 中打开周报" aria-label="在 Obsidian 中打开周报"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a>
+            </div>
+            <header class="weekly-report-head">
+              <p class="eyebrow">阶段归档汇编</p>
+              <h2 id="weeklyTitle">周报</h2>
+              <p id="weeklyMeta"></p>
+            </header>
+            <article class="knowledge-article note-stream" id="weeklySource"></article>
+          </section>
+
+          <!-- 8. 统一 Obsidian 周报抽屉与悬浮紫晶浮钮 -->
+          <div class="section-note-float logs-note-float hidden" id="logsNoteFloat">
+            <section class="section-note-popover" id="logsNotePopover" role="dialog" aria-hidden="true" aria-label="周度复盘与 AI 知识织网">
+              <header class="section-note-heading">
+                <div>
+                  <p class="eyebrow" id="logsPopoverEyebrow">周度复盘与 AI 总结</p>
+                  <span id="weeklySaved">粘贴侧边栏周报，自动保存</span>
+                </div>
+                <div class="section-note-actions">
+                  <a class="note-icon-button" id="weeklyDrawerObsidian" href="obsidian://open" title="在 Obsidian 中打开周报" aria-label="在 Obsidian 中打开周报">
+                    <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                  </a>
+                  <button class="note-icon-button" id="closeLogsNote" type="button" title="收起周报" aria-label="收起周报">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+              </header>
+              <textarea id="weeklySummary" rows="12" placeholder="在此粘贴侧边栏 Gemini 生成的本周全科知识织网、高频盲区诊断与攻坚建议，自动同步至 Obsidian 独立周报…"></textarea>
+              <footer class="section-note-footer">
+                <span>Markdown · 自动保存为独立周报</span>
+              </footer>
+            </section>
+            <button class="section-note-launcher" id="toggleLogsNoteDock" type="button" aria-label="打开周报笔记" aria-controls="logsNotePopover" aria-expanded="false" title="周报笔记">
+              <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section class="view" id="statsView" data-view="stats">
         <div class="reader-stats-dashboard">

@@ -6,7 +6,7 @@ import { renderEnglishExams } from "./js/domains/english.js";
 import { loadOralFocus, navigateOralFocus, openOralFocusIndex, renderOralFocusDirectory, saveOralFocusNote, scheduleOralFocusNoteSave, setOralFocusNoteOpen, toggleOralFocusChapterAnswers, toggleOralFocusReference } from "./js/modules/oral_focus.js";
 import { finishPracticeSession, renderPracticeQuestion, returnFromPractice, returnFromSubjectivePractice, reviewFirstWrongPracticeQuestion, schedulePracticeAnalysisSave, scheduleSubjectiveSave, setPracticeNoteOpen, submitPracticeAnswer, togglePracticeSessionMap, toggleSubjectiveReference } from "./js/modules/practice.js";
 import { renderHome } from "./js/views/home.js";
-import { loadStats, openLogs, openStats, openWeeklyReport, renderLogsList, scheduleWeeklySave } from "./js/views/logs.js";
+import { loadStats, openLogs, openStats, openWeeklyReport, renderTimelineCards, scheduleWeeklySave, setWeeklyNoteOpen } from "./js/views/logs.js";
 import { closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave } from "./js/views/reader.js";
 import { markReviewNoText, openReview, scheduleDailySummarySave, setReviewNoteOpen } from "./js/views/review.js";
 
@@ -48,7 +48,9 @@ export function bindNavigation() {
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => button.addEventListener("click", () => navigateSection(-1))); [$("readerNextSection"), $("nextSectionLink")].forEach((button) => button.addEventListener("click", () => navigateSection(1)));
   $("toggleSectionNoteDock").addEventListener("click", (event) => state.noteOpen ? closeNotePopover() : openNotePopover(event.currentTarget)); $("closeSectionNote").addEventListener("click", () => closeNotePopover({ restoreFocus: true })); $("sectionNote").addEventListener("input", scheduleNoteSave);
   $("reviewReportBack").addEventListener("click", setHomeMode); $("reviewDailySummary").addEventListener("input", scheduleDailySummarySave); $("reviewMarkNoText").addEventListener("click", markReviewNoText);
-  $("logsBack").addEventListener("click", renderLogsList); $("weeklyBack").addEventListener("click", renderLogsList); $("openWeeklyReport").addEventListener("click", openWeeklyReport); $("openStatsFromRecords").addEventListener("click", openStats); $("statsBackToRecords").addEventListener("click", openLogs); $("weeklySummary").addEventListener("input", scheduleWeeklySave); $("englishExamsBack").addEventListener("click", () => selectLibraryShelf("english")); $("englishExamOverviewBack").addEventListener("click", renderEnglishExams);
+  $("statsBackToRecords")?.addEventListener("click", openLogs);
+  $("englishExamsBack")?.addEventListener("click", () => selectLibraryShelf("english"));
+  $("englishExamOverviewBack")?.addEventListener("click", renderEnglishExams);
   document.querySelectorAll("[data-section-material]").forEach((button) => button.addEventListener("click", () => { state.material = button.dataset.sectionMaterial; renderMaterial(); })); document.addEventListener("click", (event) => { if (!event.target.closest(".reader-toolbar")) closeSectionMenu(); });
   document.addEventListener("keydown", (event) => { if (event.key !== "Escape") return; if (state.oralFocusNoteOpen) { setOralFocusNoteOpen(false); return; } if (state.noteOpen) { closeNotePopover({ restoreFocus: true }); return; } closeSectionMenu(); });
   window.addEventListener("hashchange", applyRouteHash);

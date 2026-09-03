@@ -323,27 +323,456 @@
 .topbar-tool:hover { color: var(--primary-strong); background: var(--primary-soft); }
 .topbar-tool img { display: block; width: 16px; height: 16px; }
 
-.logs-workspace { width: clamp(700px, 68vw, 880px); max-width: 100%; margin: 0 auto; padding: 10px 0 72px; }
-.logs-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 18px 0 24px; border-bottom: 1px solid var(--line-strong); }
-.logs-heading p:last-child, .weekly-report header p:last-child { margin: 8px 0 0; color: var(--text-soft); font-size: 10px; }
-.logs-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 16px; }
-.logs-heading-actions > button { display: inline-flex; width: auto; align-items: center; gap: 8px; padding: 9px 0; border: 0; border-radius: 0; color: var(--text-secondary); background: transparent; box-shadow: none; font-size: 10px; cursor: pointer; }
-.logs-heading-actions > button svg { width: 15px; color: var(--primary); }
-.logs-list { border-bottom: 1px solid var(--line-strong); }
-.log-mail-row { display: grid; width: 100%; grid-template-columns: minmax(180px, 1fr) 100px 90px 16px; gap: 18px; align-items: center; min-height: 72px; padding: 11px 4px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; cursor: pointer; }
-.log-mail-row:hover { background: var(--surface-hover); }
-.log-mail-row > span:first-child { display: grid; gap: 4px; }
-.log-mail-row strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
-.log-mail-row small, .log-mail-row > span:not(:first-child) { color: var(--text-soft); font-size: 9px; }
-.log-mail-row > svg { width: 14px; color: var(--primary); }
-.log-mail-row.weekly { color: var(--text-secondary); }
-.log-section-label { display: flex; align-items: baseline; justify-content: space-between; margin: 30px 4px 8px; color: var(--text-soft); }
-.log-section-label span { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; color: var(--text); font-size: 13px; }
-.log-section-label small { font-size: 9px; letter-spacing: .05em; }
-.logs-detail, .weekly-report { padding-top: 10px; }
-.logs-detail > article, .weekly-report > article { max-width: none; margin-top: 28px; padding: 0; }
-.logs-detail > .note-icon-button { margin-top: 24px; }
-.weekly-report > header { margin-top: 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line-strong); }
+/* ==========================================================================
+   Logs & Records Workspace (成长档案 · 周期复盘)
+   ========================================================================== */
+.logs-workspace {
+  width: clamp(720px, 72vw, 920px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 16px 0 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.logs-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.logs-heading-center h2 {
+  font-family: "Noto Serif SC", STSong, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.logs-heading-center p {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+/* 本周周期看板 */
+.logs-weekly-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 18px 22px;
+  box-shadow: var(--shadow);
+}
+.logs-weekly-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.logs-weekly-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.logs-weekly-lead .eyebrow {
+  margin: 0;
+  font-size: 10px;
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.logs-weekly-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.logs-weekly-stat-row strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+.logs-stat-divider {
+  color: var(--line-strong);
+}
+
+.logs-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.logs-domain-col {
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 10px 14px;
+  transition: border-color 150ms var(--ease-out);
+}
+.logs-domain-col .domain-col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.logs-domain-col[data-domain="medicine"] .domain-col-header svg { color: #039855; }
+.logs-domain-col[data-domain="politics"] .domain-col-header svg { color: #d92d20; }
+.logs-domain-col[data-domain="english"] .domain-col-header svg { color: #175cd3; }
+.logs-domain-col .domain-col-metric {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+/* 按钮组 */
+.logs-overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.logs-copy-prompt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  min-height: 34px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-strong));
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
+  cursor: pointer;
+  transition: all 160ms var(--ease-out);
+}
+.logs-copy-prompt-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-strong));
+  border-color: var(--primary-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(184, 96, 69, 0.15);
+}
+.logs-copy-prompt-btn svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary);
+}
+
+.logs-open-drawer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  min-height: 34px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #6941c6;
+  background: color-mix(in srgb, #9974f8 10%, var(--surface-strong));
+  border: 1px solid color-mix(in srgb, #9974f8 28%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
+  cursor: pointer;
+  transition: all 160ms var(--ease-out);
+}
+.logs-open-drawer-btn:hover {
+  background: color-mix(in srgb, #9974f8 18%, var(--surface-strong));
+  border-color: #7f56d9;
+  color: #53389e;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(153, 116, 248, 0.15);
+}
+.logs-open-drawer-btn img {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+/* 分类标签栏 */
+.logs-filter-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+.logs-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logs-tabs .filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 150ms var(--ease-out);
+}
+.logs-tabs .filter-tab:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.logs-tabs .filter-tab.active {
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  font-weight: 600;
+}
+
+/* 时间轴流式卡片 */
+.logs-timeline-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.logs-timeline-group {
+  margin-bottom: 18px;
+}
+.logs-group-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.logs-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  transition: transform 160ms var(--ease-out), border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.logs-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  box-shadow: 0 4px 16px rgba(20, 20, 19, 0.06);
+}
+.logs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.logs-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logs-card-date {
+  font-family: "Noto Serif SC", STSong, serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.logs-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.logs-pill-badge.weekly {
+  background: color-mix(in srgb, #9974f8 14%, var(--surface));
+  color: #6941c6;
+  border: 1px solid color-mix(in srgb, #9974f8 30%, transparent);
+}
+.logs-pill-badge.summary-done {
+  background: color-mix(in srgb, #12b76a 14%, var(--surface));
+  color: #027a48;
+  border: 1px solid color-mix(in srgb, #12b76a 30%, transparent);
+}
+.logs-pill-badge.activity-only {
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  border: 1px solid var(--line);
+}
+.logs-pill-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.logs-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 140ms var(--ease-out);
+}
+.logs-card-btn:hover {
+  color: var(--primary-strong);
+  border-color: var(--primary);
+  background: var(--surface-hover);
+}
+.logs-card-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.logs-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.logs-card-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.logs-card-domain-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.logs-domain-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+}
+.logs-domain-pill svg {
+  width: 12px;
+  height: 12px;
+}
+.logs-domain-pill.medicine {
+  color: #039855;
+  border-color: color-mix(in srgb, #039855 25%, transparent);
+}
+.logs-domain-pill.politics {
+  color: #d92d20;
+  border-color: color-mix(in srgb, #d92d20 25%, transparent);
+}
+.logs-domain-pill.english {
+  color: #175cd3;
+  border-color: color-mix(in srgb, #175cd3 25%, transparent);
+}
+.logs-card-duration {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.logs-summary-quote {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--primary) 45%, var(--line));
+  background: color-mix(in srgb, var(--surface-muted) 65%, transparent);
+  border-radius: 0 6px 6px 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.logs-summary-quote svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--primary);
+  margin-top: 3px;
+}
+
+/* 详情与周报查看区域 */
+.logs-detail, .weekly-report {
+  padding-top: 8px;
+}
+.logs-detail-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.weekly-report-head {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.weekly-report-head h2 {
+  font-family: "Noto Serif SC", STSong, serif;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.weekly-report-head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.logs-detail > article, .weekly-report > article {
+  max-width: none;
+  padding: 0;
+}
+
+@media (max-width: 680px) {
+  .logs-domain-grid {
+    grid-template-columns: 1fr;
+  }
+  .logs-weekly-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .logs-overview-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .logs-copy-prompt-btn,
+  .logs-open-drawer-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .logs-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .logs-card-actions {
+    width: 100%;
+  }
+  .logs-card-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
 .main-content:has(#homeView.active) { padding-top: 26px; padding-bottom: 40px; }
 .main-content:has(#homeView.active) .topbar { min-height: 38px; margin-bottom: 16px; }

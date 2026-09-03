@@ -74,9 +74,13 @@ class ReviewWorkflowTests(unittest.TestCase):
         year, week, _ = date.fromisoformat(self.day).isocalendar()
         weekly = app.weekly_payload()
         self.assertEqual(weekly["week"], f"{year}-W{week:02d}")
+        self.assertIn("ai_weekly_prompt", weekly)
+        self.assertIn("周度知识织网与成长复盘周报", weekly["ai_weekly_prompt"])
         app.atomic_write(app.WEEKLY_DIR / f"{weekly['week']}.md", "阶段总结")
         logs = app.logs_payload()
         self.assertEqual(logs["entries"][0]["date"], self.day)
+        self.assertIn("duration_seconds", logs["entries"][0])
+        self.assertIn("domain_totals", logs["entries"][0])
         self.assertEqual(logs["weekly_entries"][0]["week"], weekly["week"])
 
 
