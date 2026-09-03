@@ -18,32 +18,84 @@ export function renderOralFocusDirectory() {
     return;
   }
   state.oralFocusSubjectId = subject.id;
-  const type = state.oralFocusTypeFilter;
-  const typeLabel = type === "definition" ? "名词解释" : type === "essay" ? "论述题" : "重点题";
-  const chapters = (subject.chapters || []).map((chapter) => {
-    const items = (chapter.items || []).filter((item) => !type || item.type === type);
+  if (!state.oralFocusTypeFilter) {
+    try {
+      state.oralFocusTypeFilter = localStorage.getItem(ORAL_FOCUS_TYPE_STORAGE_KEY) || "definition";
+    } catch {
+      state.oralFocusTypeFilter = "definition";
+    }
+  }
+  const type = state.oralFocusTypeFilter || "definition";
+  const typeLabel = type === "definition" ? "名词解释" : "简答论述";
+
+  // Filter chapters strictly by type
+  const chapters = (subject.chapters || []).filter((chapter) => {
+    if (chapter.type) return chapter.type === type;
+    return chapter.id.includes(`-${type}-`);
+  }).map((chapter) => {
+    const items = chapter.items || [];
     return { ...chapter, filtered_items: items, completed: items.filter((item) => item.completed).length };
   }).filter((chapter) => chapter.filtered_items.length);
+
   const filteredItems = chapters.flatMap((chapter) => chapter.filtered_items);
   const completedCount = filteredItems.filter((item) => item.completed).length;
+
   $("oralFocusDirectoryTitle").textContent = `${subject.short_title || subject.title} · ${typeLabel}`;
   $("oralFocusSummary").textContent = `${formatInteger(completedCount)} / ${formatInteger(filteredItems.length)}`;
+
+  // Subject tabs
   $("oralFocusSubjectTabs").innerHTML = subjects.map((entry) => {
-    const items = (entry.chapters || []).flatMap((chapter) => chapter.items || []).filter((item) => !type || item.type === type);
+    const items = (entry.chapters || []).filter((ch) => ch.type === type || ch.id.includes(`-${type}-`)).flatMap((ch) => ch.items || []);
     const completed = items.filter((item) => item.completed).length;
     return `<button type="button" class="${entry.id === subject.id ? "active" : ""}" data-oral-subject="${escapeHtml(entry.id)}" aria-pressed="${entry.id === subject.id ? "true" : "false"}"><strong>${escapeHtml(entry.short_title)}</strong><small>${formatInteger(completed)} / ${formatInteger(items.length)}</small></button>`;
   }).join("");
+
+  // Type filter tabs counts
+  const defItems = (subject.chapters || []).filter((ch) => ch.type === "definition" || ch.id.includes("-definition-")).flatMap((ch) => ch.items || []);
+  const essayItems = (subject.chapters || []).filter((ch) => ch.type === "essay" || ch.id.includes("-essay-")).flatMap((ch) => ch.items || []);
+  const defCountEl = $("oftDefCount");
+  if (defCountEl) defCountEl.textContent = formatInteger(defItems.length);
+  const essayCountEl = $("oftEssayCount");
+  if (essayCountEl) essayCountEl.textContent = formatInteger(essayItems.length);
+
+  document.querySelectorAll("[data-oral-filter-type]").forEach((btn) => {
+    const isActive = btn.dataset.oralFilterType === type;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
   $("oralFocusChapterPanel").classList.add("hidden");
   $("oralFocusChapterList").classList.remove("hidden");
   $("oralFocusChapterList").innerHTML = chapters.length ? chapters.map((chapter) => `<button class="oral-focus-chapter-entry" type="button" data-oral-chapter="${escapeHtml(chapter.id)}"><span class="oral-focus-chapter-number">${String(chapter.order || 0).padStart(2, "0")}</span><span><strong>${escapeHtml(chapter.title || "未分章")}</strong><small>${formatInteger(chapter.completed)} / ${formatInteger(chapter.filtered_items.length)}</small></span><i data-lucide="arrow-right"></i></button>`).join("") : `<div class="knowledge-index-empty"><strong>本科暂无${typeLabel}</strong><span>切换其他学科，或返回医学学习选择另一类资料。</span></div>`;
+
   $("oralFocusSubjectTabs").querySelectorAll("[data-oral-subject]").forEach((button) => button.addEventListener("click", () => { state.oralFocusSubjectId = button.dataset.oralSubject; state.oralFocusChapterId = ""; state.oralFocusChapter = null; renderOralFocusDirectory(); window.scrollTo({ top: 0, behavior: "auto" }); }));
   $("oralFocusChapterList").querySelectorAll("[data-oral-chapter]").forEach((button) => button.addEventListener("click", () => openOralFocusChapter(button.dataset.oralChapter)));
+  $("oralFocusTypeFilterBar")?.querySelectorAll("[data-oral-filter-type]").forEach((btn) => btn.addEventListener("click", () => {
+    state.oralFocusTypeFilter = btn.dataset.oralFilterType;
+    try { localStorage.setItem(ORAL_FOCUS_TYPE_STORAGE_KEY, state.oralFocusTypeFilter); } catch {}
+    state.oralFocusChapterId = "";
+    state.oralFocusChapter = null;
+    renderOralFocusDirectory();
+  }));
+
   refreshIcons();
 }
 
 export function oralFocusAnswerHtml(item) {
+  if (item.answer_status === "source_missing") {
+    return `<div class="oral-focus-source-missing-box">
+      <div class="of-missing-head">
+        <i data-lucide="info"></i>
+        <strong>原资料未提供参考答案</strong>
+      </div>
+      <p>该考点在原始整理讲义中未附带完整解答（仅有题名或中文译名）。建议使用右侧 Obsidian 笔记与侧边栏 AI 查阅官方教材进行理解补充。</p>
+    </div>`;
+  }
+  const tagsHtml = (item.source_tags && item.source_tags.length)
+    ? `<div class="oral-focus-tags-row">${item.source_tags.map((t) => `<span class="oral-focus-source-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+    : "";
   const translation = item.definition_translation ? `<div class="oral-focus-translation"><small>中文译名</small><strong>${escapeHtml(item.definition_translation)}</strong></div>` : "";
-  return `${translation}<article class="knowledge-article oral-focus-answer-copy">${renderMarkdown(item.answer_markdown || "暂无可识别的标准答案。")}</article>`;
+  return `${tagsHtml}${translation}<article class="knowledge-article oral-focus-answer-copy">${renderMarkdown(item.answer_markdown || "暂无可识别的标准答案。")}</article>`;
 }
 
 export function enhanceOralFocusSource(root) {
@@ -90,8 +142,17 @@ export function renderOralFocusChapterCards(focusItemId = "") {
     const showBody = state.oralFocusReferenceVisible || noteExpanded;
     const note = item.progress?.memory_note || "";
     const star = item.star_level ? `<span class="oral-focus-card-stars" aria-label="${item.star_level} 星">${"★".repeat(item.star_level)}</span>` : "";
+    const tags = (item.source_tags && item.source_tags.length)
+      ? `<div class="oral-focus-card-tags">${item.source_tags.map((t) => `<span class="of-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+      : "";
+    const missingBadge = item.answer_status === "source_missing"
+      ? `<span class="of-badge-missing" title="原资料未提供参考答案">原资料无答案</span>`
+      : "";
+    const bilingualHint = item.type === "definition" && /^[A-Za-z]/.test(item.title || "")
+      ? `<small class="of-bilingual-hint">先说出中文译名，再解释</small>`
+      : "";
     const body = !showBody ? "" : `<div class="oral-focus-card-body"><nav class="oral-focus-card-tabs" aria-label="答案与笔记"><button type="button" data-oral-card-mode="answer" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "answer" ? "active" : ""}" ${state.oralFocusReferenceVisible ? "" : "disabled"}>答案</button><button type="button" data-oral-card-mode="note" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "note" ? "active" : ""}">笔记</button></nav><section class="${mode === "answer" ? "" : "hidden"}" data-oral-card-answer>${state.oralFocusReferenceVisible ? oralFocusAnswerHtml(item) : ""}</section><section class="oral-focus-card-note ${mode === "note" ? "" : "hidden"}" data-oral-card-note>${note.trim() ? `<article class="knowledge-article">${renderMarkdown(note)}</article>` : `<p>这道题还没有补充笔记。</p>`}</section></div>`;
-    return `<article class="oral-focus-study-card${focusItemId === item.id ? " is-focused" : ""}" data-oral-card="${escapeHtml(item.id)}"><header><span>${String(index + 1).padStart(2, "0")}</span><div><h4>${escapeHtml(item.title)}</h4>${item.type === "definition" && /^[A-Za-z]/.test(item.title || "") ? `<small>先说出中文译名，再解释</small>` : ""}</div><div class="oral-focus-card-tools">${star}<button type="button" data-oral-note-open="${escapeHtml(item.id)}" aria-label="编辑《${escapeHtml(item.title)}》的 Obsidian 笔记" title="补充笔记"><img src="/assets/obsidian.svg" alt=""></button></div></header>${body}</article>`;
+    return `<article class="oral-focus-study-card${focusItemId === item.id ? " is-focused" : ""}" data-oral-card="${escapeHtml(item.id)}"><header><span>${String(index + 1).padStart(2, "0")}</span><div><h4>${escapeHtml(item.title)}</h4>${bilingualHint}${tags}</div><div class="oral-focus-card-tools">${missingBadge}${star}<button type="button" data-oral-note-open="${escapeHtml(item.id)}" aria-label="编辑《${escapeHtml(item.title)}》的 Obsidian 笔记" title="补充笔记"><img src="/assets/obsidian.svg" alt=""></button></div></header>${body}</article>`;
   }).join("");
   $("oralFocusItems").querySelectorAll("[data-oral-card-mode]").forEach((button) => button.addEventListener("click", () => { state.oralFocusCardModes.set(button.dataset.oralCardId, button.dataset.oralCardMode); renderOralFocusChapterCards(button.dataset.oralCardId); }));
   $("oralFocusItems").querySelectorAll("[data-oral-note-open]").forEach((button) => button.addEventListener("click", () => openOralFocusCardNote(button.dataset.oralNoteOpen)));
@@ -163,13 +224,22 @@ export async function openOralFocusIndex(subjectId = "", type = null) {
   $("oralFocusQuestion").classList.add("hidden"); $("oralFocusDirectory").classList.remove("hidden");
   try {
     if (!state.oralFocus?.available) await loadOralFocus();
-    if ((subjectId && subjectId !== state.oralFocusSubjectId) || (type !== null && type !== state.oralFocusTypeFilter)) {
-      state.oralFocusChapterId = ""; state.oralFocusChapter = null;
-    }
-    if (subjectId) state.oralFocusSubjectId = subjectId;
     if (type !== null) {
+      if (type !== state.oralFocusTypeFilter) {
+        state.oralFocusChapterId = ""; state.oralFocusChapter = null;
+      }
       state.oralFocusTypeFilter = type;
       try { localStorage.setItem(ORAL_FOCUS_TYPE_STORAGE_KEY, type); } catch {}
+    } else if (!state.oralFocusTypeFilter) {
+      try {
+        state.oralFocusTypeFilter = localStorage.getItem(ORAL_FOCUS_TYPE_STORAGE_KEY) || "definition";
+      } catch {
+        state.oralFocusTypeFilter = "definition";
+      }
+    }
+    if (subjectId && subjectId !== state.oralFocusSubjectId) {
+      state.oralFocusChapterId = ""; state.oralFocusChapter = null;
+      state.oralFocusSubjectId = subjectId;
     }
     renderOralFocusDirectory();
   } catch {
@@ -202,7 +272,7 @@ export async function toggleOralFocusReference() {
     const revealed = await response.json();
     state.oralFocusItem = { ...revealed, progress: item.progress };
   }
-  renderOralFocusQuestion();
+  renderOralFocusChapterCards();
 }
 
 export async function saveOralFocusNote() {
@@ -283,7 +353,13 @@ export function renderOralFlashcard() {
   }
   if ($("fcCardType")) $("fcCardType").textContent = item.type === "definition" ? "名词解释" : "简答论述";
   if ($("fcCardSubject")) $("fcCardSubject").textContent = state.oralFocusChapter?.subject?.title || "医学全书";
-  if ($("fcFrontStem")) $("fcFrontStem").textContent = item.title || "";
+  if ($("fcFrontStem")) {
+    const isBilingual = item.type === "definition" && /^[A-Za-z]/.test(item.title || "");
+    const tagsHtml = (item.source_tags && item.source_tags.length)
+      ? `<div class="fc-front-tags">${item.source_tags.map((t) => `<span class="of-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+      : "";
+    $("fcFrontStem").innerHTML = `<div class="fc-front-title">${escapeHtml(item.title || "")}</div>${isBilingual ? `<div class="fc-bilingual-hint">先在心中回忆【中文译名】与【核心定义】</div>` : ""}${tagsHtml}`;
+  }
   if ($("fcBackContent")) {
     $("fcBackContent").innerHTML = oralFocusAnswerHtml(item);
     enhanceOralFocusSource($("fcBackContent"));

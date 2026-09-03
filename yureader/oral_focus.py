@@ -446,14 +446,18 @@ def oral_focus_index_payload() -> dict:
                 public_items.append(
                     {
                         key: item.get(key)
-                        for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image")
+                        for key in (
+                            "id", "order", "type", "type_label", "title", "star_level",
+                            "character_count", "has_table", "has_unreviewed_image",
+                            "definition_translation", "source_tags", "answer_status"
+                        )
                     }
                     | {"mastery": str(state.get("mastery") or "unseen"), "completed": completed}
                 )
             chapters.append(
                 {
                     key: chapter.get(key)
-                    for key in ("id", "order", "title", "definition_count", "essay_count", "starred_count")
+                    for key in ("id", "order", "title", "type", "definition_count", "essay_count", "starred_count")
                 }
                 | {"items": public_items}
             )
@@ -487,12 +491,20 @@ def _oral_focus_public_record(record: dict, progress: dict, *, reveal: bool = Fa
     _note_target, note_storage, note_uri = oral_focus_notes_target(subject)
     public = {
         key: record.get(key)
-        for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image", "source_files", "source_paragraph")
+        for key in (
+            "id", "order", "type", "type_label", "title", "star_level",
+            "character_count", "has_table", "has_unreviewed_image",
+            "source_files", "source_paragraph"
+        )
     }
+    public["definition_translation"] = str(record.get("definition_translation") or "")
+    public["source_tags"] = list(record.get("source_tags") or [])
+    public["source_title_raw"] = str(record.get("source_title_raw") or record.get("title") or "")
+    public["answer_status"] = str(record.get("answer_status") or "available")
     public.update(
         {
             "subject": {key: subject.get(key) for key in ("id", "short_title", "title", "book_id")},
-            "chapter": {key: chapter.get(key) for key in ("id", "order", "title")},
+            "chapter": {key: chapter.get(key) for key in ("id", "order", "title", "type")},
             "progress": {
                 "answer": str(progress.get("answer") or ""),
                 "memory_note": str(progress.get("memory_note") or ""),
@@ -506,7 +518,6 @@ def _oral_focus_public_record(record: dict, progress: dict, *, reveal: bool = Fa
     )
     if reveal:
         public["answer_markdown"] = str(record.get("answer_markdown") or "")
-        public["definition_translation"] = str(record.get("definition_translation") or "")
     return public
 
 
@@ -532,6 +543,17 @@ def oral_focus_chapter_payload(subject_id: str, chapter_id: str, item_type: str,
         raise ValueError("oral focus subject not found")
     chapter = next((entry for entry in subject.get("chapters") or [] if entry.get("id") == chapter_id), None)
     if not chapter:
+        m = re.match(r"^([a-z-]+)-(ch\d+)$", chapter_id)
+        if m:
+            base_subj, ch_num = m.groups()
+            preferred = item_type or "definition"
+            alt = "essay" if preferred == "definition" else "definition"
+            candidate_id = f"{base_subj}-{preferred}-{ch_num}"
+            chapter = next((entry for entry in subject.get("chapters") or [] if entry.get("id") == candidate_id), None)
+            if not chapter:
+                candidate_id = f"{base_subj}-{alt}-{ch_num}"
+                chapter = next((entry for entry in subject.get("chapters") or [] if entry.get("id") == candidate_id), None)
+    if not chapter:
         raise ValueError("oral focus chapter not found")
     progress_items = load_oral_focus_progress().get("items", {})
     public_items = []
@@ -543,7 +565,7 @@ def oral_focus_chapter_payload(subject_id: str, chapter_id: str, item_type: str,
             public_items.append(_oral_focus_public_record(record, progress_items.get(record["id"], {}), reveal=reveal))
     return {
         "subject": {key: subject.get(key) for key in ("id", "short_title", "title", "book_id")},
-        "chapter": {key: chapter.get(key) for key in ("id", "order", "title")},
+        "chapter": {key: chapter.get(key) for key in ("id", "order", "title", "type")},
         "type": item_type,
         "reference_revealed": bool(reveal),
         "items": public_items,

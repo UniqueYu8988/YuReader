@@ -223,5 +223,103 @@ class OralFocusRuntimeTests(unittest.TestCase):
         self.assertIn("从 Gemini 整理的新笔记", note)
 
 
+class OralFocusContentRegressionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.content_path = ROOT / "data" / "oral-focus" / "content.json"
+        cls.archive_path = ROOT / "data" / "oral-focus" / "archive" / "content-pre-cleanup-20260904-01.json"
+        with cls.content_path.open("r", encoding="utf-8") as f:
+            cls.content = json.load(f)
+        with cls.archive_path.open("r", encoding="utf-8") as f:
+            cls.archive = json.load(f)
+        cls.all_items = [
+            item
+            for s in cls.content.get("subjects", [])
+            for ch in s.get("chapters", [])
+            for item in ch.get("items", [])
+        ]
+        cls.archive_ids = {
+            item["id"]
+            for s in cls.archive.get("subjects", [])
+            for ch in s.get("chapters", [])
+            for item in ch.get("items", [])
+        }
+
+    def test_total_item_count_and_id_uniqueness(self):
+        self.assertEqual(len(self.all_items), 2216)
+        all_ids = [item["id"] for item in self.all_items]
+        self.assertEqual(len(set(all_ids)), 2216, "Item IDs must be unique across entire dataset")
+
+    def test_original_1869_ids_preserved(self):
+        current_ids = {item["id"] for item in self.all_items}
+        missing_ids = self.archive_ids - current_ids
+        self.assertEqual(len(missing_ids), 0, f"Must preserve all 1869 original IDs; missing: {missing_ids}")
+
+    def test_no_empty_titles(self):
+        for item in self.all_items:
+            self.assertTrue(bool(item.get("title") and item["title"].strip()), f"Empty title in {item['id']}")
+
+    def test_no_stars_or_tags_polluting_titles(self):
+        for item in self.all_items:
+            title = item.get("title", "")
+            self.assertNotIn("★", title, f"Star leaked in title: {item['id']}")
+            self.assertNotIn("＊", title, f"Star leaked in title: {item['id']}")
+            for tag in item.get("source_tags", []):
+                self.assertNotIn(f"[{tag}]", title, f"Source tag leaked in title: {title}")
+                self.assertNotIn(f"（{tag}）", title, f"Source tag leaked in title: {title}")
+
+    def test_source_missing_explicitly_flagged(self):
+        missing_items = [item for item in self.all_items if item.get("answer_status") == "source_missing"]
+        self.assertEqual(len(missing_items), 6, f"Expected 6 source_missing items, found {len(missing_items)}")
+        expected_missing_ids = {
+            "oral-focus-1cd619d8712d31dd",
+            "oral-focus-510dbec59e1b3eb0",
+            "oral-focus-a19d350ab86699c9",
+            "oral-focus-3c95532097d77397",
+            "oral-focus-c4dce0f486fc286f",
+            "oral-focus-864f08fabf461b1a",
+        }
+        actual_missing_ids = {item["id"] for item in missing_items}
+        self.assertEqual(actual_missing_ids, expected_missing_ids)
+
+    def test_three_knowledge_images_published(self):
+        target_ids = {
+            "oral-focus-a671a5a6a4e3e50c",
+            "oral-focus-57c5c2f94117daae",
+            "oral-focus-78c0e3923626e8f6",
+        }
+        for item_id in target_ids:
+            item = next(it for it in self.all_items if it["id"] == item_id)
+            self.assertFalse(item.get("has_unreviewed_image"), f"Should not have unreviewed image: {item_id}")
+            self.assertIn(f"/assets/oral-focus/{item_id}.jpg", item.get("answer_markdown", ""))
+            img_file = ROOT / "static" / "assets" / "oral-focus" / f"{item_id}.jpg"
+            self.assertTrue(img_file.is_file(), f"Image file missing on disk: {img_file}")
+            self.assertGreater(img_file.stat().st_size, 20000, "Image file size should be substantial")
+
+        for item in self.all_items:
+            self.assertNotIn("尚待人工确认后发布", item.get("answer_markdown", ""))
+
+    def test_independent_definition_and_essay_chapters(self):
+        for subject in self.content.get("subjects", []):
+            for chapter in subject.get("chapters", []):
+                ch_id = chapter["id"]
+                ch_type = chapter.get("type")
+                if "-definition-" in ch_id:
+                    self.assertEqual(ch_type, "definition")
+                    self.assertTrue(all(it["type"] == "definition" for it in chapter.get("items", [])))
+                elif "-essay-" in ch_id:
+                    self.assertEqual(ch_type, "essay")
+                    self.assertTrue(all(it["type"] == "essay" for it in chapter.get("items", [])))
+
+    def test_legacy_chapter_mapping_and_new_fields(self):
+        payload = app.oral_focus_chapter_payload("oral-surgery", "oral-surgery-ch01", "definition")
+        self.assertIn("definition", payload["chapter"]["id"])
+        self.assertTrue(len(payload["items"]) > 0)
+        first_item = payload["items"][0]
+        self.assertIn("answer_status", first_item)
+        self.assertIn("source_tags", first_item)
+        self.assertIn("definition_translation", first_item)
+
+
 if __name__ == "__main__":
     unittest.main()

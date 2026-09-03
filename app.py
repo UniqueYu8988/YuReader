@@ -485,6 +485,10 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 content_type = "image/svg+xml"
             elif candidate.suffix == ".png":
                 content_type = "image/png"
+            elif candidate.suffix in {".jpg", ".jpeg"}:
+                content_type = "image/jpeg"
+            elif candidate.suffix == ".webp":
+                content_type = "image/webp"
             self.send_text(candidate.read_bytes(), content_type)
             return
         self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)

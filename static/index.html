@@ -349,6 +349,18 @@
               <div><h2 id="oralFocusDirectoryTitle">口腔重点</h2><span id="oralFocusSummary">0 / 0</span></div>
             </header>
             <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
+            <div class="oral-focus-type-filter-bar" id="oralFocusTypeFilterBar" role="tablist" aria-label="题型筛选">
+              <button type="button" class="oft-tab active" data-oral-filter-type="definition" role="tab" aria-selected="true">
+                <i data-lucide="sparkles"></i>
+                <span>名词解释</span>
+                <span class="oft-count" id="oftDefCount">0</span>
+              </button>
+              <button type="button" class="oft-tab" data-oral-filter-type="essay" role="tab" aria-selected="false">
+                <i data-lucide="file-text"></i>
+                <span>简答论述</span>
+                <span class="oft-count" id="oftEssayCount">0</span>
+              </button>
+            </div>
             <div class="oral-focus-chapter-list" id="oralFocusChapterList"></div>
             <section class="oral-focus-chapter-panel hidden" id="oralFocusChapterPanel" aria-label="章节题卡">
               <header class="oral-focus-chapter-head">
