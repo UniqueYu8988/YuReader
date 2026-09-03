@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import app  # noqa: E402
-from yureader.oral_focus import SUBJECT_SOURCES, build_dataset  # noqa: E402
+from yureader.oral_focus import SUBJECT_SOURCES, build_dataset, normalize_definition_title  # noqa: E402
 
 
 class OralFocusHandler(app.ReaderHandler):
@@ -76,10 +76,22 @@ class OralFocusImportTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["table_item_count"], 5)
         self.assertGreaterEqual(payload["summary"]["excluded_promotion_blocks"], 5)
         oral_surgery = payload["subjects"][0]
+        first_definition = next(item for chapter in oral_surgery["chapters"] for item in chapter["items"] if item["type"] == "definition")
+        self.assertEqual(first_definition["title"], "测试术语")
+        self.assertEqual(first_definition["aliases"], ["test term"])
+        self.assertEqual(first_definition["source_title"], "test term：测试术语")
+        self.assertEqual(payload["summary"]["normalized_definition_title_count"], 5)
         first_essay = next(item for chapter in oral_surgery["chapters"] for item in chapter["items"] if item["type"] == "essay")
         self.assertIn("| 项目 | 内容 |", first_essay["answer_markdown"])
         self.assertIn("上一卷的续文", first_essay["answer_markdown"])
         self.assertNotIn("银河研旅", json.dumps(payload, ensure_ascii=False))
+
+    def test_definition_title_normalization_is_narrow_and_source_preserving(self):
+        self.assertEqual(normalize_definition_title("anesthesia：麻醉"), ("麻醉", "anesthesia"))
+        self.assertEqual(normalize_definition_title("Vesicle/blister：疱"), ("疱", "Vesicle/blister"))
+        self.assertEqual(normalize_definition_title("Ante's law: Ante 法则"), ("Ante 法则", "Ante's law"))
+        self.assertEqual(normalize_definition_title("牙根拔除术（exodontia）"), ("牙根拔除术（exodontia）", ""))
+        self.assertEqual(normalize_definition_title("guided tissue regeneration, GTR"), ("guided tissue regeneration, GTR", ""))
 
 
 class OralFocusRuntimeTests(unittest.TestCase):

@@ -120,6 +120,17 @@ def split_embedded_definition(title: str) -> tuple[str, str]:
     return value, ""
 
 
+def normalize_definition_title(title: str) -> tuple[str, str]:
+    """Prefer the Chinese term in bilingual OCR headings and retain the English alias."""
+    value = str(title or "").strip()
+    match = re.match(r"^([A-Za-z][^：:]*?)\s*[：:]\s*(.*[\u3400-\u9fff].*)$", value)
+    if not match:
+        return value, ""
+    english_alias = re.sub(r"\s+", " ", match.group(1)).strip()
+    chinese_title = re.sub(r"\s+", " ", match.group(2)).strip(" ：:")
+    return chinese_title or value, english_alias
+
+
 def table_markdown(table: object) -> str:
     rows: list[list[str]] = []
     for row in getattr(table, "rows", []):
@@ -165,6 +176,7 @@ def build_dataset(source_dir: Path | str) -> dict:
     warnings: list[dict] = []
     excluded_promotions = 0
     image_markers = 0
+    normalized_definition_titles = 0
 
     for subject_config in SUBJECT_SOURCES:
         chapter_map: dict[int, dict] = {}
@@ -243,11 +255,16 @@ def build_dataset(source_dir: Path | str) -> dict:
                                 current_chapter = chapter_map[number]
                             title, stars = clean_question_title(question_match.group(2))
                             embedded_answer = ""
+                            source_title = title
+                            english_alias = ""
                             if item_type == "definition":
                                 title, embedded_answer = split_embedded_definition(title)
-                            duplicate_key = (int(current_chapter["order"]), title)
+                                source_title = title
+                                title, english_alias = normalize_definition_title(title)
+                                normalized_definition_titles += int(bool(english_alias))
+                            duplicate_key = (int(current_chapter["order"]), source_title)
                             duplicate_titles[duplicate_key] = duplicate_titles.get(duplicate_key, 0) + 1
-                            item_id = "oral-focus-" + _stable_id(subject_config["id"], item_type, current_chapter["id"], title, duplicate_titles[duplicate_key])
+                            item_id = "oral-focus-" + _stable_id(subject_config["id"], item_type, current_chapter["id"], source_title, duplicate_titles[duplicate_key])
                             current_item = {
                                 "id": item_id,
                                 "type": item_type,
@@ -262,6 +279,9 @@ def build_dataset(source_dir: Path | str) -> dict:
                                 "_has_table": False,
                                 "_has_image": False,
                             }
+                            if english_alias:
+                                current_item["aliases"] = [english_alias]
+                                current_item["source_title"] = source_title
                             expected_question += 1
                             continue
                         if current_item and text:
@@ -306,6 +326,7 @@ def build_dataset(source_dir: Path | str) -> dict:
             "unreviewed_image_item_count": sum(item["has_unreviewed_image"] for subject in subjects for chapter in subject["chapters"] for item in chapter["items"]),
             "excluded_promotion_blocks": excluded_promotions,
             "image_markers": image_markers,
+            "normalized_definition_title_count": normalized_definition_titles,
         },
         "warnings": warnings,
         "subjects": subjects,
