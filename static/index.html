@@ -43,12 +43,18 @@
         <button class="nav-item" type="button" id="reviewNav" title="回顾"><i data-lucide="history"></i><span>回顾</span></button>
         <button class="nav-item" type="button" id="logsNav" title="记录"><i data-lucide="mails"></i><span>记录</span></button>
       </nav>
+      <div class="side-nav-bottom">
+        <button class="nav-item theme-toggle" id="themeToggle" type="button" aria-label="切换夜间模式" title="切换夜间模式" aria-pressed="false">
+          <i data-lucide="moon"></i>
+          <span>切换主题</span>
+        </button>
+      </div>
     </aside>
 
     <main class="main-content wide-layout">
       <header class="topbar">
         <h1 class="reader-page-title" id="pageTitle">今日学习</h1>
-        <div class="topbar-actions"><a class="topbar-tool" id="globalObsidian" href="obsidian://open" title="打开 Obsidian" aria-label="打开 Obsidian"><img src="/assets/obsidian.svg" alt=""></a><button class="theme-toggle" id="themeToggle" type="button" aria-label="切换到夜间模式" title="切换到夜间模式" aria-pressed="false"><i data-lucide="moon"></i></button><span class="reader-local-state" id="syncState"><i data-lucide="circle-check"></i> 本地</span></div>
+        <div class="topbar-actions"></div>
       </header>
 
       <section class="view active" id="homeView" data-view="home">
