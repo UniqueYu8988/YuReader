@@ -71,8 +71,7 @@
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="学习库">
             <header class="learning-center-header">
-              <div class="learning-center-intro"><p class="eyebrow">学习库</p><h2 id="learningCenterTitle">医学</h2><p id="learningCenterDescription">教材、名词解释与论述。</p></div>
-              <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><strong>医学</strong></button><button type="button" data-shelf="politics"><strong>政治</strong></button><button type="button" data-shelf="english"><strong>英语</strong></button></nav>
+              <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button></nav>
             </header>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习库还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
             <section class="english-exams hidden" id="englishExams" aria-label="历年英语真题">
@@ -135,10 +134,11 @@
           <section class="oral-focus-directory" id="oralFocusDirectory">
             <header class="oral-focus-lead">
               <button class="review-back-link" id="oralFocusBackToLibrary" type="button"><i data-lucide="arrow-left"></i> 返回医学学习库</button>
-              <div><p class="eyebrow">医学 · 口腔重点</p><h2>一页一道题</h2><p id="oralFocusSummary">按学科和章节进入，逐题理解、口述与记忆。</p></div>
+              <div><h2 id="oralFocusDirectoryTitle">口腔重点</h2><span id="oralFocusSummary">0 / 0</span></div>
             </header>
             <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
-            <div class="oral-focus-chapters" id="oralFocusChapters"></div>
+            <div class="oral-focus-question-list" id="oralFocusItems"></div>
+            <nav class="oral-focus-list-pagination" aria-label="题目列表翻页"><button type="button" id="oralFocusListPrevious"><i data-lucide="arrow-left"></i><span>上一页</span></button><span id="oralFocusListPosition">1 / 1</span><button type="button" id="oralFocusListNext"><span>下一页</span><i data-lucide="arrow-right"></i></button></nav>
           </section>
 
           <section class="oral-focus-question hidden" id="oralFocusQuestion" aria-label="口腔重点单题学习">
@@ -147,30 +147,15 @@
               <div class="oral-focus-question-meta"><span id="oralFocusQuestionType">名词解释</span><span id="oralFocusQuestionStars"></span><span id="oralFocusQuestionLocation"></span></div>
             </header>
             <article class="oral-focus-card">
-              <p class="eyebrow">当前题目</p>
               <h2 id="oralFocusQuestionTitle"></h2>
-              <div class="oral-focus-source-note" id="oralFocusSourceNote"></div>
-              <div class="oral-focus-ai-actions" aria-label="Gemini 侧边栏提示词">
-                <button type="button" data-oral-prompt="understand"><i data-lucide="sparkles"></i><span>理解这道题</span></button>
-                <button type="button" data-oral-prompt="recall"><i data-lucide="mic"></i><span>闭卷口述</span></button>
-                <button class="hidden" type="button" data-oral-prompt="grade" id="oralFocusGradePrompt"><i data-lucide="scan-text"></i><span>按点批改</span></button>
-              </div>
             </article>
-            <section class="oral-focus-editor">
-              <header><div><strong>我的作答</strong><small id="oralFocusSaved">输入后自动保存</small></div></header>
-              <textarea id="oralFocusAnswer" rows="9" placeholder="先闭卷写下或口述自己的答案，再查看参考答案"></textarea>
-              <button class="primary-button oral-focus-reveal" id="oralFocusReveal" type="button"><span>显示参考答案</span><i data-lucide="arrow-down"></i></button>
+            <section class="oral-focus-reference" id="oralFocusReference">
+              <header><h3>标准答案</h3><button class="oral-focus-answer-toggle" id="oralFocusReferenceToggle" type="button" role="switch" aria-checked="false"><span>显示答案</span><i aria-hidden="true"></i></button></header>
+              <article class="knowledge-article hidden" id="oralFocusReferenceBody"></article>
             </section>
-            <section class="oral-focus-reference hidden" id="oralFocusReference">
-              <header><div><p class="eyebrow">来源参考</p><h3>参考答案</h3></div><span>揭示后可让 Gemini 按评分点批改</span></header>
-              <article class="knowledge-article" id="oralFocusReferenceBody"></article>
-            </section>
-            <section class="oral-focus-editor oral-focus-memory">
-              <header><div><strong>漏点与记忆</strong><small>只保留自己的修正，不复制整段 AI 回答</small></div></header>
-              <textarea id="oralFocusMemory" rows="6" placeholder="漏点、易混点、20秒口述版、下次提示"></textarea>
-              <div class="oral-focus-mastery" id="oralFocusMastery" aria-label="掌握状态">
-                <button type="button" data-mastery="learning">不会</button><button type="button" data-mastery="fuzzy">模糊</button><button type="button" data-mastery="mastered">已掌握</button>
-              </div>
+            <section class="oral-focus-note-content hidden" id="oralFocusNoteContent">
+              <h3>学习笔记</h3>
+              <article class="knowledge-article" id="oralFocusNoteBody"></article>
             </section>
             <nav class="oral-focus-pagination" aria-label="题目切换">
               <button type="button" id="oralFocusPrevious"><i data-lucide="arrow-left"></i><span>上一题</span></button>
@@ -180,6 +165,15 @@
           </section>
         </div>
       </section>
+
+      <div class="section-note-float oral-focus-note-float hidden" id="oralFocusNoteFloat">
+        <section class="section-note-popover" id="oralFocusNotePopover" role="dialog" aria-hidden="true" aria-label="本题笔记">
+          <header class="section-note-heading"><div><p class="eyebrow">本题笔记</p><span id="oralFocusNoteSaved">输入后自动保存</span></div><div class="section-note-actions"><a class="note-icon-button" id="oralFocusObsidian" href="obsidian://open" title="在 Obsidian 中打开" aria-label="在 Obsidian 中打开本题笔记"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a><button class="note-icon-button" id="closeOralFocusNote" type="button" title="收起笔记" aria-label="收起笔记"><i data-lucide="x"></i></button></div></header>
+          <textarea id="oralFocusNote" rows="12" placeholder="粘贴侧边栏 Gemini 中值得保留的内容"></textarea>
+          <footer>Markdown · 自动保存</footer>
+        </section>
+        <button class="section-note-launcher" id="toggleOralFocusNote" type="button" aria-label="打开本题笔记" aria-controls="oralFocusNotePopover" aria-expanded="false" title="本题笔记"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></button>
+      </div>
 
       <section class="view" id="practiceView" data-view="practice">
         <div class="practice-workspace" id="practiceWorkspace">

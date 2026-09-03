@@ -29,6 +29,15 @@ class LearningCenterFrontendContractTests(unittest.TestCase):
         self.assertIn('start >= 21 && start <= 40 : start >= 41', self.javascript)
         self.assertIn('openOralFocusIndex(subjectId = "", type = "")', self.javascript)
 
+    def test_oral_focus_uses_question_first_list_and_simple_question_page(self):
+        self.assertIn("slice(state.oralFocusListPage * 10", self.javascript)
+        self.assertIn('id="oralFocusReferenceToggle"', self.html)
+        self.assertIn('id="oralFocusNote"', self.html)
+        self.assertIn('id="oralFocusNoteBody"', self.html)
+        self.assertIn("renderOralFocusNoteContent", self.javascript)
+        for removed_id in ("oralFocusAnswer", "oralFocusMastery", "oralFocusGradePrompt"):
+            self.assertNotIn(f'id="{removed_id}"', self.html)
+
 
 class DomainFallbackTests(unittest.TestCase):
     """Runtime must safely fall back when existing packages have no domain fields."""

@@ -1,73 +1,72 @@
-.oral-focus-shell { width: min(100%, 980px); margin: 0 auto; padding: 46px 32px 96px; }
-.oral-focus-directory, .oral-focus-question { display: grid; gap: 28px; }
-.oral-focus-lead { display: grid; gap: 26px; padding-bottom: 24px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-lead > div { display: grid; gap: 8px; }
-.oral-focus-lead h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(32px, 4vw, 52px); font-weight: 500; letter-spacing: -.03em; }
-.oral-focus-lead p:last-child { margin: 0; color: var(--text-secondary); }
-.oral-focus-subject-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.oral-focus-subject-tabs button { display: grid; gap: 3px; min-height: 66px; place-content: center; border: 0; border-right: 1px solid var(--line); color: var(--text-secondary); background: transparent; cursor: pointer; }
-.oral-focus-subject-tabs button:last-child { border-right: 0; }
+.oral-focus-shell { width: min(100%, 940px); margin: 0 auto; padding: 34px 32px 100px; }
+.oral-focus-directory, .oral-focus-question { display: grid; gap: 26px; }
+.oral-focus-lead { display: grid; gap: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-lead > div { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+.oral-focus-lead h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(24px, 3vw, 32px); font-weight: 500; letter-spacing: -.02em; }
+.oral-focus-lead #oralFocusSummary { color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.oral-focus-subject-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.oral-focus-subject-tabs button { display: grid; min-height: 58px; gap: 4px; place-content: center; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary); background: transparent; cursor: pointer; transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
+.oral-focus-subject-tabs button:hover { color: var(--text); }
 .oral-focus-subject-tabs button strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
-.oral-focus-subject-tabs button small { color: var(--text-soft); font-size: 9px; }
-.oral-focus-subject-tabs button.active { color: var(--primary-strong); background: var(--primary-soft); }
-.oral-focus-chapters { display: grid; gap: 0; border-top: 1px solid var(--line-strong); }
-.oral-focus-chapter { border-bottom: 1px solid var(--line-strong); }
-.oral-focus-chapter > summary { display: grid; min-height: 68px; grid-template-columns: 36px minmax(0, 1fr) auto 18px; gap: 12px; align-items: center; list-style: none; cursor: pointer; }
-.oral-focus-chapter > summary::-webkit-details-marker { display: none; }
-.oral-focus-chapter > summary > span { color: var(--primary); font-size: 10px; font-variant-numeric: tabular-nums; }
-.oral-focus-chapter > summary > strong { min-width: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
-.oral-focus-chapter > summary > em { color: var(--text-soft); font-size: 10px; font-style: normal; }
-.oral-focus-chapter > summary svg { width: 14px; transition: transform 160ms var(--ease-out); }
-.oral-focus-chapter[open] > summary svg { transform: rotate(90deg); }
-.oral-focus-item-list { display: grid; padding: 0 0 10px 48px; }
-.oral-focus-item-row { display: grid; min-height: 54px; grid-template-columns: 76px minmax(0, 1fr) auto 18px; gap: 12px; align-items: center; border-top: 1px solid var(--line); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
-.oral-focus-item-row > span { color: var(--text-soft); font-size: 9px; letter-spacing: .05em; }
-.oral-focus-item-row > strong { overflow: hidden; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.oral-focus-item-row > em { color: var(--primary); font-size: 10px; font-style: normal; }
-.oral-focus-item-row svg { width: 13px; color: var(--text-soft); }
-.oral-focus-item-row[data-mastery="mastered"] > em { color: var(--success); }
-.oral-focus-question { width: min(100%, 800px); margin: 0 auto; }
+.oral-focus-subject-tabs button small { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.oral-focus-subject-tabs button.active { color: var(--primary-strong); border-bottom-color: var(--primary); }
+
+.oral-focus-question-list { border-top: 1px solid var(--line-strong); }
+.oral-focus-item-row { display: grid; width: 100%; min-height: 70px; grid-template-columns: 38px minmax(0, 1fr) auto 18px; gap: 16px; align-items: center; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.oral-focus-item-row:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
+.oral-focus-item-index { color: var(--primary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.oral-focus-item-copy { display: grid; min-width: 0; gap: 6px; }
+.oral-focus-item-copy strong { overflow: hidden; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.oral-focus-item-copy small { overflow: hidden; color: var(--text-soft); font-size: 11px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
+.oral-focus-item-complete { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-size: 11px; white-space: nowrap; }
+.oral-focus-item-complete svg { width: 11px; }
+.oral-focus-item-row > svg { width: 14px; color: var(--text-soft); }
+
+.oral-focus-list-pagination, .oral-focus-pagination { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; padding-top: 4px; }
+.oral-focus-list-pagination button, .oral-focus-pagination button { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; border: 0; color: var(--text-secondary); font-size: 12px; background: transparent; cursor: pointer; }
+.oral-focus-list-pagination button:last-child, .oral-focus-pagination button:last-child { justify-self: end; }
+.oral-focus-list-pagination button:disabled, .oral-focus-pagination button:disabled { opacity: .3; cursor: default; }
+.oral-focus-list-pagination > span, .oral-focus-pagination > span { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.oral-focus-list-pagination svg, .oral-focus-pagination svg { width: 14px; }
+
+.oral-focus-question { width: min(100%, 760px); margin: 0 auto; }
 .oral-focus-question-head { display: grid; gap: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-question-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--text-soft); font-size: 10px; }
-.oral-focus-question-meta span:first-child { color: var(--primary); }
-.oral-focus-card { display: grid; gap: 18px; padding: 22px 0 28px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-card h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(25px, 4vw, 38px); font-weight: 500; line-height: 1.45; letter-spacing: -.02em; }
-.oral-focus-source-note { color: var(--text-soft); font-size: 10px; }
-.oral-focus-ai-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.oral-focus-ai-actions button { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-secondary); background: transparent; cursor: pointer; }
-.oral-focus-ai-actions button:hover { color: var(--text); background: var(--surface-hover); }
-.oral-focus-ai-actions svg { width: 14px; }
-.oral-focus-editor { display: grid; gap: 12px; }
-.oral-focus-editor > header { display: flex; justify-content: space-between; gap: 16px; }
-.oral-focus-editor > header div { display: grid; gap: 4px; }
-.oral-focus-editor > header strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-weight: 500; }
-.oral-focus-editor > header small { color: var(--text-soft); font-size: 10px; }
-.oral-focus-editor textarea { width: 100%; resize: vertical; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-soft); font: inherit; line-height: 1.75; }
-.oral-focus-reveal { justify-self: start; }
-.oral-focus-reference { display: grid; gap: 18px; padding: 24px 0; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
-.oral-focus-reference > header { display: flex; justify-content: space-between; gap: 18px; align-items: end; }
-.oral-focus-reference h3 { margin: 3px 0 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 22px; font-weight: 500; }
-.oral-focus-reference > header > span { color: var(--text-soft); font-size: 10px; }
-.oral-focus-memory { padding-top: 4px; }
-.oral-focus-mastery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
-.oral-focus-mastery button { min-height: 42px; border: 0; border-right: 1px solid var(--line-strong); color: var(--text-secondary); background: transparent; cursor: pointer; }
-.oral-focus-mastery button:last-child { border-right: 0; }
-.oral-focus-mastery button.active { color: var(--primary-strong); background: var(--primary-soft); }
-.oral-focus-pagination { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; padding-top: 20px; border-top: 1px solid var(--line-strong); }
-.oral-focus-pagination button { display: inline-flex; min-height: 42px; align-items: center; gap: 8px; border: 0; color: var(--text-secondary); background: transparent; cursor: pointer; }
-.oral-focus-pagination button:last-child { justify-self: end; }
-.oral-focus-pagination button:disabled { opacity: .35; cursor: default; }
-.oral-focus-pagination span { color: var(--text-soft); font-size: 10px; font-variant-numeric: tabular-nums; }
-.oral-focus-pagination svg { width: 15px; }
+.oral-focus-question-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.oral-focus-question-meta span { color: var(--text-soft); font-size: 12px; }
+.oral-focus-question-meta span:first-child { color: var(--primary-strong); }
+.oral-focus-card { padding: 20px 0 30px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-card h2 { max-width: 22em; margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(24px, 3.2vw, 34px); font-weight: 500; line-height: 1.55; letter-spacing: -.015em; }
+
+.oral-focus-reference { display: grid; gap: 22px; padding: 4px 0 28px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-reference > header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.oral-focus-reference h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; }
+.oral-focus-answer-toggle { display: inline-flex; align-items: center; gap: 9px; border: 0; color: var(--text-secondary); background: transparent; font-size: 12px; cursor: pointer; }
+.oral-focus-answer-toggle > i { position: relative; width: 31px; height: 18px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface-soft); transition: background 160ms var(--ease-out); }
+.oral-focus-answer-toggle > i::after { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-soft); content: ""; transition: transform 160ms var(--ease-out), background 160ms var(--ease-out); }
+.oral-focus-answer-toggle[aria-checked="true"] { color: var(--primary-strong); }
+.oral-focus-answer-toggle[aria-checked="true"] > i { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.oral-focus-answer-toggle[aria-checked="true"] > i::after { background: var(--primary); transform: translateX(13px); }
+.oral-focus-reference .knowledge-article { padding-top: 4px; }
+.oral-focus-note-content { display: grid; gap: 18px; padding: 2px 0 28px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-note-content h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; }
+.oral-focus-note-content .knowledge-article { padding-top: 2px; }
+.oral-focus-pagination { padding-top: 18px; border-top: 0; }
+
+.oral-focus-note-float { z-index: 55; }
+.oral-focus-note-float .section-note-popover textarea { min-height: 280px; }
+.oral-focus-note-float .note-icon-button img { display: block; width: 16px; height: 16px; }
 
 @media (max-width: 720px) {
-  .oral-focus-shell { padding: 24px 18px 112px; }
-  .oral-focus-subject-tabs { grid-template-columns: repeat(5, minmax(60px, 1fr)); overflow-x: auto; }
-  .oral-focus-subject-tabs button { min-width: 64px; }
-  .oral-focus-chapter > summary { grid-template-columns: 26px minmax(0, 1fr) 16px; }
-  .oral-focus-chapter > summary > em { display: none; }
-  .oral-focus-item-list { padding-left: 26px; }
-  .oral-focus-item-row { grid-template-columns: 60px minmax(0, 1fr) 14px; }
-  .oral-focus-item-row > em { display: none; }
-  .oral-focus-reference > header { align-items: start; flex-direction: column; }
+  .oral-focus-shell { padding: 22px 18px 112px; }
+  .oral-focus-lead { gap: 18px; }
+  .oral-focus-lead > div { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .oral-focus-subject-tabs { grid-template-columns: repeat(5, minmax(62px, 1fr)); overflow-x: auto; }
+  .oral-focus-subject-tabs button { min-width: 62px; }
+  .oral-focus-item-row { grid-template-columns: 28px minmax(0, 1fr) 14px; gap: 10px; }
+  .oral-focus-item-copy strong { font-size: 15px; }
+  .oral-focus-item-complete { display: none; }
+  .oral-focus-question-head { gap: 14px; }
+  .oral-focus-card { padding-top: 14px; }
+  .oral-focus-reference > header { align-items: center; }
 }

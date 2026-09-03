@@ -1,5 +1,25 @@
 # 当前状态
 
+## 学习库排版系统性收敛（2026-09-03，第二轮）
+
+- 量化诊断确认用户对“文字显示效果差”的判断：仅 `static/reader.css` 就有 117 处 `font-size: 8–10px`（66×9px、36×10px、15×8px），中文辅助信息普遍低于可读下限；且学习中心样式存在**三代互相覆盖的历史层**（初版竖版封面卡 → “Yu Design 收敛”的 56px 横排细线卡 → 上一会话追加的居中三栏导览），同屏混用导致观感混乱。书架卡片还把 `书名` 与 `subject` 重复渲染两行（如“牙体牙髓病学”出现两次）。
+- 确立本轮排版尺度（最小字号 11px，数字一律 tabular-nums）：辅助/元信息 11–12px、卡片书名 13px、列表题干 16px 衬线、区块标题 20px 衬线、页面标题 clamp(24–32px) 衬线、导览文字 18px 衬线。全部改动只调层级与字号，不新增元素、不改信息架构。
+- `static/reader.css`：38 处 8–10px 提升到 11–13px（章节/小节目录、页内考点导览、面包屑、阅读会话出口、资料主页状态、返回链接、政治练习导语、英语中心/真题导览/周记全部小字）；文件末尾新增“Learning center typographic consolidation”块统一三代样式：导览 active 从橙色填充块改为**橙色文字 + 2px 底线**，去掉多余外框竖线；卡片**移除 border-block 细线森林**，恢复 62px 书封 + 13px 书名的行式卡片，hover 只抬升书封不再位移变色；移动端同步收敛。
+- `static/oral-focus.css` 18 处：目录标题 clamp(28–42px)→clamp(24–32px)，进度 `已完成 x / y`→`x / y`（13px tabular）；学科标签从竖线表格改为**下划线式**（去 5 条竖线和橙色底块）；题目列表章节小字 9→11px；单题页三枚胶囊 meta 改为**无边框纯文字 meta 行**（12px，题型橙色）；题干 clamp(27–40px)→clamp(24–34px)；“标准答案” 19→16px、开关文字 10→12px；翻页按钮 12px。
+- `static/app.js` 3 处文案：书架卡 `subject === title` 时不再渲染第二行重复书名；名解/论述卡与目录页头进度统一为 `x / y`；`static/index.html` 同步默认占位文案。
+- 验证：全量 unittest 140/140、`py_compile`、`node --check`、`git diff --check` 通过。真实 Chrome（2560×1440）逐页截图检查：医学库浅色、政治库深色、名解二级目录、单题页关闭/开启答案、阅读页（牙体牙髓病学第二节），层级清晰、无重复文字、无线条森林，DevTools 控制台 0 error；IAB 390×844 检查 `scrollWidth-innerWidth=-10`（无横向溢出）、每页固定 10 题、字号计算值 11/13/15/18/20px 全部生效。验证期间打开阅读页写入的活动已从 `data/activity.json` 字节级还原（SHA-256 与验证前一致），Chrome 侧测试用主题与答案开关偏好已清除。
+
+## 口腔名解/论述三级页面重做（2026-09-03，接手中断会话后完成）
+
+- 上一会话因额度中断，工作区遗留未提交改动（app.py、static/app.js、static/index.html、static/oral-focus.css、static/reader.css、tests/test_oral_focus.py、tests/test_platform_learning.py）。本轮核实改动已覆盖用户反馈的四个要点并补齐两处缺陷后完成验证；全部改动仍未提交，留给用户确认后一并提交。
+- 学习库顶部恢复居中三栏图标导览（听诊器/ landmarks /语言图标 + 衬线文字），移除学科标题下的解释性副标题；名解/论述封面改为学科名大字、题型小字，卡片下方直接显示真实进度 `x / n 已完成`，不再出现“一页一道题”文案。
+- 名解/论述二级页面从章节手风琴改为题目优先的平铺列表：每页固定 10 题，章节归属以小字显示在题干下方，底部为上一页/下一页与 `1 / n` 页码；学科标签同样显示 `x / n` 进度。进度口径由 `mastery` 扩展为“有作答、有笔记或非 unseen”，后端 index payload 新增 `completed` 字段。
+- 三级单题页极简重做：题型/星级/章位元信息胶囊、衬线大标题题干、`标准答案` 区块加持久化显示开关（localStorage `yureader-oral-reference-visible`，切题与刷新保持，开启时按需请求 `reveal=1`）；Obsidian 悬浮笔记按钮复用阅读页 note-float，粘贴 Gemini 内容后自动写入 `重点背诵.md` 并更新 `obsidian_uri`。按用户要求移除“我的作答”输入、掌握状态按钮（不会/模糊/已掌握）和三个 Gemini 提示词按钮；后端 `write_oral_focus_notes` 的“漏点与记忆”标题改为“学习笔记”，保存时保留历史 answer/mastery 字段不丢失。
+- 本轮修复两处中断遗留缺陷：1) `openOralFocusItem` 预先将整个 `#oralFocusReference` 置 hidden 而新渲染只切换内部正文，导致“标准答案 + 开关”整块不显示，改为只隐藏正文；2) 笔记浮层内 obsidian 图标无尺寸约束在窄窗口渲染为 200×200，补 `.oral-focus-note-float .note-icon-button img {16px}`。
+- 最终接手复核再补齐学习闭环的两处边界：将口腔笔记浮层移到带页面切换 transform 的 `#oralFocusView` 外，避免 390px 窄窗口左侧越界；保存或载入 Gemini Markdown 时同时在单题正文中即时渲染“学习笔记”，原书标准答案与个人笔记继续保持分区，后台仍沿用原有 Obsidian 自动保存链路。
+- 验证：YuReader 140/140、YuBook 31/31、YuPractice 56/56 通过，`py_compile`、`node --check`、`git diff --check` 通过；使用隔离数据目录和禁用的 Obsidian 路径，在真实浏览器 1280×800 深浅主题与 390×844 窄窗口验证三科学习库、二级列表翻页（1/14、固定10题）、单题开关开启→切题保持→刷新后重新进入仍保持、笔记输入自动保存及 Markdown 正文即时呈现。桌面笔记面板边界为 795–1225px（视口宽 1280px），移动端边界为 4–358px（视口宽 390px），各页均无横向溢出；隔离验收数据不写入正式学习记录或真实 Obsidian。
+- 待办（下一会话）：用户确认后提交这批未提交改动；名解列表中存在少量 OCR 噪声题（如 “oral and maxillofacial surgery：口腔颌面外科学”“anesthesia：麻醉”），属数据层问题，未在本轮处理。
+
 ## 学习中心系统化重建（2026-09-03）
 
 - 依据 `C:\Users\Yu\Documents\YuDesign\YU_DESIGN_LANGUAGE.md` 完成视觉收敛：移除营销式大标题区、大面积主题色和海报式书封，顶部改为工作页标题与固定分段控件；书架改成一行五本的紧凑资料索引，单页资料不显示无意义的翻页操作。训练区以留白和细线组织，不再使用容器套容器或高对比按钮墙。

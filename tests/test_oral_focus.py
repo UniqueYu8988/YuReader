@@ -151,8 +151,11 @@ class OralFocusRuntimeTests(unittest.TestCase):
         index = app.oral_focus_index_payload()
         self.assertTrue(index["available"])
         self.assertNotIn("answer_markdown", json.dumps(index, ensure_ascii=False))
+        self.assertFalse(index["subjects"][0]["chapters"][0]["items"][0]["completed"])
         hidden = app.oral_focus_item_payload(self.item_id)
         self.assertNotIn("answer_markdown", hidden)
+        self.assertEqual(hidden["storage"], "local")
+        self.assertEqual(hidden["obsidian_uri"], "obsidian://open")
         revealed = app.oral_focus_item_payload(self.item_id, reveal=True)
         self.assertIn("正确取材", revealed["answer_markdown"])
 
@@ -164,6 +167,7 @@ class OralFocusRuntimeTests(unittest.TestCase):
         self.assertTrue(response["saved"])
         self.assertTrue(app.ORAL_FOCUS_PROGRESS_PATH.is_file())
         self.assertIn("漏了结合临床", Path(response["path"]).read_text(encoding="utf-8"))
+        self.assertTrue(app.oral_focus_index_payload()["subjects"][0]["chapters"][0]["items"][0]["completed"])
         activities = app.activity_records_payload(date.today().isoformat(), "subjective_practice")["activities"]
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0]["resume_target"]["view"], "oral_focus")
@@ -172,6 +176,20 @@ class OralFocusRuntimeTests(unittest.TestCase):
         self.assertEqual(sources[0]["title"], "活组织检查的注意事项")
         self.assertIn("我的闭卷答案", sources[0]["markdown"])
         self.assertIn("漏了结合临床", sources[0]["markdown"])
+
+    def test_sidebar_note_preserves_hidden_historical_fields(self):
+        first = app.save_oral_focus_progress(self.item_id, "历史作答", "旧笔记", "mastered")
+        second = app.save_oral_focus_progress(
+            self.item_id,
+            first["progress"]["answer"],
+            "从 Gemini 整理的新笔记",
+            first["progress"]["mastery"],
+        )
+        self.assertEqual(second["progress"]["answer"], "历史作答")
+        self.assertEqual(second["progress"]["mastery"], "mastered")
+        note = Path(second["path"]).read_text(encoding="utf-8")
+        self.assertIn("### 学习笔记", note)
+        self.assertIn("从 Gemini 整理的新笔记", note)
 
 
 if __name__ == "__main__":

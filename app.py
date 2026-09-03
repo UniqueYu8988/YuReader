@@ -925,12 +925,18 @@ def oral_focus_index_payload() -> dict:
             public_items = []
             for item in chapter.get("items") or []:
                 state = progress.get(str(item.get("id") or ""), {})
+                state = state if isinstance(state, dict) else {}
+                completed = bool(
+                    str(state.get("answer") or "").strip()
+                    or str(state.get("memory_note") or "").strip()
+                    or str(state.get("mastery") or "unseen") != "unseen"
+                )
                 public_items.append(
                     {
                         key: item.get(key)
                         for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image")
                     }
-                    | {"mastery": str((state if isinstance(state, dict) else {}).get("mastery") or "unseen")}
+                    | {"mastery": str(state.get("mastery") or "unseen"), "completed": completed}
                 )
             chapters.append(
                 {
@@ -946,7 +952,15 @@ def oral_focus_index_payload() -> dict:
                 for key in ("id", "short_title", "title", "book_id", "item_count", "chapter_count")
             }
             | {
-                "studied_count": sum(isinstance(item, dict) and item.get("mastery") not in (None, "", "unseen") for item in subject_progress),
+                "studied_count": sum(
+                    isinstance(item, dict)
+                    and bool(
+                        str(item.get("answer") or "").strip()
+                        or str(item.get("memory_note") or "").strip()
+                        or item.get("mastery") not in (None, "", "unseen")
+                    )
+                    for item in subject_progress
+                ),
                 "mastered_count": sum(isinstance(item, dict) and item.get("mastery") == "mastered" for item in subject_progress),
                 "chapters": chapters,
             }
@@ -965,6 +979,7 @@ def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
     chapter = record["chapter"]
     progress = load_oral_focus_progress().get("items", {}).get(item_id, {})
     progress = progress if isinstance(progress, dict) else {}
+    _note_target, note_storage, note_uri = oral_focus_notes_target(subject)
     public = {
         key: record.get(key)
         for key in ("id", "order", "type", "type_label", "title", "star_level", "character_count", "has_table", "has_unreviewed_image", "source_files", "source_paragraph")
@@ -980,6 +995,8 @@ def oral_focus_item_payload(item_id: str, *, reveal: bool = False) -> dict:
                 "updated_at": str(progress.get("updated_at") or ""),
             },
             "reference_revealed": bool(reveal),
+            "storage": note_storage,
+            "obsidian_uri": note_uri,
         }
     )
     if reveal:
@@ -1007,7 +1024,7 @@ def write_oral_focus_notes(subject_id: str, progress_payload: dict) -> tuple[Pat
     subject = next((entry for entry in dataset.get("subjects") or [] if entry.get("id") == subject_id), None)
     if not subject:
         raise ValueError("oral focus subject not found")
-    lines = [f"# {subject.get('title')} · 重点背诵", "", "> 只保存个人作答与记忆修正；原始题目和参考答案仍留在本地重点数据中。"]
+    lines = [f"# {subject.get('title')} · 重点背诵", "", "> 保存从侧边栏整理的个人笔记；原始题目和参考答案仍留在本地重点数据中。"]
     progress_items = progress_payload.get("items") if isinstance(progress_payload.get("items"), dict) else {}
     for item_id, state in progress_items.items():
         record = items.get(str(item_id))
@@ -1022,7 +1039,7 @@ def write_oral_focus_notes(subject_id: str, progress_payload: dict) -> tuple[Pat
         if answer:
             lines.extend(["", "### 我的作答", "", answer])
         if memory_note:
-            lines.extend(["", "### 漏点与记忆", "", memory_note])
+            lines.extend(["", "### 学习笔记", "", memory_note])
     target, storage, uri = oral_focus_notes_target(subject)
     atomic_write(target, "\n".join(lines).strip() + "\n")
     return target, storage, uri
