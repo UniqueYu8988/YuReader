@@ -384,8 +384,38 @@
           <section class="practice-result hidden" id="practiceResult" aria-live="polite">
             <header class="practice-feedback-head"><span class="practice-result-icon" id="practiceResultIcon"><i data-lucide="check"></i></span><div><strong id="practiceResultTitle"></strong><span id="practiceCorrectAnswer"></span></div></header>
             <section class="practice-analysis"><h3>原书解析</h3><article class="knowledge-article note-stream" id="practiceSourceAnalysis"></article></section>
-            <section class="review-result-editor practice-personal-analysis"><header><div><strong>个人解析</strong><small id="practiceAnalysisSaved">粘贴侧边栏的分析，自动保存</small></div><a class="note-icon-button" id="practiceObsidian" href="obsidian://open" aria-label="在 Obsidian 中打开练习笔记"><img src="/assets/obsidian.svg" alt=""></a></header><textarea id="practicePersonalAnalysis" rows="9" placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程"></textarea></section>
+            <div class="practice-personal-analysis-entry">
+              <button type="button" class="secondary-button practice-open-note-btn" id="practiceOpenNoteBtn">
+                <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                <span>个人解析与 AI 笔记</span>
+              </button>
+            </div>
           </section>
+          <div class="section-note-float practice-note-float hidden" id="practiceNoteFloat">
+            <section class="section-note-popover" id="practiceNotePopover" role="dialog" aria-hidden="true" aria-label="题目解析与笔记">
+              <header class="section-note-heading">
+                <div>
+                  <p class="eyebrow">题目解析与笔记</p>
+                  <span id="practiceAnalysisSaved">粘贴侧边栏分析，自动保存</span>
+                </div>
+                <div class="section-note-actions">
+                  <a class="note-icon-button" id="practiceObsidian" href="obsidian://open" title="在 Obsidian 中打开练习笔记" aria-label="在 Obsidian 中打开练习笔记">
+                    <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                  </a>
+                  <button class="note-icon-button" id="closePracticeNote" type="button" title="收起解析" aria-label="收起解析">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+              </header>
+              <textarea id="practicePersonalAnalysis" rows="12" placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程"></textarea>
+              <footer class="section-note-footer">
+                <span>Markdown · 自动保存到练习笔记</span>
+              </footer>
+            </section>
+            <button class="section-note-launcher" id="togglePracticeNoteDock" type="button" aria-label="打开题目解析与笔记" aria-controls="practiceNotePopover" aria-expanded="false" title="题目解析与笔记">
+              <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+            </button>
+          </div>
           <nav class="practice-pagination" id="practicePagination" aria-label="题目切换"><button class="practice-page-button" id="practicePrevious" type="button"><i data-lucide="arrow-left"></i><span>上一题</span></button><button class="practice-page-button next" id="practiceNext" type="button"><span>下一题</span><i data-lucide="arrow-right"></i></button></nav>
           <section class="practice-session-summary hidden" id="practiceSessionSummary" aria-live="polite">
             <h2>本组结果</h2><p class="hidden" id="practiceSummaryLead"></p>
@@ -452,10 +482,16 @@
                     <span class="review-stat-item">沉淀笔记 <strong id="reviewTotalNotes">0 条</strong></span>
                   </div>
                 </div>
-                <button type="button" class="primary-button review-copy-prompt-btn" id="reviewCopyPromptBtn">
-                  <i data-lucide="sparkles"></i>
-                  <span>复制笔记摘要（发给侧边栏）</span>
-                </button>
+                <div class="review-overview-actions">
+                  <button type="button" class="primary-button review-copy-prompt-btn" id="reviewCopyPromptBtn">
+                    <i data-lucide="sparkles"></i>
+                    <span>复制笔记摘要（发给侧边栏）</span>
+                  </button>
+                  <button type="button" class="secondary-button review-open-drawer-btn" id="reviewOpenDrawerBtn">
+                    <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                    <span>今日复盘总结</span>
+                  </button>
+                </div>
               </div>
               <div class="review-domain-grid" id="reviewDomainGrid">
                 <div class="review-domain-col" data-domain="medicine">
@@ -491,25 +527,33 @@
             <!-- 隐藏保留的 reviewCombinedDocument 保证兼容 -->
             <article class="knowledge-article note-stream review-combined-document hidden" id="reviewCombinedDocument"></article>
 
-            <!-- 4. 今日复盘与 AI 总结沉淀区 -->
-            <section class="review-result-card" id="reviewResultSection">
-              <header class="review-result-header">
-                <div>
-                  <div class="review-result-title-row">
-                    <i data-lucide="check-circle-2"></i>
-                    <strong>今日复盘与 AI 总结</strong>
+            <!-- 4. 统一的 Obsidian 复盘总结抽屉与浮钮 -->
+            <div class="section-note-float review-note-float hidden" id="reviewNoteFloat">
+              <section class="section-note-popover" id="reviewNotePopover" role="dialog" aria-hidden="true" aria-label="今日复盘与 AI 总结">
+                <header class="section-note-heading">
+                  <div>
+                    <p class="eyebrow">今日复盘与 AI 总结</p>
+                    <span id="reviewSummarySaved">粘贴侧边栏 Gemini 的复盘总结，自动保存</span>
                   </div>
-                  <small id="reviewSummarySaved">粘贴侧边栏 Gemini 的复盘总结，自动保存为当日独立学习记录</small>
-                </div>
-                <a class="note-icon-button" id="reviewLogObsidian" href="obsidian://open" title="在 Obsidian 中打开学习记录" aria-label="在 Obsidian 中打开学习记录">
-                  <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
-                </a>
-              </header>
-              <textarea id="reviewDailySummary" rows="8" placeholder="在此粘贴侧边栏 Gemini 对昨日笔记生成的知识框架与复盘总结，自动同步至 Obsidian 独立记录…"></textarea>
-              <div class="review-result-actions">
-                <button class="secondary-button review-no-text-button" id="reviewMarkNoText" type="button">标记已回顾（无总结文本）</button>
-              </div>
-            </section>
+                  <div class="section-note-actions">
+                    <a class="note-icon-button" id="reviewLogObsidian" href="obsidian://open" title="在 Obsidian 中打开学习记录" aria-label="在 Obsidian 中打开学习记录">
+                      <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+                    </a>
+                    <button class="note-icon-button" id="closeReviewNote" type="button" title="收起复盘" aria-label="收起复盘">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </header>
+                <textarea id="reviewDailySummary" rows="12" placeholder="在此粘贴侧边栏 Gemini 对昨日笔记生成的知识框架与复盘总结，自动同步至 Obsidian 独立记录…"></textarea>
+                <footer class="section-note-footer">
+                  <span>Markdown · 自动保存</span>
+                  <button class="secondary-button review-no-text-button" id="reviewMarkNoText" type="button">标记已回顾（无文本）</button>
+                </footer>
+              </section>
+              <button class="section-note-launcher" id="toggleReviewNoteDock" type="button" aria-label="打开今日复盘总结" aria-controls="reviewNotePopover" aria-expanded="false" title="今日复盘总结">
+                <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+              </button>
+            </div>
           </section>
         </div>
       </section>

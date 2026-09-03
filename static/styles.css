@@ -5104,9 +5104,12 @@ input:focus-visible {
   background: var(--surface-hover);
 }
 
-.note-icon-button svg {
+.note-icon-button svg,
+.note-icon-button img {
   width: 16px;
   height: 16px;
+  display: block;
+  object-fit: contain;
 }
 
 .section-note-popover textarea {

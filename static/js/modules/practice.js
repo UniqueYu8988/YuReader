@@ -187,17 +187,34 @@ export async function loadResourcePractice(bookId) {
 }
 
 export async function openPractice(entry, returnTo, startIndex = 0) {
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); state.practiceReturn = returnTo; state.practiceOverviewBankId = returnTo === "english-exam-overview" ? entry.bank_id : ""; state.practiceIndex = Math.max(0, Number(startIndex) || 0);
-  state.subjectivePractice = null; $("subjectivePracticeWorkspace")?.classList.add("hidden"); $("practiceWorkspace")?.classList.remove("hidden");
+  state.openRequest += 1;
+  stopReadingTimer();
+  closeNotePopover();
+  $("sectionNoteFloat")?.classList.add("hidden");
+  $("oralFocusNoteFloat")?.classList.add("hidden");
+  $("reviewNoteFloat")?.classList.add("hidden");
+  $("practiceNoteFloat")?.classList.remove("hidden");
+  setPracticeNoteOpen(false);
+  state.practiceReturn = returnTo;
+  state.practiceOverviewBankId = returnTo === "english-exam-overview" ? entry.bank_id : "";
+  state.practiceIndex = Math.max(0, Number(startIndex) || 0);
+  state.subjectivePractice = null;
+  $("subjectivePracticeWorkspace")?.classList.add("hidden");
+  $("practiceWorkspace")?.classList.remove("hidden");
   try {
     const query = new URLSearchParams({ bank_id: entry.bank_id, knowledge_id: entry.knowledge_id, match_level: entry.match_level });
-    const response = await fetch(`/api/practice/session?${query}`, { cache: "no-store" }); if (!response.ok) throw new Error("practice unavailable");
+    const response = await fetch(`/api/practice/session?${query}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("practice unavailable");
     const session = await response.json();
     if (entry.unit_label) {
       const scoped = (session.questions || []).filter((question) => (question.unit_label || question.unit) === entry.unit_label);
       if (scoped.length) { session.questions = scoped; session.question_count = scoped.length; session.answered_count = scoped.filter((question) => question.answered).length; state.practiceIndex = 0; }
     }
-    state.practice = { ...session, entry }; setActiveView("practice"); renderPracticeSessionMap(); renderPracticeQuestion(); window.scrollTo({ top: 0, behavior: "auto" });
+    state.practice = { ...session, entry };
+    setActiveView("practice");
+    renderPracticeSessionMap();
+    renderPracticeQuestion();
+    window.scrollTo({ top: 0, behavior: "auto" });
   } catch { showToast("暂时无法读取这组题目"); }
 }
 
@@ -496,4 +513,23 @@ export function schedulePracticeAnalysisSave() {
   state.practiceAnalysisSaveTimer = window.setTimeout(async () => { try { const response = await fetch("/api/practice/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bank_id: question.bank_id, question_id: question.question_id, content }) }); if (!response.ok) throw new Error("analysis failed"); const result = await response.json(); $("practiceAnalysisSaved").textContent = content.trim() ? "已保存到练习笔记" : "个人解析已清空"; $("practiceObsidian").href = result.obsidian_uri || "obsidian://open"; } catch { $("practiceAnalysisSaved").textContent = "保存失败，请稍后重试"; } }, 420);
 }
 
-export function returnFromPractice() { if (state.practiceReturn === "home") setHomeMode(); else if (state.practiceReturn === "learning-center") setLibraryMode(); else if (state.practiceReturn === "english-exams") { setActiveView("library"); renderEnglishExams(); } else if (state.practiceReturn === "english-exam-overview" && state.practiceOverviewBankId) openEnglishExamOverview(state.practiceOverviewBankId); else if (state.practiceReturn === "resource" && state.resourceBookId) openResource(state.resourceBookId); else if (state.current?.id) setReaderMode(); else setLibraryMode(); }
+export function setPracticeNoteOpen(open) {
+  state.practiceNoteOpen = Boolean(open);
+  $("practiceNoteFloat")?.classList.toggle("note-is-open", state.practiceNoteOpen);
+  $("practiceNotePopover")?.classList.toggle("is-open", state.practiceNoteOpen);
+  $("practiceNotePopover")?.setAttribute("aria-hidden", String(!state.practiceNoteOpen));
+  $("togglePracticeNoteDock")?.setAttribute("aria-expanded", String(state.practiceNoteOpen));
+  if (state.practiceNoteOpen) window.setTimeout(() => $("practicePersonalAnalysis")?.focus(), 120);
+}
+
+export function returnFromPractice() {
+  setPracticeNoteOpen(false);
+  $("practiceNoteFloat")?.classList.add("hidden");
+  if (state.practiceReturn === "home") setHomeMode();
+  else if (state.practiceReturn === "learning-center") setLibraryMode();
+  else if (state.practiceReturn === "english-exams") { setActiveView("library"); renderEnglishExams(); }
+  else if (state.practiceReturn === "english-exam-overview" && state.practiceOverviewBankId) openEnglishExamOverview(state.practiceOverviewBankId);
+  else if (state.practiceReturn === "resource" && state.resourceBookId) openResource(state.resourceBookId);
+  else if (state.current?.id) setReaderMode();
+  else setLibraryMode();
+}

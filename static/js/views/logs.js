@@ -1,4 +1,5 @@
 import { selectLibraryShelf, setActiveView, setRouteHash } from "../core/router.js";
+import { hideAllNoteFloats } from "../core/router.js";
 import { $, state } from "../core/state.js";
 import { stopReadingTimer } from "../core/timer.js";
 import { escapeHtml, formatDuration, formatInteger, refreshIcons, renderMarkdown } from "../core/utils.js";
@@ -68,7 +69,7 @@ export async function loadStats() {
 
 export async function openStats() {
   setRouteHash("records/stats");
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); setActiveView("stats"); window.scrollTo({ top: 0, behavior: "auto" });
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); hideAllNoteFloats(); setActiveView("stats"); window.scrollTo({ top: 0, behavior: "auto" });
   await loadStats();
 }
 
@@ -97,6 +98,6 @@ export function scheduleWeeklySave() {
 
 export async function openLogs() {
   setRouteHash("records");
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); setActiveView("logs"); window.scrollTo({ top: 0, behavior: "auto" });
+  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); hideAllNoteFloats(); setActiveView("logs"); window.scrollTo({ top: 0, behavior: "auto" });
   try { const response = await fetch("/api/logs", { cache: "no-store" }); if (!response.ok) throw new Error("logs unavailable"); state.logs = await response.json(); renderLogsList(); } catch { $("logsList").innerHTML = `<div class="review-empty"><strong>暂时无法读取学习记录</strong></div>`; }
 }

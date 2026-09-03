@@ -1798,67 +1798,73 @@
   max-width: 480px;
 }
 
-/* 4. Result / Summary Card */
-.review-result-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 18px 20px;
-  box-shadow: var(--shadow);
-}
-.review-result-header {
+/* 4. Unified Obsidian Note Buttons & Popover Styling */
+.review-overview-actions {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.review-result-title-row {
+.review-open-drawer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: all 150ms var(--ease-out);
+}
+.review-open-drawer-btn:hover {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, #9974f8 40%, var(--line));
+  transform: translateY(-1px);
+}
+.review-open-drawer-btn img {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.practice-personal-analysis-entry {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.practice-open-note-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 3px;
-}
-.review-result-title-row strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-.review-result-title-row svg {
-  width: 17px;
-  height: 17px;
-  color: var(--primary);
-}
-.review-result-header small {
-  font-size: 12px;
-  color: var(--text-soft);
-}
-.review-result-card textarea {
-  width: 100%;
-  border: 1px solid var(--line);
+  padding: 7px 14px;
   border-radius: var(--radius-xs);
-  background: var(--surface-muted);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.6;
-  padding: 12px 14px;
-  resize: vertical;
-  outline: none;
-  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
-}
-.review-result-card textarea:focus {
-  border-color: var(--primary);
-  background: var(--surface-strong);
-}
-.review-result-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-.review-no-text-button {
-  padding: 6px 14px;
   font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: all 150ms var(--ease-out);
+}
+.practice-open-note-btn:hover {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, #9974f8 40%, var(--line));
+  transform: translateY(-1px);
+}
+.practice-open-note-btn img {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.review-no-text-button {
+  padding: 4px 10px;
+  font-size: 11px;
   border-radius: var(--radius-xs);
 }
 
@@ -1870,7 +1876,12 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  .review-copy-prompt-btn {
+  .review-overview-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .review-copy-prompt-btn,
+  .review-open-drawer-btn {
     width: 100%;
     justify-content: center;
   }

@@ -30,35 +30,63 @@ export function setActiveView(mode) {
   $("pageTitle").textContent = mode === "home" ? "今日" : mode === "reader" ? "阅读" : mode === "oralFocus" ? "口腔重点" : mode === "library" ? "学习" : mode === "practice" ? "练习" : mode === "review" ? "回顾" : mode === "logs" ? "记录" : "统计";
 }
 
+export function hideAllNoteFloats() {
+  $("sectionNoteFloat")?.classList.add("hidden");
+  $("oralFocusNoteFloat")?.classList.add("hidden");
+  $("practiceNoteFloat")?.classList.add("hidden");
+  $("reviewNoteFloat")?.classList.add("hidden");
+}
+
 export function setHomeMode() {
   setRouteHash("today");
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); setActiveView("home"); renderHome(); window.scrollTo({ top: 0, behavior: "auto" });
+  state.openRequest += 1;
+  stopReadingTimer();
+  closeNotePopover();
+  hideAllNoteFloats();
+  setActiveView("home");
+  renderHome();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 export function setLibraryMode() {
   setRouteHash("library");
-  state.openRequest += 1; stopReadingTimer();
+  state.openRequest += 1;
+  stopReadingTimer();
   state.resourceBookId = null;
-  $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
-  setActiveView("library"); closeNotePopover();
-  renderBooks(); window.scrollTo({ top: 0, behavior: "auto" });
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open");
+  $("readerContent").classList.add("hidden");
+  hideAllNoteFloats();
+  setActiveView("library");
+  closeNotePopover();
+  renderBooks();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 export function selectLibraryShelf(shelf) {
   if (!SHELF_ORDER.includes(shelf)) return;
   setRouteHash("library");
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover();
+  state.openRequest += 1;
+  stopReadingTimer();
+  closeNotePopover();
   state.libraryDomain = shelf;
-  state.resourceBookId = null; state.resource = null;
-  $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden"); $("sectionNoteFloat").classList.add("hidden");
+  state.resourceBookId = null;
+  state.resource = null;
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open");
+  $("readerContent").classList.add("hidden");
+  hideAllNoteFloats();
   setActiveView("library");
-  renderBooks(); window.scrollTo({ top: 0, behavior: "auto" });
+  renderBooks();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 export function setReaderMode() {
+  hideAllNoteFloats();
   $("libraryWorkspace").classList.remove("resource-open");
-  $("libraryWorkspace").classList.add("reader-open"); $("readerContent").classList.remove("hidden"); $("sectionNoteFloat").classList.remove("hidden");
-  setActiveView("reader"); if (state.current?.id) startReadingTimer(state.current.id);
+  $("libraryWorkspace").classList.add("reader-open");
+  $("readerContent").classList.remove("hidden");
+  $("sectionNoteFloat")?.classList.remove("hidden");
+  setActiveView("reader");
+  if (state.current?.id) startReadingTimer(state.current.id);
 }
 
 export function homeActivityTargetKey(prefix, index) {

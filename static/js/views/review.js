@@ -173,6 +173,15 @@ export function renderReviewUnified() {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
+export function setReviewNoteOpen(open) {
+  state.reviewNoteOpen = Boolean(open);
+  $("reviewNoteFloat")?.classList.toggle("note-is-open", state.reviewNoteOpen);
+  $("reviewNotePopover")?.classList.toggle("is-open", state.reviewNoteOpen);
+  $("reviewNotePopover")?.setAttribute("aria-hidden", String(!state.reviewNoteOpen));
+  $("toggleReviewNoteDock")?.setAttribute("aria-expanded", String(state.reviewNoteOpen));
+  if (state.reviewNoteOpen) window.setTimeout(() => $("reviewDailySummary")?.focus(), 120);
+}
+
 let reviewEventsBound = false;
 function bindReviewEvents() {
   if (reviewEventsBound) return;
@@ -187,6 +196,21 @@ function bindReviewEvents() {
       showToast("复制失败，请手动复制");
     }
   });
+
+  $("reviewOpenDrawerBtn")?.addEventListener("click", () => {
+    setReviewNoteOpen(!state.reviewNoteOpen);
+  });
+
+  $("toggleReviewNoteDock")?.addEventListener("click", () => {
+    setReviewNoteOpen(!state.reviewNoteOpen);
+  });
+
+  $("closeReviewNote")?.addEventListener("click", () => {
+    setReviewNoteOpen(false);
+  });
+
+  $("reviewDailySummary")?.addEventListener("input", scheduleDailySummarySave);
+  $("reviewMarkNoText")?.addEventListener("click", markReviewNoText);
 
   $("reviewDomainTabs")?.querySelectorAll("[data-review-filter]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -207,6 +231,10 @@ export async function openReview(reviewDate = "") {
   stopReadingTimer();
   closeNotePopover();
   $("sectionNoteFloat")?.classList.add("hidden");
+  $("oralFocusNoteFloat")?.classList.add("hidden");
+  $("practiceNoteFloat")?.classList.add("hidden");
+  $("reviewNoteFloat")?.classList.remove("hidden");
+  setReviewNoteOpen(false);
   setActiveView("review");
   window.scrollTo({ top: 0, behavior: "auto" });
 
