@@ -260,16 +260,15 @@ export function renderHome() {
   const continuation = stats.continue_activity;
   const continueTarget = stats.continue_target || null;
   state.homeContinueTarget = continueTarget;
-  $("homeLeadText").textContent = continuation ? `上次停在“${continuation.title}”` : "选择一本书，开始今天的学习";
-  $("homeContinueLabel").textContent = continuation?.activity_label ? `继续${continuation.activity_label}` : "继续学习";
-  $("homeContinueTitle").textContent = continuation?.title || "进入学习选择内容";
+  if ($("homeLeadText")) $("homeLeadText").textContent = continuation ? `上次停在“${continuation.title}”` : "选择一本书，开始今天的学习";
+  if ($("homeContinueLabel")) $("homeContinueLabel").textContent = continuation?.activity_label ? `继续${continuation.activity_label}` : "继续学习";
+  if ($("homeContinueTitle")) $("homeContinueTitle").textContent = continuation?.title || "进入学习选择内容";
   const pending = stats.review_pending;
   $("homeTodayMinutes").textContent = formatInteger(Math.floor((stats.today_activity_seconds || 0) / 60));
   $("homeTodayActivities").textContent = `${formatInteger(stats.today_activity_count || 0)} 项活动`;
   $("homeTodayNotes").textContent = `${formatInteger(stats.today_note_count || 0)} 条笔记`;
   $("homeReviewMeta").textContent = pending ? `${reviewDateLabel(pending.date)} · ${formatInteger(pending.activity_count)} 条待整理` : "整理最近学习";
 
-  updateExamCountdown();
   initGoalsListeners();
   fetchDailyGoals();
   refreshIcons();

@@ -58,51 +58,29 @@
     <main class="main-content wide-layout">
       <header class="topbar">
         <h1 class="reader-page-title" id="pageTitle">今日学习</h1>
-        <div class="topbar-actions">
-          <button class="topbar-search-btn" id="topSearchTrigger" type="button" title="全局搜索 (Ctrl + K)">
-            <i data-lucide="search"></i>
-            <span>秒搜教材、真题、词条…</span>
-            <kbd>Ctrl K</kbd>
-          </button>
-        </div>
+        <div class="topbar-actions"></div>
       </header>
 
       <section class="view active" id="homeView" data-view="home">
         <div class="reader-home">
-          <!-- 考研初试大考倒计时与备考阶段规划 -->
-          <section class="exam-countdown-banner" id="examCountdownBanner" aria-label="考研初试倒计时">
-            <div class="ec-left">
-              <div class="ec-target-tag"><i data-lucide="flame"></i> 2027 全国硕士研究生统一招生考试</div>
-              <div class="ec-days-wrap">
-                <span class="ec-label">距离初试大考仅剩</span>
-                <strong class="ec-d-day" id="ecDDayNumber">D-000</strong>
-                <span class="ec-unit">天</span>
-              </div>
-            </div>
-            <div class="ec-right">
-              <div class="ec-stages-head">
-                <span class="ec-stage-title">三轮备考阶段规划</span>
-                <span class="ec-stage-current" id="ecCurrentStageLabel">当前：一轮知识奠基与深度精读</span>
-              </div>
-              <div class="ec-stage-track">
-                <div class="ec-stage-pill active" data-stage="1">
-                  <span class="stage-num">01</span>
-                  <div class="stage-info"><strong>一轮精读奠基</strong><small>教材重点全覆盖</small></div>
-                </div>
-                <div class="ec-stage-pill" data-stage="2">
-                  <span class="stage-num">02</span>
-                  <div class="stage-info"><strong>二轮真题攻坚</strong><small>题库刷题与错题斩杀</small></div>
-                </div>
-                <div class="ec-stage-pill" data-stage="3">
-                  <span class="stage-num">03</span>
-                  <div class="stage-info"><strong>三轮冲刺押题</strong><small>全真模考与口外名解</small></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section class="reader-home-lead">
-            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
+            <div class="reader-home-copy">
+              <p class="eyebrow" id="homeDate">今天</p>
+              <h2 id="homeGreeting">从一小节开始</h2>
+              <div class="reader-home-search-box" id="homeSearchTrigger" role="button" tabindex="0" title="全局搜索 (Ctrl + K)">
+                <div class="rhs-left">
+                  <i data-lucide="search" class="rhs-icon"></i>
+                  <div class="rhs-text">
+                    <span class="rhs-title">全局穿透搜索</span>
+                    <span class="rhs-sub">快速检索 11 本医学教材、政治英语真题、口腔词条与复盘笔记…</span>
+                  </div>
+                </div>
+                <div class="rhs-right">
+                  <kbd>Ctrl K</kbd>
+                  <i data-lucide="arrow-right" class="rhs-arrow"></i>
+                </div>
+              </div>
+            </div>
             <aside class="reader-home-today" aria-label="今日学习概况"><span>今日学习</span><strong><b id="homeTodayMinutes">0</b><em>分</em></strong><small>有效学习时长</small><div><span id="homeTodayActivities">0 项活动</span><span id="homeTodayNotes">0 条笔记</span></div></aside>
           </section>
           <nav class="reader-home-portals" aria-label="学习入口">

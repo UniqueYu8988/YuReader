@@ -3435,142 +3435,83 @@
 }
 
 /* ==========================================================================
-   Exam Countdown & Milestones Banner (考研初试倒计时与三轮备考阶段)
+   Home Search Entrance (替换原继续学习位置)
    ========================================================================== */
-.exam-countdown-banner {
+.reader-home-search-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 18px 24px;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--primary) 5%, var(--surface)) 100%);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  gap: 16px;
+  padding: 16px 20px;
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 160ms var(--ease-out);
+  user-select: none;
+}
+.reader-home-search-box:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+  transform: translateY(-1px);
   box-shadow: var(--shadow);
-  flex-wrap: wrap;
 }
-
-.ec-left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 220px;
+.reader-home-search-box:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
-.ec-target-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #d92d20;
-}
-.ec-target-tag svg {
-  width: 15px;
-  height: 15px;
-}
-.ec-days-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.ec-label {
-  font-size: 13px;
-  color: var(--text-soft);
-}
-.ec-d-day {
-  font-family: "Noto Serif SC", STSong, serif;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  color: #d92d20;
-  line-height: 1;
-}
-.ec-unit {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-soft);
-}
-
-.ec-right {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 320px;
-}
-.ec-stages-head {
+.rhs-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
-.ec-stage-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-.ec-stage-current {
-  font-size: 12px;
-  font-weight: 600;
+.rhs-icon {
+  width: 20px;
+  height: 20px;
   color: var(--primary);
+  flex-shrink: 0;
 }
-
-.ec-stage-track {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+.rhs-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-.ec-stage-pill {
+.rhs-title {
+  font-family: "Noto Serif SC", STSong, serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.rhs-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.rhs-right {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  transition: all 140ms var(--ease-out);
-}
-.ec-stage-pill .stage-num {
-  font-size: 11px;
-  font-weight: 700;
   color: var(--text-muted);
 }
-.ec-stage-pill .stage-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.ec-stage-pill .stage-info strong {
-  font-size: 12px;
+.rhs-right kbd {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
   color: var(--text-soft);
 }
-.ec-stage-pill .stage-info small {
-  font-size: 10.5px;
-  color: var(--text-muted);
-}
-
-.ec-stage-pill.active {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-.ec-stage-pill.active .stage-num {
+.rhs-arrow {
+  width: 16px;
+  height: 16px;
   color: var(--primary);
+  transition: transform 140ms;
 }
-.ec-stage-pill.active .stage-info strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.ec-stage-pill.completed {
-  border-color: #12b76a;
-  background: color-mix(in srgb, #12b76a 6%, var(--surface));
-}
-.ec-stage-pill.completed .stage-num {
-  color: #12b76a;
+.reader-home-search-box:hover .rhs-arrow {
+  transform: translateX(3px);
 }
 
 /* ==========================================================================

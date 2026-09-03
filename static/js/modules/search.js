@@ -147,6 +147,13 @@ export function bindGlobalSearch() {
   $("globalSearchBackdrop")?.addEventListener("click", closeGlobalSearch);
   $("globalSearchClose")?.addEventListener("click", closeGlobalSearch);
   $("topSearchTrigger")?.addEventListener("click", openGlobalSearch);
+  $("homeSearchTrigger")?.addEventListener("click", openGlobalSearch);
+  $("homeSearchTrigger")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openGlobalSearch();
+    }
+  });
 
   const input = $("globalSearchInput");
   input?.addEventListener("input", () => {

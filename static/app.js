@@ -43,7 +43,7 @@ export function bindNavigation() {
   $("homeOpenEnglish").addEventListener("click", () => selectLibraryShelf("english"));
   $("homeOpenPolitics").addEventListener("click", () => selectLibraryShelf("politics"));
   $("homeOpenReview").addEventListener("click", openReview); $("homeOpenStats")?.addEventListener("click", openStats);
-  $("homeContinue").addEventListener("click", () => resumeActivityTarget(state.homeContinueTarget));
+  $("homeContinue")?.addEventListener("click", () => resumeActivityTarget(state.homeContinueTarget));
   window.addEventListener("resize", () => { window.clearTimeout(state.homeResizeTimer); state.homeResizeTimer = window.setTimeout(() => { if ($("homeView").classList.contains("active")) renderHome(); if ($("libraryView").classList.contains("active") && !$("bookTree").classList.contains("hidden") && !$("libraryWorkspace").classList.contains("resource-open") && !$("libraryWorkspace").classList.contains("reader-open")) renderBooks(); }, 120); });
   $("sidebar").addEventListener("mouseenter", () => $("sidebar").classList.add("is-expanded")); $("sidebar").addEventListener("mouseleave", () => $("sidebar").classList.remove("is-expanded"));
   $("readerBack").addEventListener("click", returnFromReader); $("readerBook").addEventListener("click", returnFromReader);
