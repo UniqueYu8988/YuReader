@@ -1554,22 +1554,30 @@
 .review-copy-prompt-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 7px;
+  padding: 7px 14px;
+  min-height: 34px;
   border-radius: var(--radius-xs);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-strong));
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
   cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+  transition: all 160ms var(--ease-out);
 }
 .review-copy-prompt-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-strong));
+  border-color: var(--primary-strong);
+  color: var(--primary-strong);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 10px rgba(184, 96, 69, 0.15);
 }
 .review-copy-prompt-btn svg {
   width: 15px;
   height: 15px;
+  color: var(--primary);
 }
 
 .review-domain-grid {
@@ -1802,28 +1810,31 @@
 .review-overview-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .review-open-drawer-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 7px;
+  padding: 7px 14px;
+  min-height: 34px;
   border-radius: var(--radius-xs);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
+  color: #6941c6;
+  background: color-mix(in srgb, #9974f8 10%, var(--surface-strong));
+  border: 1px solid color-mix(in srgb, #9974f8 28%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
   cursor: pointer;
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-  color: var(--text);
-  box-shadow: var(--shadow);
-  transition: all 150ms var(--ease-out);
+  transition: all 160ms var(--ease-out);
 }
 .review-open-drawer-btn:hover {
-  background: var(--surface-hover);
-  border-color: color-mix(in srgb, #9974f8 40%, var(--line));
+  background: color-mix(in srgb, #9974f8 18%, var(--surface-strong));
+  border-color: #7f56d9;
+  color: #53389e;
   transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(153, 116, 248, 0.15);
 }
 .review-open-drawer-btn img {
   width: 15px;
@@ -1839,26 +1850,27 @@
 .practice-open-note-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
+  gap: 7px;
+  padding: 6px 13px;
+  min-height: 32px;
   border-radius: var(--radius-xs);
   font-size: 12px;
   font-weight: 500;
+  color: #6941c6;
+  background: color-mix(in srgb, #9974f8 8%, var(--surface-strong));
+  border: 1px solid color-mix(in srgb, #9974f8 26%, transparent);
   cursor: pointer;
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-  color: var(--text);
-  box-shadow: var(--shadow);
-  transition: all 150ms var(--ease-out);
+  transition: all 160ms var(--ease-out);
 }
 .practice-open-note-btn:hover {
-  background: var(--surface-hover);
-  border-color: color-mix(in srgb, #9974f8 40%, var(--line));
+  background: color-mix(in srgb, #9974f8 16%, var(--surface-strong));
+  border-color: #7f56d9;
+  color: #53389e;
   transform: translateY(-1px);
 }
 .practice-open-note-btn img {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   display: block;
 }
 

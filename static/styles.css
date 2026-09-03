@@ -1364,50 +1364,58 @@ input:focus-visible {
 .primary-button,
 .secondary-button {
   display: inline-flex;
-  min-height: var(--control-height);
+  min-height: 36px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 18px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
+  gap: 7px;
+  padding: 0 15px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
+  transition: all var(--motion-fast) var(--ease-out);
 }
 
 .primary-button {
-  border: 0;
-  color: var(--on-inverse);
-  background: var(--inverse);
-  box-shadow: 0 0 0 1px var(--inverse), var(--shadow);
+  border: 1px solid color-mix(in srgb, var(--primary) 70%, transparent);
+  color: #ffffff;
+  background: var(--primary);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.08);
 }
 
 .primary-button:hover:not(:disabled) {
-  background: var(--inverse-hover);
-  box-shadow: 0 0 0 1px var(--inverse-hover), var(--shadow-whisper);
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  box-shadow: 0 3px 8px rgba(184, 96, 69, 0.2);
+  transform: translateY(-1px);
 }
 
 .primary-button:disabled {
-  border: 0;
-  color: #73726c;
-  background: #dedcd1;
-  box-shadow: 0 0 0 1px rgba(20, 20, 19, 0.14);
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+  background: var(--surface-muted);
+  box-shadow: none;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .secondary-button {
-  border: 0;
-  color: var(--text);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
   background: var(--surface-strong);
-  box-shadow: var(--ring);
+  box-shadow: var(--shadow);
 }
 
-.secondary-button:hover {
-  background: var(--surface);
-  box-shadow: var(--ring-strong), var(--shadow);
+.secondary-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
 .primary-button:active:not(:disabled),
-.secondary-button:active,
+.secondary-button:active:not(:disabled),
 .action-tile:active:not(:disabled),
 .icon-button:active:not(:disabled) {
   transform: scale(0.985);
@@ -1415,16 +1423,16 @@ input:focus-visible {
 
 .primary-button.compact,
 .secondary-button.compact {
-  min-height: 38px;
-  padding: 0 13px;
-  border-radius: 10px;
-  font-size: 13px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 5px;
+  font-size: 12px;
 }
 
 .primary-button svg,
 .secondary-button svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
 }
 
 .feedback-panel {
