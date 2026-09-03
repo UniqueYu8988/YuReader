@@ -846,12 +846,15 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
             dur = max(0, int(item.get("duration_seconds") or 0))
             ts = str(item.get("started_at") or item.get("last_active_at") or "")
             hour = 14
-            if "T" in ts:
+            if ts:
                 try:
-                    time_part = ts.split("T")[1]
-                    hour = int(time_part.split(":")[0])
-                except (ValueError, IndexError):
-                    hour = 14
+                    hour = datetime.fromisoformat(ts).astimezone().hour
+                except Exception:
+                    if "T" in ts:
+                        try:
+                            hour = int(ts.split("T")[1].split(":")[0])
+                        except Exception:
+                            hour = 14
             if 5 <= hour < 12:
                 morning_seconds += dur
             elif 12 <= hour < 18:
@@ -860,7 +863,19 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
                 evening_seconds += dur
 
         if primary_seconds == 0 and day_seconds(value) > 0:
-            afternoon_seconds = day_seconds(value)
+            ts_legacy = str(value.get("last_reading_at") or "")
+            hour = 14
+            if ts_legacy:
+                try:
+                    hour = datetime.fromisoformat(ts_legacy).astimezone().hour
+                except Exception:
+                    hour = 14
+            if 5 <= hour < 12:
+                morning_seconds = day_seconds(value)
+            elif 12 <= hour < 18:
+                afternoon_seconds = day_seconds(value)
+            else:
+                evening_seconds = day_seconds(value)
 
         heatmap_days.append(
             {

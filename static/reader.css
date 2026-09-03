@@ -1066,14 +1066,14 @@
   padding-bottom: 6px;
 }
 .reader-activity-chart {
-  --reader-activity-cell-w: 16px;
-  --reader-activity-cell-h: 30px;
-  --reader-activity-gap: 5px;
+  --reader-activity-cell-w: 36px;
+  --reader-activity-cell-h: 13px;
+  --reader-activity-gap: 4px;
   display: grid;
   width: max-content;
   grid-template-columns: 20px auto;
   grid-template-rows: 16px auto;
-  gap: 6px 10px;
+  gap: 5px 8px;
 }
 .reader-activity-months {
   display: grid;
@@ -1094,7 +1094,7 @@
 }
 .reader-activity-weekdays span {
   color: var(--text-soft);
-  font-size: 9px;
+  font-size: 8.5px;
   line-height: var(--reader-activity-cell-h);
 }
 
@@ -1109,11 +1109,11 @@
 }
 .reader-circadian-cell {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 2px;
   width: var(--reader-activity-cell-w);
   height: var(--reader-activity-cell-h);
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--surface-muted);
   padding: 1.5px;
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
@@ -1121,9 +1121,9 @@
   transition: transform 120ms var(--ease-out), box-shadow 120ms;
 }
 .reader-circadian-cell:hover {
-  transform: scale(1.18);
+  transform: scale(1.15);
   z-index: 10;
-  box-shadow: 0 4px 14px rgba(20, 20, 19, 0.12);
+  box-shadow: 0 3px 10px rgba(20, 20, 19, 0.12);
   border-color: var(--primary);
 }
 .reader-circadian-cell.today {
@@ -1135,9 +1135,11 @@
 }
 .reader-circadian-cell i {
   flex: 1;
+  height: 100%;
   border-radius: 1.5px;
   background: color-mix(in srgb, var(--surface-strong) 40%, transparent);
   transition: background 140ms;
+}
 }
 .reader-circadian-cell i.level-0 {
   background: color-mix(in srgb, var(--line) 40%, transparent);
