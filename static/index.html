@@ -58,11 +58,49 @@
     <main class="main-content wide-layout">
       <header class="topbar">
         <h1 class="reader-page-title" id="pageTitle">今日学习</h1>
-        <div class="topbar-actions"></div>
+        <div class="topbar-actions">
+          <button class="topbar-search-btn" id="topSearchTrigger" type="button" title="全局搜索 (Ctrl + K)">
+            <i data-lucide="search"></i>
+            <span>秒搜教材、真题、词条…</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+        </div>
       </header>
 
       <section class="view active" id="homeView" data-view="home">
         <div class="reader-home">
+          <!-- 考研初试大考倒计时与备考阶段规划 -->
+          <section class="exam-countdown-banner" id="examCountdownBanner" aria-label="考研初试倒计时">
+            <div class="ec-left">
+              <div class="ec-target-tag"><i data-lucide="flame"></i> 2027 全国硕士研究生统一招生考试</div>
+              <div class="ec-days-wrap">
+                <span class="ec-label">距离初试大考仅剩</span>
+                <strong class="ec-d-day" id="ecDDayNumber">D-000</strong>
+                <span class="ec-unit">天</span>
+              </div>
+            </div>
+            <div class="ec-right">
+              <div class="ec-stages-head">
+                <span class="ec-stage-title">三轮备考阶段规划</span>
+                <span class="ec-stage-current" id="ecCurrentStageLabel">当前：一轮知识奠基与深度精读</span>
+              </div>
+              <div class="ec-stage-track">
+                <div class="ec-stage-pill active" data-stage="1">
+                  <span class="stage-num">01</span>
+                  <div class="stage-info"><strong>一轮精读奠基</strong><small>教材重点全覆盖</small></div>
+                </div>
+                <div class="ec-stage-pill" data-stage="2">
+                  <span class="stage-num">02</span>
+                  <div class="stage-info"><strong>二轮真题攻坚</strong><small>题库刷题与错题斩杀</small></div>
+                </div>
+                <div class="ec-stage-pill" data-stage="3">
+                  <span class="stage-num">03</span>
+                  <div class="stage-info"><strong>三轮冲刺押题</strong><small>全真模考与口外名解</small></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section class="reader-home-lead">
             <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
             <aside class="reader-home-today" aria-label="今日学习概况"><span>今日学习</span><strong><b id="homeTodayMinutes">0</b><em>分</em></strong><small>有效学习时长</small><div><span id="homeTodayActivities">0 项活动</span><span id="homeTodayNotes">0 条笔记</span></div></aside>
@@ -237,9 +275,39 @@
         <div class="knowledge-workspace" id="libraryWorkspace">
           <section class="knowledge-browser" id="libraryBrowser" aria-label="学习">
             <header class="learning-center-header">
-              <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button></nav>
+              <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button><button type="button" data-shelf="mistakes"><i data-lucide="circle-alert"></i><strong>错题</strong><span class="mistakes-count-badge hidden" id="mistakesBadge">0</span></button></nav>
             </header>
             <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习区还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+            <section class="library-mistakes-view hidden" id="libraryMistakesView" aria-label="错题攻坚中心">
+              <header class="mistakes-lead-header">
+                <div>
+                  <p class="eyebrow">MISTAKES BANK · 错题攻坚</p>
+                  <h3>错题重练与弱项斩杀</h3>
+                  <p class="mistakes-lead-subtitle">聚合客观题做题历史中的错题，针对性二刷突破，直至彻底掌握。</p>
+                </div>
+                <div class="mistakes-summary-pill" id="mistakesSummaryPill">
+                  <div class="msp-col"><span class="msp-lbl">错题总量</span><strong id="mistakesTotalCount">0</strong></div>
+                  <div class="msp-col"><span class="msp-lbl">待攻坚</span><strong class="pending-txt" id="mistakesPendingCount">0</strong></div>
+                  <div class="msp-col"><span class="msp-lbl">已斩杀</span><strong class="resolved-txt" id="mistakesResolvedCount">0</strong></div>
+                </div>
+              </header>
+              <div class="mistakes-filter-bar">
+                <div class="mistakes-filter-tabs" id="mistakesFilterTabs">
+                  <button type="button" class="mf-tab active" data-mistake-filter="all">全部错题</button>
+                  <button type="button" class="mf-tab" data-mistake-filter="politics">政治理论</button>
+                  <button type="button" class="mf-tab" data-mistake-filter="english">考研英语</button>
+                  <button type="button" class="mf-tab" data-mistake-filter="pending">仅待攻坚</button>
+                  <button type="button" class="mf-tab" data-mistake-filter="resolved">已斩杀</button>
+                </div>
+              </div>
+              <div class="mistakes-card-list" id="mistakesCardList">
+                <div class="mistakes-empty-box" id="mistakesEmptyBox">
+                  <i data-lucide="check-circle-2"></i>
+                  <strong>暂无错题记录</strong>
+                  <span>在政治或英语中做题后，做错的题目会自动汇聚在此处供您二刷。</span>
+                </div>
+              </div>
+            </section>
             <section class="english-exams hidden" id="englishExams" aria-label="历年英语真题">
               <button class="review-back-link english-notebook-back" id="englishExamsBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习</button>
               <header class="english-notebook-heading"><div><p class="eyebrow">PAST PAPERS</p><h3>历年真题</h3><p>原文先作答，提交后再显示原书解析；个人解析继续独立保存。</p></div></header>
@@ -308,9 +376,61 @@
               <header class="oral-focus-chapter-head">
                 <button class="review-back-link" id="oralFocusBackToChapters" type="button"><i data-lucide="arrow-left"></i> 返回章节</button>
                 <div><h3 id="oralFocusChapterTitle">章节</h3><span id="oralFocusChapterSummary">0 / 0</span></div>
+                <div class="oral-view-modes" id="oralViewModes">
+                  <button type="button" class="ov-mode-btn active" id="oralModeListBtn" title="列表研读模式"><i data-lucide="list"></i> 目录列表</button>
+                  <button type="button" class="ov-mode-btn" id="oralModeCardBtn" title="Anki翻转背诵卡模式"><i data-lucide="sparkles"></i> 翻转背诵卡</button>
+                </div>
                 <button class="oral-focus-answer-toggle" id="oralFocusChapterAnswerToggle" type="button" role="switch" aria-checked="false"><span>只看题目</span><i aria-hidden="true"></i></button>
               </header>
               <div class="oral-focus-card-grid" id="oralFocusItems"></div>
+              <div class="oral-flashcard-deck hidden" id="oralFocusFlashcardDeck">
+                <div class="fc-counter-bar">
+                  <span class="fc-index" id="fcCounterText">第 1 / 10 题</span>
+                  <span class="fc-meta" id="fcMetaText"></span>
+                </div>
+                <div class="fc-stage" id="fcStage">
+                  <div class="fc-card" id="fcCard">
+                    <div class="fc-card-face fc-card-front">
+                      <div class="fc-face-top">
+                        <span class="fc-pill-type" id="fcCardType">名词解释</span>
+                        <span class="fc-pill-subject" id="fcCardSubject">口腔颌面外科</span>
+                      </div>
+                      <div class="fc-front-stem" id="fcFrontStem">正在载入题目…</div>
+                      <div class="fc-flip-prompt">
+                        <i data-lucide="refresh-cw"></i> 点击卡片或按空格翻转查看采分点
+                      </div>
+                    </div>
+                    <div class="fc-card-face fc-card-back">
+                      <div class="fc-face-top">
+                        <span class="fc-pill-type is-ans">权威参考解析与采分点</span>
+                        <button type="button" class="fc-unflip-btn" id="fcUnflipBtn"><i data-lucide="rotate-ccw"></i> 翻回正面</button>
+                      </div>
+                      <div class="fc-back-content knowledge-article" id="fcBackContent"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="fc-ebbinghaus-controls" id="fcEbbinghausControls">
+                  <button type="button" class="eb-btn eb-again" data-eb-rating="learning" data-eb-days="1" title="10分钟后重测">
+                    <i data-lucide="rotate-ccw"></i>
+                    <strong>完全遗忘</strong>
+                    <small>重新排队</small>
+                  </button>
+                  <button type="button" class="eb-btn eb-hard" data-eb-rating="fuzzy" data-eb-days="2" title="明天再背">
+                    <i data-lucide="help-circle"></i>
+                    <strong>模糊犹豫</strong>
+                    <small>+2 天后复测</small>
+                  </button>
+                  <button type="button" class="eb-btn eb-good" data-eb-rating="mastered" data-eb-days="4" title="熟练掌握">
+                    <i data-lucide="check-circle-2"></i>
+                    <strong>熟练掌握</strong>
+                    <small>+4 天巩固</small>
+                  </button>
+                </div>
+                <div class="fc-nav-bar">
+                  <button type="button" class="fc-nav-btn" id="fcPrevBtn"><i data-lucide="chevron-left"></i> 上一题</button>
+                  <button type="button" class="fc-nav-btn" id="fcNextBtn">下一题 <i data-lucide="chevron-right"></i></button>
+                </div>
+              </div>
             </section>
           </section>
 
@@ -883,6 +1003,31 @@
       <footer class="section-note-footer"><span>Markdown · 自动保存</span></footer>
     </section>
     <button class="section-note-launcher" id="toggleSectionNoteDock" type="button" aria-label="打开本节笔记" aria-controls="sectionNotePopover" aria-expanded="false" title="本节笔记"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></button>
+  </div>
+
+  <!-- 全局穿透秒搜命令面板 (Ctrl + K) -->
+  <div class="global-search-modal hidden" id="globalSearchModal" role="dialog" aria-modal="true" aria-label="全局穿透搜索">
+    <div class="global-search-backdrop" id="globalSearchBackdrop"></div>
+    <div class="global-search-box">
+      <div class="global-search-input-wrap">
+        <i data-lucide="search" class="gs-input-icon"></i>
+        <input type="text" id="globalSearchInput" placeholder="输入关键词穿透搜索教材、真题、词条、笔记…" autocomplete="off" spellcheck="false" />
+        <span class="gs-shortcut-tag">ESC</span>
+        <button type="button" class="gs-close-btn" id="globalSearchClose" aria-label="关闭搜索"><i data-lucide="x"></i></button>
+      </div>
+      <div class="global-search-categories" id="gsCategoryFilter">
+        <button type="button" class="gs-cat-chip active" data-gs-cat="">全部</button>
+        <button type="button" class="gs-cat-chip" data-gs-cat="books">教材原文</button>
+        <button type="button" class="gs-cat-chip" data-gs-cat="oral">口腔重点</button>
+        <button type="button" class="gs-cat-chip" data-gs-cat="practice">真题考点</button>
+      </div>
+      <div class="global-search-results" id="globalSearchResults"></div>
+      <footer class="global-search-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> 切换选项</span>
+        <span><kbd>↵</kbd> 跳转内容</span>
+        <span><kbd>ESC</kbd> 退出</span>
+      </footer>
+    </div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>

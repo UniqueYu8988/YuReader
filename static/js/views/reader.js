@@ -7,6 +7,7 @@ import { renderMedicineCenter } from "../domains/medicine.js";
 import { bindPoliticsEvents, renderPoliticsCenter } from "../domains/politics.js";
 import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { loadResourcePractice, loadSectionPractice, openPractice } from "../modules/practice.js";
+import { bindMistakesEvents, loadMistakes, renderMistakes } from "../domains/mistakes.js";
 import { loadStats } from "./logs.js";
 
 export function domainBooks() {
@@ -129,11 +130,25 @@ export function bindLearningCenter() {
 }
 
 export function renderBooks() {
-  renderDomainTabs(); englishPanel("");
-  const tree = $("bookTree"); tree.classList.remove("hidden");
-  tree.innerHTML = state.libraryDomain === "politics" ? renderPoliticsCenter() : state.libraryDomain === "english" ? renderEnglishCenter() : renderMedicineCenter();
-  bindLearningCenter(); refreshIcons();
-  if (state.libraryDomain === "english") loadEnglishCenterOverview();
+  renderDomainTabs();
+  englishPanel("");
+  const tree = $("bookTree");
+  const mistakesView = $("libraryMistakesView");
+
+  if (state.libraryDomain === "mistakes") {
+    tree.classList.add("hidden");
+    mistakesView?.classList.remove("hidden");
+    bindMistakesEvents();
+    loadMistakes();
+  } else {
+    mistakesView?.classList.add("hidden");
+    tree.classList.remove("hidden");
+    tree.innerHTML = state.libraryDomain === "politics" ? renderPoliticsCenter() : state.libraryDomain === "english" ? renderEnglishCenter() : renderMedicineCenter();
+    bindLearningCenter();
+    if (state.libraryDomain === "english") loadEnglishCenterOverview();
+    loadMistakes(); // load badge count in background
+  }
+  refreshIcons();
 }
 
 export function renderResource() {

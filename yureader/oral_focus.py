@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -591,7 +591,7 @@ def write_oral_focus_notes(subject_id: str, progress_payload: dict) -> tuple[Pat
     return target, storage, uri
 
 
-def save_oral_focus_progress(item_id: str, answer: str, memory_note: str, mastery: str) -> dict:
+def save_oral_focus_progress(item_id: str, answer: str, memory_note: str, mastery: str, eb_interval_days: int = 1) -> dict:
     item = oral_focus_item_payload(item_id)
     if mastery not in {"unseen", "learning", "fuzzy", "mastered"}:
         raise ValueError("invalid oral focus mastery")
@@ -601,10 +601,17 @@ def save_oral_focus_progress(item_id: str, answer: str, memory_note: str, master
         raise ValueError("oral focus response is too long")
     with ORAL_FOCUS_LOCK:
         payload = load_oral_focus_progress()
-        payload.setdefault("items", {})[item_id] = {
+        items = payload.setdefault("items", {})
+        old_item = items.get(item_id, {})
+        reps = int(old_item.get("eb_reps") or 0) + 1 if mastery == "mastered" else 0
+        next_review = (datetime.now().astimezone() + timedelta(days=max(1, int(eb_interval_days)))).isoformat(timespec="seconds")
+        items[item_id] = {
             "answer": answer,
             "memory_note": memory_note,
             "mastery": mastery,
+            "eb_reps": reps,
+            "eb_interval_days": max(1, int(eb_interval_days)),
+            "next_review_at": next_review,
             "updated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         }
         atomic_write(ORAL_FOCUS_PROGRESS_PATH, json.dumps(payload, ensure_ascii=False, indent=2))

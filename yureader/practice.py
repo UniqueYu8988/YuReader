@@ -606,3 +606,97 @@ def write_practice_notes(bank_id: str, subject_label: str = "") -> tuple[Path, s
     return practice_notes_target(bank, selected_label)
 
 
+def mistakes_overview(domain_filter: str = "") -> dict:
+    attempts_data = load_practice_store("attempts").get("items", {})
+    analyses_data = load_practice_store("analyses").get("items", {})
+    all_banks = question_bank_catalog()
+    bank_map = {bank["id"]: bank for bank in all_banks}
+
+    bank_questions: dict[str, dict[str, dict]] = {}
+    for bank in all_banks:
+        try:
+            questions = load_bank_questions(bank["id"])
+            bank_questions[bank["id"]] = {q["question_id"]: q for q in questions}
+        except Exception:
+            continue
+
+    mistakes: list[dict] = []
+    resolved_count = 0
+    pending_count = 0
+
+    for qid, attempt in attempts_data.items():
+        if not isinstance(attempt, dict):
+            continue
+        if attempt.get("correct") is not False and not attempt.get("previously_wrong"):
+            continue
+
+        bank_id = attempt.get("bank_id") or ""
+        bank = bank_map.get(bank_id, {})
+        domain = safe_domain(bank.get("domain") or "politics")
+        if domain_filter and domain != domain_filter:
+            continue
+
+        q_dict = bank_questions.get(bank_id, {}).get(qid)
+        if not q_dict:
+            for b_id, b_qs in bank_questions.items():
+                if qid in b_qs:
+                    q_dict = b_qs[qid]
+                    bank_id = b_id
+                    bank = bank_map.get(bank_id, {})
+                    domain = safe_domain(bank.get("domain") or "politics")
+                    break
+
+        if not q_dict:
+            continue
+
+        is_resolved = bool(attempt.get("resolved") or (attempt.get("correct") is True and attempt.get("previously_wrong")))
+        if is_resolved:
+            resolved_count += 1
+        else:
+            pending_count += 1
+
+        personal_analysis = str((analyses_data.get(qid) or {}).get("content") or "").strip()
+
+        mistakes.append({
+            "question_id": qid,
+            "bank_id": bank_id,
+            "bank_title": bank.get("title") or bank_id,
+            "domain": domain,
+            "domain_label": DOMAIN_LABELS.get(domain, domain),
+            "subject_label": practice_subject_label(bank, str(q_dict.get("subject_label") or "")),
+            "stem_md": q_dict.get("stem_md") or "",
+            "context_md": q_dict.get("context_md") or "",
+            "options": q_dict.get("options") or [],
+            "correct_answers": q_dict.get("correct_answers") or [],
+            "selected_answers": attempt.get("selected_answers") or [],
+            "source_analysis_md": q_dict.get("source_analysis_md") or "",
+            "personal_analysis": personal_analysis,
+            "answered_at": attempt.get("answered_at") or "",
+            "resolved": is_resolved,
+            "resolved_at": attempt.get("resolved_at") or "",
+        })
+
+    mistakes.sort(key=lambda x: (1 if x["resolved"] else 0, x["answered_at"] or ""), reverse=True)
+
+    return {
+        "total": len(mistakes),
+        "pending": pending_count,
+        "resolved": resolved_count,
+        "items": mistakes,
+    }
+
+
+def resolve_mistake(question_id: str, resolved: bool = True) -> dict:
+    if not re.fullmatch(r"[a-z0-9-]{3,160}", question_id):
+        raise ValueError("invalid question id")
+    with PRACTICE_LOCK:
+        payload = load_practice_store("attempts")
+        items = payload.setdefault("items", {})
+        if question_id not in items:
+            raise ValueError("question attempt not found")
+        items[question_id]["resolved"] = bool(resolved)
+        items[question_id]["resolved_at"] = datetime.now().astimezone().isoformat(timespec="seconds") if resolved else ""
+        save_practice_store("attempts", payload)
+    return {"ok": True, "question_id": question_id, "resolved": resolved}
+
+

@@ -218,6 +218,40 @@ function initGoalsListeners() {
   }
 }
 
+export function updateExamCountdown() {
+  const dDayEl = $("ecDDayNumber");
+  const stageLabelEl = $("ecCurrentStageLabel");
+  if (!dDayEl) return;
+
+  const examDate = new Date("2026-12-26T08:30:00+08:00");
+  const now = new Date();
+  const diffMs = examDate.getTime() - now.getTime();
+  const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+  dDayEl.textContent = `D-${String(diffDays).padStart(3, "0")}`;
+
+  let stageNum = 1;
+  let stageText = "当前：一轮知识奠基与深度精读";
+  if (diffDays <= 30) {
+    stageNum = 3;
+    stageText = "当前：三轮全真模拟冲刺与核心名解狂背";
+  } else if (diffDays <= 120) {
+    stageNum = 2;
+    stageText = "当前：二轮真题强化攻坚与错题精准斩杀";
+  } else {
+    stageNum = 1;
+    stageText = "当前：一轮全面教材精读与考点筑基";
+  }
+
+  if (stageLabelEl) stageLabelEl.textContent = stageText;
+
+  document.querySelectorAll(".ec-stage-pill").forEach((pill) => {
+    const stage = parseInt(pill.dataset.stage, 10);
+    pill.classList.toggle("active", stage === stageNum);
+    pill.classList.toggle("completed", stage < stageNum);
+  });
+}
+
 export function renderHome() {
   const stats = state.stats || {};
   const today = stats.today ? new Date(`${stats.today}T00:00:00`) : new Date();
@@ -235,6 +269,7 @@ export function renderHome() {
   $("homeTodayNotes").textContent = `${formatInteger(stats.today_note_count || 0)} 条笔记`;
   $("homeReviewMeta").textContent = pending ? `${reviewDateLabel(pending.date)} · ${formatInteger(pending.activity_count)} 条待整理` : "整理最近学习";
 
+  updateExamCountdown();
   initGoalsListeners();
   fetchDailyGoals();
   refreshIcons();

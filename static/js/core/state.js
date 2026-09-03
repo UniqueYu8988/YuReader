@@ -1,5 +1,5 @@
-export const DOMAIN_LABELS = { medicine: "医学", politics: "政治", english: "英语" };
-export const SHELF_ORDER = ["medicine", "politics", "english"];
+export const DOMAIN_LABELS = { medicine: "医学", politics: "政治", english: "英语", mistakes: "错题" };
+export const SHELF_ORDER = ["medicine", "politics", "english", "mistakes"];
 export const BOOK_COVER_LABELS = {
   "dental-pulp-5e": "牙体",
   "implantology-5e": "种植",

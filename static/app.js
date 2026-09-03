@@ -3,14 +3,17 @@ import { $, state } from "./js/core/state.js";
 import { collectReadingTime, collectWorkspaceTime, flushReadingTime, flushWorkspaceTime, initializeReadingTimer, markReadingScroll, markWorkspaceActivity } from "./js/core/timer.js";
 import { applyTheme, refreshIcons, toggleTheme } from "./js/core/utils.js";
 import { renderEnglishExams } from "./js/domains/english.js";
-import { loadOralFocus, navigateOralFocus, openOralFocusIndex, renderOralFocusDirectory, saveOralFocusNote, scheduleOralFocusNoteSave, setOralFocusNoteOpen, toggleOralFocusChapterAnswers, toggleOralFocusReference } from "./js/modules/oral_focus.js";
+import { bindFlashcardEvents, loadOralFocus, navigateOralFocus, openOralFocusIndex, renderOralFocusDirectory, saveOralFocusNote, scheduleOralFocusNoteSave, setOralFocusNoteOpen, toggleOralFocusChapterAnswers, toggleOralFocusReference } from "./js/modules/oral_focus.js";
 import { finishPracticeSession, renderPracticeQuestion, returnFromPractice, returnFromSubjectivePractice, reviewFirstWrongPracticeQuestion, schedulePracticeAnalysisSave, scheduleSubjectiveSave, setPracticeNoteOpen, submitPracticeAnswer, togglePracticeSessionMap, toggleSubjectiveReference } from "./js/modules/practice.js";
 import { renderHome } from "./js/views/home.js";
 import { loadStats, openLogs, openStats, openWeeklyReport, renderTimelineCards, scheduleWeeklySave, setWeeklyNoteOpen } from "./js/views/logs.js";
 import { closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave } from "./js/views/reader.js";
 import { markReviewNoText, openReview, scheduleDailySummarySave, setReviewNoteOpen } from "./js/views/review.js";
+import { bindGlobalSearch } from "./js/modules/search.js";
 
 export function bindNavigation() {
+  bindGlobalSearch();
+  bindFlashcardEvents();
   document.querySelectorAll("[data-dashboard]").forEach((button) => button.addEventListener("click", setHomeMode));
   $("themeToggle")?.addEventListener("click", toggleTheme);
   applyTheme(document.documentElement.dataset.theme || "light", { persist: false });

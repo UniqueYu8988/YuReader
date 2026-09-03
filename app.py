@@ -135,7 +135,11 @@ from yureader.practice import (
     practice_subject_label,
     practice_notes_target,
     write_practice_notes,
+    mistakes_overview,
+    resolve_mistake,
 )
+
+from yureader.search import global_search
 
 from yureader.activity import (
     load_activity,
@@ -368,6 +372,23 @@ class ReaderHandler(BaseHTTPRequestHandler):
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
+        if path == "/api/practice/mistakes":
+            try:
+                query = parse_qs(parsed.query)
+                domain = query.get("domain", [""])[0]
+                self.send_json(mistakes_overview(domain))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/search":
+            try:
+                query = parse_qs(parsed.query)
+                q = query.get("q", [""])[0]
+                category = query.get("category", [""])[0]
+                self.send_json(global_search(q, category))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
         if path.startswith("/api/resource/"):
             resource_id = path.rsplit("/", 1)[-1]
             book = next((item for item in books if item["id"] == resource_id), None)
@@ -470,7 +491,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/oral-focus/progress", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/subjective/response", "/api/daily-goals"}:
+        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/oral-focus/progress", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/practice/mistakes/resolve", "/api/subjective/response", "/api/daily-goals"}:
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
             return
         try:
@@ -523,8 +544,9 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 answer = str(body.get("answer") or "")
                 memory_note = str(body.get("memory_note") or "")
                 mastery = str(body.get("mastery") or "unseen").strip()
+                eb_interval = int(body.get("eb_interval_days") or 1)
                 item = oral_focus_item_payload(item_id)
-                saved = save_oral_focus_progress(item_id, answer, memory_note, mastery)
+                saved = save_oral_focus_progress(item_id, answer, memory_note, mastery, eb_interval)
                 subject = item.get("subject") if isinstance(item.get("subject"), dict) else {}
                 resource_id = f"oral-focus:{subject.get('id')}"
                 has_output = bool(answer.strip() or memory_note.strip() or mastery != "unseen")
@@ -547,6 +569,11 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 )
                 self.send_json({"ok": True, **saved, "item": oral_focus_item_payload(item_id)})
                 return
+            if parsed.path == "/api/practice/mistakes/resolve":
+                question_id = str(body.get("question_id") or "")
+                resolved = bool(body.get("resolved", True))
+                self.send_json(resolve_mistake(question_id, resolved))
+                return
             if parsed.path == "/api/practice/answer":
                 bank_id = str(body.get("bank_id") or "")
                 question_id = str(body.get("question_id") or "")
@@ -563,7 +590,20 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 correct_answers = sorted(str(item) for item in question.get("correct_answers") or [])
                 with PRACTICE_LOCK:
                     payload = load_practice_store("attempts")
-                    payload.setdefault("items", {})[question_id] = {"bank_id": bank_id, "selected_answers": selected_answers, "correct": selected_answers == correct_answers, "answered_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+                    items = payload.setdefault("items", {})
+                    old_attempt = items.get(question_id, {})
+                    is_correct = (selected_answers == correct_answers)
+                    was_wrong = (old_attempt.get("correct") is False or bool(old_attempt.get("previously_wrong")))
+                    items[question_id] = {
+                        "bank_id": bank_id,
+                        "selected_answers": selected_answers,
+                        "correct": is_correct,
+                        "previously_wrong": was_wrong,
+                        "resolved": is_correct if was_wrong else bool(old_attempt.get("resolved")),
+                        "answered_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                    }
+                    if is_correct and was_wrong:
+                        items[question_id]["resolved_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
                     save_practice_store("attempts", payload)
                 bank = question_bank_by_id(bank_id) or {}
                 record_activity(

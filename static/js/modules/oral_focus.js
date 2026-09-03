@@ -245,3 +245,162 @@ export async function navigateOralFocus(step) {
   const target = state.oralFocusFlatItems[index + step]; if (!target) return;
   await saveOralFocusNote(); openOralFocusItem(target.id);
 }
+
+let flashcardIndex = 0;
+let isFlashcardFlipped = false;
+let oralViewMode = "list";
+
+export function setOralFocusViewMode(mode) {
+  oralViewMode = mode;
+  $("oralModeListBtn")?.classList.toggle("active", mode === "list");
+  $("oralModeCardBtn")?.classList.toggle("active", mode === "card");
+  $("oralFocusItems")?.classList.toggle("hidden", mode !== "list");
+  $("oralFocusFlashcardDeck")?.classList.toggle("hidden", mode !== "card");
+
+  if (mode === "card") {
+    flashcardIndex = 0;
+    renderOralFlashcard();
+  }
+}
+
+export function renderOralFlashcard() {
+  const items = state.oralFocusChapter?.items || [];
+  const deck = $("oralFocusFlashcardDeck");
+  if (!deck || !items.length) return;
+
+  if (flashcardIndex < 0) flashcardIndex = 0;
+  if (flashcardIndex >= items.length) flashcardIndex = items.length - 1;
+
+  const item = items[flashcardIndex];
+  isFlashcardFlipped = false;
+  $("fcCard")?.classList.remove("is-flipped");
+
+  if ($("fcCounterText")) $("fcCounterText").textContent = `第 ${flashcardIndex + 1} / ${items.length} 题`;
+  if ($("fcMetaText")) {
+    const starText = item.star_level ? "★".repeat(item.star_level) + " 重点" : "";
+    const masteryText = item.progress?.mastery === "mastered" ? "🟢 已熟记" : item.progress?.mastery === "fuzzy" ? "🟡 需巩固" : "⚪ 未掌握";
+    $("fcMetaText").textContent = [starText, masteryText].filter(Boolean).join(" · ");
+  }
+  if ($("fcCardType")) $("fcCardType").textContent = item.type === "definition" ? "名词解释" : "简答论述";
+  if ($("fcCardSubject")) $("fcCardSubject").textContent = state.oralFocusChapter?.subject?.title || "医学全书";
+  if ($("fcFrontStem")) $("fcFrontStem").textContent = item.title || "";
+  if ($("fcBackContent")) {
+    $("fcBackContent").innerHTML = oralFocusAnswerHtml(item);
+    enhanceOralFocusSource($("fcBackContent"));
+  }
+
+  if ($("fcPrevBtn")) $("fcPrevBtn").disabled = flashcardIndex <= 0;
+  if ($("fcNextBtn")) $("fcNextBtn").disabled = flashcardIndex >= items.length - 1;
+
+  refreshIcons();
+}
+
+export function flipFlashcard(forceState = null) {
+  if (forceState !== null) {
+    isFlashcardFlipped = forceState;
+  } else {
+    isFlashcardFlipped = !isFlashcardFlipped;
+  }
+  $("fcCard")?.classList.toggle("is-flipped", isFlashcardFlipped);
+}
+
+export function stepFlashcard(delta) {
+  const items = state.oralFocusChapter?.items || [];
+  const next = flashcardIndex + delta;
+  if (next >= 0 && next < items.length) {
+    flashcardIndex = next;
+    renderOralFlashcard();
+  }
+}
+
+export async function submitFlashcardRating(rating, days) {
+  const items = state.oralFocusChapter?.items || [];
+  const item = items[flashcardIndex];
+  if (!item) return;
+
+  try {
+    const res = await fetch("/api/oral-focus/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item_id: item.id,
+        mastery: rating,
+        eb_interval_days: days,
+        answer: item.progress?.answer || "",
+        memory_note: item.progress?.memory_note || "",
+      }),
+    });
+    if (!res.ok) throw new Error("progress failed");
+    const result = await res.json();
+    item.progress = result.progress;
+
+    if (rating === "mastered") {
+      showToast(`🟢 已掌握！艾宾浩斯排程：+${days}天后复查`);
+    } else if (rating === "fuzzy") {
+      showToast(`🟡 模糊犹豫！排程：明天(+${days}天)重点复习`);
+    } else {
+      showToast(`🔴 完全遗忘！已移入今日待背队列`);
+    }
+
+    if (flashcardIndex < items.length - 1) {
+      flashcardIndex += 1;
+      renderOralFlashcard();
+    } else {
+      renderOralFlashcard();
+      showToast("🎉 本章所有重点词条背诵完成！");
+    }
+  } catch {
+    showToast("保存进度失败，请重试");
+  }
+}
+
+let flashcardEventsBound = false;
+export function bindFlashcardEvents() {
+  if (flashcardEventsBound) return;
+
+  $("oralModeListBtn")?.addEventListener("click", () => setOralFocusViewMode("list"));
+  $("oralModeCardBtn")?.addEventListener("click", () => setOralFocusViewMode("card"));
+  $("fcCard")?.addEventListener("click", (e) => {
+    if (e.target.closest("button") || e.target.closest("a")) return;
+    flipFlashcard();
+  });
+  $("fcUnflipBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    flipFlashcard(false);
+  });
+  $("fcPrevBtn")?.addEventListener("click", () => stepFlashcard(-1));
+  $("fcNextBtn")?.addEventListener("click", () => stepFlashcard(1));
+
+  document.querySelectorAll("#fcEbbinghausControls [data-eb-rating]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const rating = btn.dataset.ebRating;
+      const days = parseInt(btn.dataset.ebDays || "1", 10);
+      submitFlashcardRating(rating, days);
+    });
+  });
+
+  window.addEventListener("keydown", (e) => {
+    const deck = $("oralFocusFlashcardDeck");
+    if (!deck || deck.classList.contains("hidden") || $("oralFocusView")?.classList.contains("hidden")) return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (e.code === "Space") {
+      e.preventDefault();
+      flipFlashcard();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      stepFlashcard(-1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      stepFlashcard(1);
+    } else if (e.key === "1") {
+      submitFlashcardRating("learning", 1);
+    } else if (e.key === "2") {
+      submitFlashcardRating("fuzzy", 2);
+    } else if (e.key === "3") {
+      submitFlashcardRating("mastered", 4);
+    }
+  });
+
+  flashcardEventsBound = true;
+}
