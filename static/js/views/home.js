@@ -1,4 +1,5 @@
-import { homeActivityTargetKey, resumeActivityTarget } from "../core/router.js";
+import { homeActivityTargetKey, resumeActivityTarget, selectLibraryShelf } from "../core/router.js";
+import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { $, state } from "../core/state.js";
 import { escapeHtml, formatDuration, formatInteger, refreshIcons } from "../core/utils.js";
 import { reviewDateLabel } from "./review.js";
@@ -191,6 +192,28 @@ function initGoalsListeners() {
         await saveDailyGoals();
       }
     });
+
+    document.querySelectorAll(".reader-home-goal-item[data-goal-target]").forEach((item) => {
+      item.addEventListener("click", (event) => {
+        if (state.goalsEditMode || event.target.closest(".goal-item-edit") || event.target.tagName === "INPUT") return;
+        const target = item.dataset.goalTarget;
+        if (target === "med-read") {
+          selectLibraryShelf("medicine");
+        } else if (target === "med-def") {
+          openOralFocusIndex(undefined, "definition");
+        } else if (target === "med-essay") {
+          openOralFocusIndex(undefined, "essay");
+        } else if (target === "eng-read") {
+          selectLibraryShelf("english");
+        } else if (target === "eng-comp") {
+          state.englishCenterType = "reading";
+          selectLibraryShelf("english");
+        } else if (target === "pol-read" || target === "pol-unit") {
+          selectLibraryShelf("politics");
+        }
+      });
+    });
+
     goalsInitialized = true;
   }
 }
@@ -205,7 +228,7 @@ export function renderHome() {
   state.homeContinueTarget = continueTarget;
   $("homeLeadText").textContent = continuation ? `上次停在“${continuation.title}”` : "选择一本书，开始今天的学习";
   $("homeContinueLabel").textContent = continuation?.activity_label ? `继续${continuation.activity_label}` : "继续学习";
-  $("homeContinueTitle").textContent = continuation?.title || "进入学习库选择内容";
+  $("homeContinueTitle").textContent = continuation?.title || "进入学习选择内容";
   const pending = stats.review_pending;
   $("homeTodayMinutes").textContent = formatInteger(Math.floor((stats.today_activity_seconds || 0) / 60));
   $("homeTodayActivities").textContent = `${formatInteger(stats.today_activity_count || 0)} 项活动`;

@@ -55,7 +55,7 @@ export async function loadBootstrap() {
     const response = await fetch("/api/bootstrap", { cache: "no-store" }); const data = await response.json(); state.books = data.books || []; state.questionBanks = data.question_banks || [];
     try { await loadOralFocus(); } catch { state.oralFocus = { available: false, subjects: [] }; }
     state.books.forEach((book) => book.sections.forEach((section) => state.sections.set(section.id, { ...section, book_title: book.title, book_id: book.id }))); renderBooks(); await loadStats();
-  } catch { $("bookTree").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取本地学习库</strong><span>请确认 YuReader 服务正在运行。</span></div>`; refreshIcons(); }
+  } catch { $("bookTree").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取本地学习资料</strong><span>请确认 YuReader 服务正在运行。</span></div>`; refreshIcons(); }
 }
 
 bindNavigation(); initializeReadingTimer(); refreshIcons(); loadBootstrap().then(applyRouteHash);

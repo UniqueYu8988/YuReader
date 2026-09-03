@@ -39,7 +39,7 @@
       </button>
       <nav class="side-nav" aria-label="主导航">
         <button class="nav-item active" type="button" data-dashboard title="今日"><i data-lucide="house"></i><span>今日</span></button>
-        <button class="nav-item" type="button" id="libraryNav" title="学习库"><i data-lucide="library"></i><span>学习库</span></button>
+        <button class="nav-item" type="button" id="libraryNav" title="学习"><i data-lucide="library"></i><span>学习</span></button>
         <button class="nav-item" type="button" id="reviewNav" title="回顾"><i data-lucide="history"></i><span>回顾</span></button>
         <button class="nav-item" type="button" id="logsNav" title="记录"><i data-lucide="mails"></i><span>记录</span></button>
       </nav>
@@ -60,7 +60,7 @@
       <section class="view active" id="homeView" data-view="home">
         <div class="reader-home">
           <section class="reader-home-lead">
-            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习库选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
+            <div class="reader-home-copy"><p class="eyebrow" id="homeDate">今天</p><h2 id="homeGreeting">从一小节开始</h2><p id="homeLeadText"></p><button class="reader-home-primary" id="homeContinue" type="button"><span><small id="homeContinueLabel">继续学习</small><strong id="homeContinueTitle">进入学习选择内容</strong></span><i data-lucide="arrow-right"></i></button></div>
             <aside class="reader-home-today" aria-label="今日学习概况"><span>今日学习</span><strong><b id="homeTodayMinutes">0</b><em>分</em></strong><small>有效学习时长</small><div><span id="homeTodayActivities">0 项活动</span><span id="homeTodayNotes">0 条笔记</span></div></aside>
           </section>
           <nav class="reader-home-portals" aria-label="学习入口">
@@ -109,7 +109,7 @@
                   <small>教材与重点题卡</small>
                 </div>
                 <div class="reader-home-goal-list">
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="med-read">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">教材阅读</span>
                       <span class="goal-item-progress" id="homeGoalMedReadStatus">0 / 2.0 小时</span>
@@ -122,7 +122,7 @@
                       <div class="reader-home-progress-fill" id="homeGoalMedReadFill" style="width: 0%;"></div>
                     </div>
                   </div>
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="med-def">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">名词解释</span>
                       <span class="goal-item-progress" id="homeGoalMedDefStatus">0 / 20 个</span>
@@ -135,7 +135,7 @@
                       <div class="reader-home-progress-fill" id="homeGoalMedDefFill" style="width: 0%;"></div>
                     </div>
                   </div>
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="med-essay">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">论述题</span>
                       <span class="goal-item-progress" id="homeGoalMedEssayStatus">0 / 20 个</span>
@@ -159,7 +159,7 @@
                   <small>基础与真题阅读</small>
                 </div>
                 <div class="reader-home-goal-list">
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="eng-read">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">基础阅读</span>
                       <span class="goal-item-progress" id="homeGoalEngReadStatus">0 / 0.5 小时</span>
@@ -172,7 +172,7 @@
                       <div class="reader-home-progress-fill" id="homeGoalEngReadFill" style="width: 0%;"></div>
                     </div>
                   </div>
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="eng-comp">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">阅读理解</span>
                       <span class="goal-item-progress" id="homeGoalEngReadCompStatus">0 / 2 篇</span>
@@ -196,7 +196,7 @@
                   <small>讲义与单元练习</small>
                 </div>
                 <div class="reader-home-goal-list">
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="pol-read">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">讲义阅读</span>
                       <span class="goal-item-progress" id="homeGoalPolReadStatus">0 / 0.5 小时</span>
@@ -209,7 +209,7 @@
                       <div class="reader-home-progress-fill" id="homeGoalPolReadFill" style="width: 0%;"></div>
                     </div>
                   </div>
-                  <div class="reader-home-goal-item">
+                  <div class="reader-home-goal-item" data-goal-target="pol-unit">
                     <div class="reader-home-goal-info">
                       <span class="goal-item-name">单元演练</span>
                       <span class="goal-item-progress" id="homeGoalPolUnitStatus">0 / 2 单元</span>
@@ -231,13 +231,13 @@
 
       <section class="view" id="libraryView" data-view="library">
         <div class="knowledge-workspace" id="libraryWorkspace">
-          <section class="knowledge-browser" id="libraryBrowser" aria-label="学习库">
+          <section class="knowledge-browser" id="libraryBrowser" aria-label="学习">
             <header class="learning-center-header">
               <nav class="reader-domain-tabs learning-domain-tabs" id="domainTabs" aria-label="学习课程"><button class="active" type="button" data-shelf="medicine"><i data-lucide="stethoscope"></i><strong>医学</strong></button><button type="button" data-shelf="politics"><i data-lucide="landmark"></i><strong>政治</strong></button><button type="button" data-shelf="english"><i data-lucide="languages"></i><strong>英语</strong></button></nav>
             </header>
-            <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习库还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
+            <div class="knowledge-review-list reader-book-list" id="bookTree"><div class="knowledge-index-empty"><i data-lucide="library"></i><strong>学习区还是空的</strong><span>把 Markdown 文件放入 content 文件夹后刷新页面。</span></div></div>
             <section class="english-exams hidden" id="englishExams" aria-label="历年英语真题">
-              <button class="review-back-link english-notebook-back" id="englishExamsBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习库</button>
+              <button class="review-back-link english-notebook-back" id="englishExamsBack" type="button"><i data-lucide="arrow-left"></i> 返回英语学习</button>
               <header class="english-notebook-heading"><div><p class="eyebrow">PAST PAPERS</p><h3>历年真题</h3><p>原文先作答，提交后再显示原书解析；个人解析继续独立保存。</p></div></header>
               <div class="english-exam-list" id="englishExamList"></div>
             </section>
@@ -251,7 +251,7 @@
           </section>
 
           <section class="knowledge-resource" id="resourcePanel" aria-label="资料学习主页">
-            <button class="review-back-link" id="resourceBack" type="button"><i data-lucide="arrow-left"></i> 返回学习库</button>
+            <button class="review-back-link" id="resourceBack" type="button"><i data-lucide="arrow-left"></i> 返回学习</button>
             <header class="resource-heading" id="resourceHeading">
               <div class="resource-heading-copy"><p class="eyebrow" id="resourceDomainLabel">医学 · 教材</p><h2 id="resourceTitle"></h2><p id="resourceMeta"></p></div>
             </header>
@@ -265,7 +265,7 @@
           <article class="knowledge-reader" id="readerView" aria-label="章节阅读">
             <div class="reader-content hidden" id="readerContent">
               <div class="reader-toolbar">
-                <button class="icon-button reader-back" id="readerBack" type="button" title="返回学习库" aria-label="返回学习库"><i data-lucide="panel-left"></i></button>
+                <button class="icon-button reader-back" id="readerBack" type="button" title="返回学习" aria-label="返回学习"><i data-lucide="panel-left"></i></button>
                 <div class="reader-breadcrumb">
                   <button class="reader-crumb-link" id="readerBook" type="button" title="返回本书目录"></button>
                   <button class="reader-crumb-picker" id="readerSectionPicker" type="button" title="选择同书章节" aria-label="选择同书章节" aria-expanded="false"><i data-lucide="chevron-right"></i><span id="readerChapter">目录</span><i data-lucide="chevron-down"></i></button>
@@ -295,7 +295,7 @@
         <div class="oral-focus-shell">
           <section class="oral-focus-directory" id="oralFocusDirectory">
             <header class="oral-focus-lead">
-              <button class="review-back-link" id="oralFocusBackToLibrary" type="button"><i data-lucide="arrow-left"></i> 返回医学学习库</button>
+              <button class="review-back-link" id="oralFocusBackToLibrary" type="button"><i data-lucide="arrow-left"></i> 返回医学学习</button>
               <div><h2 id="oralFocusDirectoryTitle">口腔重点</h2><span id="oralFocusSummary">0 / 0</span></div>
             </header>
             <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
@@ -444,7 +444,7 @@
       </section>
     </main>
 
-    <nav class="mobile-nav" aria-label="移动端导航"><button class="active" type="button" data-dashboard><i data-lucide="house"></i><span>今日</span></button><button type="button" id="mobileLibrary"><i data-lucide="library"></i><span>学习库</span></button><button type="button" id="mobileReview"><i data-lucide="history"></i><span>回顾</span></button><button type="button" id="mobileLogs"><i data-lucide="mails"></i><span>记录</span></button></nav>
+    <nav class="mobile-nav" aria-label="移动端导航"><button class="active" type="button" data-dashboard><i data-lucide="house"></i><span>今日</span></button><button type="button" id="mobileLibrary"><i data-lucide="library"></i><span>学习</span></button><button type="button" id="mobileReview"><i data-lucide="history"></i><span>回顾</span></button><button type="button" id="mobileLogs"><i data-lucide="mails"></i><span>记录</span></button></nav>
   </div>
 
   <div class="section-note-float hidden" id="sectionNoteFloat">

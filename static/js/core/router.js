@@ -27,7 +27,7 @@ export function setActiveView(mode) {
   $("libraryNav").classList.toggle("active", primaryMode === "library"); $("mobileLibrary").classList.toggle("active", primaryMode === "library");
   $("reviewNav").classList.toggle("active", primaryMode === "review"); $("mobileReview").classList.toggle("active", primaryMode === "review");
   $("logsNav").classList.toggle("active", primaryMode === "logs"); $("mobileLogs").classList.toggle("active", primaryMode === "logs");
-  $("pageTitle").textContent = mode === "home" ? "今日" : mode === "reader" ? "阅读" : mode === "oralFocus" ? "口腔重点" : mode === "library" ? "学习库" : mode === "practice" ? "练习" : mode === "review" ? "回顾" : mode === "logs" ? "记录" : "统计";
+  $("pageTitle").textContent = mode === "home" ? "今日" : mode === "reader" ? "阅读" : mode === "oralFocus" ? "口腔重点" : mode === "library" ? "学习" : mode === "practice" ? "练习" : mode === "review" ? "回顾" : mode === "logs" ? "记录" : "统计";
 }
 
 export function setHomeMode() {
@@ -46,6 +46,7 @@ export function setLibraryMode() {
 
 export function selectLibraryShelf(shelf) {
   if (!SHELF_ORDER.includes(shelf)) return;
+  setRouteHash("library");
   state.openRequest += 1; stopReadingTimer(); closeNotePopover();
   state.libraryDomain = shelf;
   state.resourceBookId = null; state.resource = null;

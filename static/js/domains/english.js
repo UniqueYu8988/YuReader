@@ -114,40 +114,123 @@ export function englishBankInfo(bank) {
 export function selectedEnglishBank() {
   const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack).sort((a, b) => b.year - a.year);
   if (!candidates.length) return null;
-  if (!candidates.some((entry) => entry.year === Number(state.englishCenterYear))) state.englishCenterYear = String(candidates[0].year);
-  return candidates.find((entry) => entry.year === Number(state.englishCenterYear)) || candidates[0];
+  if (state.englishCenterYear && !candidates.some((entry) => String(entry.year) === String(state.englishCenterYear))) {
+    state.englishCenterYear = "";
+  }
+  return state.englishCenterYear ? candidates.find((entry) => String(entry.year) === String(state.englishCenterYear)) : null;
 }
 
-export function englishSelectionHtml(selected) {
-  const years = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack && entry.year).sort((a, b) => b.year - a.year);
-  return `<div class="english-center-filters"><div role="group" aria-label="英语试卷类型"><button type="button" data-english-track="1" class="${state.englishCenterTrack === 1 ? "active" : ""}">英语一</button><button type="button" data-english-track="2" class="${state.englishCenterTrack === 2 ? "active" : ""}">英语二</button></div><label><span>年份</span><select id="englishCenterYear" aria-label="选择真题年份">${years.map((entry) => `<option value="${entry.year}" ${entry.year === selected?.year ? "selected" : ""}>${entry.year}</option>`).join("")}</select></label></div>`;
+export function englishSelectionHtml(years) {
+  const curType = state.englishCenterType || "all";
+  return `<div class="english-unified-filter-bar">
+    <div class="filter-group track-group" role="group" aria-label="卷别">
+      <button type="button" class="filter-btn${state.englishCenterTrack === 1 ? " active" : ""}" data-english-track="1">英语一</button>
+      <button type="button" class="filter-btn${state.englishCenterTrack === 2 ? " active" : ""}" data-english-track="2">英语二</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group year-group">
+      <label class="filter-select-label">
+        <span>年份</span>
+        <select id="englishCenterYear" aria-label="选择真题年份">
+          <option value="" ${!state.englishCenterYear ? "selected" : ""}>全部年份</option>
+          ${years.map((y) => `<option value="${y}" ${String(state.englishCenterYear) === String(y) ? "selected" : ""}>${y} 年</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group type-group" role="group" aria-label="题型">
+      <button type="button" class="filter-btn${curType === "all" ? " active" : ""}" data-english-type="all">全部题型</button>
+      <button type="button" class="filter-btn${curType === "cloze" ? " active" : ""}" data-english-type="cloze">完形填空</button>
+      <button type="button" class="filter-btn${curType === "reading" ? " active" : ""}" data-english-type="reading">阅读理解</button>
+      <button type="button" class="filter-btn${curType === "new" ? " active" : ""}" data-english-type="new">新题型</button>
+      <button type="button" class="filter-btn${curType === "subjective" ? " active" : ""}" data-english-type="subjective">翻译与写作</button>
+    </div>
+  </div>`;
 }
 
 export function renderEnglishCenter() {
-  const books = recentFirstBooks(englishShelfBooks(), "english"); const recentId = books[0]?.id || ""; const selected = selectedEnglishBank();
-  return `<section class="learning-center-section">${learningSectionHeader(1, "书架", `${books.length} 本方法、阅读与词汇资料 · 最近阅读自动置前`, "english-books")}${learningRailHtml("english-books", books, (book) => learningBookCard(book, recentId))}</section>
-    <section class="learning-center-section english-training-section">${learningSectionHeader(2, "真题训练", "完形、阅读与新题型统一按年份快速进入")}${englishSelectionHtml(selected)}<div class="english-type-tabs" role="group" aria-label="客观题型"><button type="button" data-english-type="cloze" class="${state.englishCenterType === "cloze" ? "active" : ""}">完形填空</button><button type="button" data-english-type="reading" class="${state.englishCenterType === "reading" ? "active" : ""}">阅读理解</button><button type="button" data-english-type="new" class="${state.englishCenterType === "new" ? "active" : ""}">新题型</button></div><div class="english-center-groups" id="englishCenterObjectiveGroups"><div class="learning-loading">正在读取${selected?.year || ""}年题型…</div></div></section>
-    <section class="learning-center-section english-writing-section">${learningSectionHeader(3, "翻译与写作", "与客观题拆分，独立作答后再查看参考解析")}<div class="english-center-groups subjective" id="englishCenterSubjectiveGroups"><div class="learning-loading">正在读取翻译与写作资料…</div></div></section>`;
+  const books = recentFirstBooks(englishShelfBooks(), "english");
+  const recentId = books[0]?.id || "";
+  const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack && entry.year).sort((a, b) => b.year - a.year);
+  const years = candidates.map((c) => c.year);
+
+  return `<section class="learning-center-section">${learningSectionHeader(1, "书架", `${books.length} 本方法、阅读与词汇资料 · 最近阅读自动置前`, "english-books", "book-marked")}${learningRailHtml("english-books", books, (book) => learningBookCard(book, recentId))}</section>
+    <section class="learning-center-section english-training-section">${learningSectionHeader(2, "真题训练", "历年真题与解析 · 客观题逐题训练，翻译与写作独立作答", "", "scroll")}${englishSelectionHtml(years)}<div class="english-center-groups unified" id="englishUnifiedExamList"><div class="learning-loading">正在读取真题列表…</div></div></section>`;
 }
 
 export async function loadEnglishCenterOverview() {
-  const selected = selectedEnglishBank(); if (!selected) return;
+  const container = $("englishUnifiedExamList");
+  if (!container) return;
+  const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack && entry.year).sort((a, b) => b.year - a.year);
+
+  if (!state.englishCenterYear) {
+    const type = state.englishCenterType || "all";
+    if (!candidates.length) {
+      container.innerHTML = `<div class="learning-empty"><strong>暂无真题数据</strong></div>`;
+      return;
+    }
+    const rows = candidates.map((entry) => {
+      const year = entry.year;
+      const trackName = entry.paper === 2 ? "英语二" : "英语一";
+      if (type === "all") {
+        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · 考研${trackName}</small><strong>${year} 年全国硕士研究生招生考试${trackName}真题</strong><em>客观题 45 题 + 翻译与写作 · 整卷导读</em></span><i data-lucide="arrow-right"></i></button>`;
+      }
+      if (type === "cloze") {
+        return `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(entry.bank.id)}" data-english-objective-knowledge="" data-english-objective-start="0"><span class="english-paper-row-index">${year}</span><span class="english-paper-row-copy"><small>${year} · SECTION I</small><strong>${trackName} · 完形填空</strong><em>第 1–20 题 · 20 题</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`;
+      }
+      if (type === "reading") {
+        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · SECTION II PART A</small><strong>${trackName} · 阅读理解（共 4 篇）</strong><em>第 21–40 题 · 20 题 · 点击进入文章列表</em></span><i data-lucide="arrow-right"></i></button>`;
+      }
+      if (type === "new") {
+        return `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(entry.bank.id)}" data-english-objective-knowledge="" data-english-objective-start="40"><span class="english-paper-row-index">${year}</span><span class="english-paper-row-copy"><small>${year} · SECTION II PART B</small><strong>${trackName} · 新题型</strong><em>第 41–45 题 · 5 题</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`;
+      }
+      if (type === "subjective") {
+        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · SECTION III / IV</small><strong>${trackName} · 翻译与写作</strong><em>独立作答与批改 · 点击查看</em></span><i data-lucide="arrow-right"></i></button>`;
+      }
+      return "";
+    }).join("");
+    container.innerHTML = rows;
+    bindEnglishCenterGroups();
+    refreshIcons();
+    return;
+  }
+
+  const selected = candidates.find((c) => String(c.year) === String(state.englishCenterYear)) || candidates[0];
+  if (!selected) return;
   try {
     let payload = state.englishCenterOverviewCache.get(selected.bank.id);
     if (!payload) {
       const response = await fetch(`/api/practice/overview?bank_id=${encodeURIComponent(selected.bank.id)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("overview unavailable");
-      payload = await response.json(); state.englishCenterOverviewCache.set(selected.bank.id, payload);
+      payload = await response.json();
+      state.englishCenterOverviewCache.set(selected.bank.id, payload);
     }
     renderLearningCenterOverview(payload, selected);
   } catch {
-    const objective = $("englishCenterObjectiveGroups"); const subjective = $("englishCenterSubjectiveGroups");
-    if (objective) objective.innerHTML = `<div class="learning-empty"><strong>暂时无法读取真题结构</strong><span>请确认本地题库可用后重试。</span></div>`;
-    if (subjective) subjective.innerHTML = `<div class="learning-empty"><strong>暂时无法读取主观题资料</strong><span>已有作答和历史资料不会受到影响。</span></div>`;
+    container.innerHTML = `<div class="learning-empty"><strong>暂时无法读取真题结构</strong><span>请确认本地题库可用后重试。</span></div>`;
   }
 }
 
 export function bindEnglishCenterGroups() {
-  $("bookTree").querySelectorAll("[data-english-objective-bank]").forEach((button) => button.addEventListener("click", () => openPractice({ bank_id: button.dataset.englishObjectiveBank, knowledge_id: button.dataset.englishObjectiveKnowledge, match_level: "comprehensive" }, "learning-center", Number(button.dataset.englishObjectiveStart || 0))));
-  $("bookTree").querySelectorAll("[data-english-subjective-section]").forEach((button) => button.addEventListener("click", () => { state.subjectiveReturn = "learning-center"; state.englishExamOverviewBankId = button.dataset.englishSubjectiveBank; openSubjectivePractice(button.dataset.englishSubjectiveBook, button.dataset.englishSubjectiveSection); }));
+  const tree = $("bookTree");
+  if (!tree) return;
+  tree.querySelectorAll("[data-open-exam-overview]").forEach((button) => {
+    button.addEventListener("click", () => openEnglishExamOverview(button.dataset.openExamOverview));
+  });
+  tree.querySelectorAll("[data-english-objective-bank]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openPractice({
+        bank_id: button.dataset.englishObjectiveBank,
+        knowledge_id: button.dataset.englishObjectiveKnowledge,
+        match_level: "comprehensive",
+      }, "learning-center", Number(button.dataset.englishObjectiveStart || 0));
+    });
+  });
+  tree.querySelectorAll("[data-english-subjective-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.subjectiveReturn = "learning-center";
+      state.englishExamOverviewBankId = button.dataset.englishSubjectiveBank;
+      openSubjectivePractice(button.dataset.englishSubjectiveBook, button.dataset.englishSubjectiveSection);
+    });
+  });
 }

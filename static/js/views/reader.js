@@ -4,7 +4,7 @@ import { stopReadingTimer } from "../core/timer.js";
 import { bookCoverTitle, bookToc, escapeHtml, formatCharacters, prepareSectionMarkdown, refreshIcons, renderMarkdown, renderSectionGuide, showToast } from "../core/utils.js";
 import { bindEnglishCenterGroups, englishPanel, englishShelfBooks, loadEnglishCenterOverview, renderEnglishCenter, selectedEnglishBank } from "../domains/english.js";
 import { renderMedicineCenter } from "../domains/medicine.js";
-import { renderPoliticsCenter } from "../domains/politics.js";
+import { bindPoliticsEvents, renderPoliticsCenter } from "../domains/politics.js";
 import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { loadResourcePractice, loadSectionPractice, openPractice } from "../modules/practice.js";
 import { loadStats } from "./logs.js";
@@ -38,9 +38,10 @@ export function chapterListHtml(book, chapters, { openAll = false } = {}) {
 }
 
 export function learningRailSize() {
-  if (window.innerWidth <= 680) return 2;
-  if (window.innerWidth <= 960) return 3;
-  return 5;
+  if (window.innerWidth <= 560) return 4;
+  if (window.innerWidth <= 840) return 6;
+  if (window.innerWidth <= 1100) return 8;
+  return 10;
 }
 
 export function recentFirstBooks(books, domain) {
@@ -53,12 +54,14 @@ export function recentFirstBooks(books, domain) {
   });
 }
 
-export function learningSectionHeader(index, title, meta, railId = "") {
-  return `<header class="learning-section-heading"><div><h3>${escapeHtml(title)}</h3></div>${railId ? `<nav aria-label="${escapeHtml(title)}翻页"><small data-rail-position="${escapeHtml(railId)}"></small><button type="button" data-rail-move="${escapeHtml(railId)}:-1" aria-label="上一组"><i data-lucide="arrow-left"></i></button><button type="button" data-rail-move="${escapeHtml(railId)}:1" aria-label="下一组"><i data-lucide="arrow-right"></i></button></nav>` : ""}</header>`;
+export function learningSectionHeader(index, title, meta, railId = "", icon = "") {
+  const iconHtml = icon ? `<i data-lucide="${escapeHtml(icon)}"></i>` : "";
+  return `<header class="learning-section-heading"><div><h3>${iconHtml}<span>${escapeHtml(title)}</span></h3></div>${railId ? `<nav aria-label="${escapeHtml(title)}翻页"><small data-rail-position="${escapeHtml(railId)}"></small><button type="button" data-rail-move="${escapeHtml(railId)}:-1" aria-label="上一组"><i data-lucide="arrow-left"></i></button><button type="button" data-rail-move="${escapeHtml(railId)}:1" aria-label="下一组"><i data-lucide="arrow-right"></i></button></nav>` : ""}</header>`;
 }
 
 export function learningBookCard(book, recentId = "") {
-  return `<button class="learning-book-card${book.id === recentId ? " recent" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover" aria-hidden="true"><strong>${bookCoverTitle(book)}</strong></span><span><strong>${escapeHtml(book.title)}</strong>${book.subject && book.subject !== book.title ? `<small>${escapeHtml(book.subject)}</small>` : ""}</span></button>`;
+  const shortTitle = bookCoverTitle(book);
+  return `<button class="learning-book-card${book.id === recentId ? " recent" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="《${escapeHtml(book.title)}》" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover" aria-hidden="true"><strong>${shortTitle}</strong></span><span class="learning-book-short-name">${shortTitle}</span></button>`;
 }
 
 export function learningRailHtml(railId, items, renderItem) {
@@ -70,16 +73,30 @@ export function learningRailHtml(railId, items, renderItem) {
 }
 
 export function renderLearningCenterOverview(payload, bankInfo) {
-  const objective = $("englishCenterObjectiveGroups"); const subjective = $("englishCenterSubjectiveGroups");
-  if (!objective || !subjective || state.libraryDomain !== "english" || selectedEnglishBank()?.bank.id !== bankInfo.bank.id) return;
+  const container = $("englishUnifiedExamList");
+  if (!container || state.libraryDomain !== "english") return;
+  const curType = state.englishCenterType || "all";
   const groups = (payload.groups || []).filter((group) => {
     const start = Number(group.start_number || 0);
-    return state.englishCenterType === "cloze" ? start <= 20 : state.englishCenterType === "reading" ? start >= 21 && start <= 40 : start >= 41;
+    if (!curType || curType === "all") return true;
+    return curType === "cloze" ? start <= 20 : curType === "reading" ? start >= 21 && start <= 40 : start >= 41;
   });
-  objective.innerHTML = groups.length ? groups.map((group) => `<button type="button" data-english-objective-bank="${escapeHtml(bankInfo.bank.id)}" data-english-objective-knowledge="${escapeHtml(group.knowledge_id || "")}" data-english-objective-start="${Number(group.start_index || 0)}"><span><small>${escapeHtml(group.part || "真题训练")}</small><strong>${escapeHtml(group.label)}</strong><em>第 ${group.start_number}–${group.end_number} 题 · ${group.answered_count || 0}/${group.question_count} 已答</em></span><i data-lucide="arrow-right"></i></button>`).join("") : `<div class="learning-empty"><strong>该题型暂无可用分组</strong><span>原始试卷结构仍保留，不会使用其他题型替代。</span></div>`;
-  const subjectiveItems = payload.subjective?.sections || [];
-  subjective.innerHTML = subjectiveItems.length ? subjectiveItems.map((item) => `<button type="button" data-english-subjective-book="${escapeHtml(item.book_id)}" data-english-subjective-section="${escapeHtml(item.section_id)}" data-english-subjective-bank="${escapeHtml(bankInfo.bank.id)}"><span><small>${bankInfo.year} · ENGLISH ${bankInfo.paper === 2 ? "II" : "I"}</small><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.range || "独立作答")}</em></span><i data-lucide="arrow-up-right"></i></button>`).join("") : `<div class="learning-empty"><strong>这个年份暂无独立主观题资料</strong><span>不会把整套试卷参考页误当作翻译或作文解析。</span></div>`;
-  bindEnglishCenterGroups(); refreshIcons();
+  const showSubjective = curType === "all" || curType === "subjective";
+  const subjectiveItems = showSubjective ? (payload.subjective?.sections || []) : [];
+
+  let html = "";
+  if (curType !== "subjective" && groups.length) {
+    html += groups.map((group) => `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(bankInfo.bank.id)}" data-english-objective-knowledge="${escapeHtml(group.knowledge_id || "")}" data-english-objective-start="${Number(group.start_index || 0)}"><span class="english-paper-row-index">${String(group.start_number).padStart(2, "0")}</span><span class="english-paper-row-copy"><small>${escapeHtml(group.part || "真题训练")}</small><strong>${escapeHtml(group.label)}</strong><em>第 ${group.start_number}–${group.end_number} 题 · ${group.answered_count || 0}/${group.question_count} 已答</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`).join("");
+  }
+  if (subjectiveItems.length) {
+    html += subjectiveItems.map((item, idx) => `<button class="english-paper-row" type="button" data-english-subjective-book="${escapeHtml(item.book_id)}" data-english-subjective-section="${escapeHtml(item.section_id)}" data-english-subjective-bank="${escapeHtml(bankInfo.bank.id)}"><span class="english-paper-row-index">${String(idx + 5).padStart(2, "0")}</span><span class="english-paper-row-copy"><small>${bankInfo.year} · SECTION III / IV</small><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.range || "独立作答")}</em></span><span class="english-paper-row-status"><strong>进入作答</strong></span><i data-lucide="arrow-up-right"></i></button>`).join("");
+  }
+  if (!html) {
+    html = `<div class="learning-empty"><strong>该题型暂无可用题目</strong><span>切换其他年份或题型。</span></div>`;
+  }
+  container.innerHTML = html;
+  bindEnglishCenterGroups();
+  refreshIcons();
 }
 
 export function bindLearningCenter() {
@@ -108,6 +125,7 @@ export function bindLearningCenter() {
   $("englishCenterYear")?.addEventListener("change", (event) => { state.englishCenterYear = event.target.value; renderBooks(); });
   tree.querySelectorAll("[data-english-type]").forEach((button) => button.addEventListener("click", () => { state.englishCenterType = button.dataset.englishType; renderBooks(); }));
   bindEnglishCenterGroups();
+  bindPoliticsEvents();
 }
 
 export function renderBooks() {
