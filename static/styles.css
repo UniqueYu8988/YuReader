@@ -448,6 +448,21 @@ input:focus-visible {
   transform: rotate(8deg);
 }
 
+.nav-item.theme-toggle {
+  display: flex;
+  width: 100%;
+  height: var(--control-height);
+  border-radius: var(--radius-xs);
+  justify-content: flex-start;
+  padding: 0 10px;
+  transform: none;
+}
+
+.nav-item.theme-toggle:hover {
+  transform: none;
+  background: rgba(232, 230, 220, 0.58);
+}
+
 .theme-toggle svg {
   width: 17px;
   height: 17px;

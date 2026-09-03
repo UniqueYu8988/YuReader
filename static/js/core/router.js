@@ -22,11 +22,12 @@ export function hashRoute() {
 export function setActiveView(mode) {
   const viewMode = mode === "reader" ? "library" : mode;
   ["home", "library", "oralFocus", "practice", "review", "logs", "stats"].forEach((view) => $(`${view}View`).classList.toggle("active", view === viewMode));
-  const primaryMode = mode === "home" ? "home" : ["library", "reader", "oralFocus", "practice"].includes(mode) ? "library" : mode === "review" ? "review" : "logs";
+  const primaryMode = mode === "home" ? "home" : ["library", "reader", "oralFocus", "practice"].includes(mode) ? "library" : mode === "review" ? "review" : mode === "stats" ? "stats" : "logs";
   document.querySelectorAll("[data-dashboard]").forEach((button) => button.classList.toggle("active", primaryMode === "home"));
   $("libraryNav").classList.toggle("active", primaryMode === "library"); $("mobileLibrary").classList.toggle("active", primaryMode === "library");
   $("reviewNav").classList.toggle("active", primaryMode === "review"); $("mobileReview").classList.toggle("active", primaryMode === "review");
   $("logsNav").classList.toggle("active", primaryMode === "logs"); $("mobileLogs").classList.toggle("active", primaryMode === "logs");
+  $("statsNav")?.classList.toggle("active", primaryMode === "stats"); $("mobileStats")?.classList.toggle("active", primaryMode === "stats");
   $("pageTitle").textContent = mode === "home" ? "今日" : mode === "reader" ? "阅读" : mode === "oralFocus" ? "口腔重点" : mode === "library" ? "学习" : mode === "practice" ? "练习" : mode === "review" ? "回顾" : mode === "logs" ? "记录" : "统计";
 }
 

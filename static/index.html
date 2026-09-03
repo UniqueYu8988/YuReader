@@ -44,6 +44,10 @@
         <button class="nav-item" type="button" id="logsNav" title="记录"><i data-lucide="mails"></i><span>记录</span></button>
       </nav>
       <div class="side-nav-bottom">
+        <button class="nav-item" id="statsNav" type="button" title="统计分析">
+          <i data-lucide="chart-pie"></i>
+          <span>统计</span>
+        </button>
         <button class="nav-item theme-toggle" id="themeToggle" type="button" aria-label="切换夜间模式" title="切换夜间模式" aria-pressed="false">
           <i data-lucide="moon"></i>
           <span>切换主题</span>
@@ -683,16 +687,189 @@
       </section>
 
       <section class="view" id="statsView" data-view="stats">
-        <div class="reader-stats-dashboard">
-          <header class="reader-stats-lead"><div><p class="eyebrow">记录 · 统计</p><strong id="statsTotalDuration">0分</strong><span>统一活动索引中的真实学习时长；阅读、客观题、主观题、笔记与回顾只计一次。</span><small class="hidden" id="statsLegacyNote"></small></div><button class="reader-home-secondary" id="statsBackToRecords" type="button"><i data-lucide="arrow-left"></i><span>返回记录</span></button></header>
-          <section class="reader-stats-facts" aria-label="学习数据"><div><span>今日时长</span><strong id="statsTodayDuration">0分</strong></div><div><span>累计时长</span><strong id="statsTotalReading">0分</strong></div><div><span>活跃学习日</span><strong id="statsActiveDays">0</strong></div><div><span>连续学习</span><strong id="statsStreak">0 天</strong></div></section>
-          <section class="reader-activity-panel" aria-label="每日学习活动"><header><div><strong>每日学习</strong><span id="activitySummary">近 12 周</span></div><div class="reader-activity-legend" aria-hidden="true"><span>少</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>多</span></div></header><div class="reader-activity-scroll"><div class="reader-activity-chart"><div class="reader-activity-months" id="activityMonths" aria-hidden="true"></div><div class="reader-activity-weekdays" aria-hidden="true"><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span>日</span></div><div class="reader-activity-grid" id="activityGrid"></div></div></div></section>
-          <section class="reader-effort-panel"><header><div><p class="eyebrow">统一投入</p><h3>把精力花在哪里</h3></div><span>按学科与活动类型汇总</span></header><div id="effortDistribution"></div></section>
+        <div class="stats-workspace">
+          <!-- 1. 顶部 Header -->
+          <header class="stats-top-bar">
+            <div class="stats-heading-center">
+              <h2 id="statsPageTitle">学业画像 · 全景统计</h2>
+              <p id="statsPageSubtitle">量化作息节律、三科学术资产与输出效能</p>
+            </div>
+          </header>
+
+          <!-- 2. 四维宏观里程碑卡片 -->
+          <section class="stats-milestone-grid" aria-label="四维宏观里程碑">
+            <div class="stats-milestone-card">
+              <div class="milestone-icon"><i data-lucide="clock"></i></div>
+              <div class="milestone-info">
+                <span class="milestone-label">累计专注学时</span>
+                <strong class="milestone-val" id="statsTotalDuration">0 小时</strong>
+                <small class="milestone-sub" id="statsTodaySub">今日专注 0 小时</small>
+              </div>
+            </div>
+            <div class="stats-milestone-card">
+              <div class="milestone-icon streak-icon"><i data-lucide="flame"></i></div>
+              <div class="milestone-info">
+                <span class="milestone-label">连续研习天数</span>
+                <strong class="milestone-val" id="statsStreak">0 天</strong>
+                <small class="milestone-sub" id="statsActiveDaysSub">累计活跃 0 天</small>
+              </div>
+            </div>
+            <div class="stats-milestone-card">
+              <div class="milestone-icon practice-icon"><i data-lucide="check-circle-2"></i></div>
+              <div class="milestone-info">
+                <span class="milestone-label">客观题做题总数</span>
+                <strong class="milestone-val" id="statsPracticeTotal">0 题</strong>
+                <small class="milestone-sub" id="statsAccuracySub">综合正确率 0%</small>
+              </div>
+            </div>
+            <div class="stats-milestone-card">
+              <div class="milestone-icon note-icon"><i data-lucide="book-marked"></i></div>
+              <div class="milestone-info">
+                <span class="milestone-label">笔记与复盘沉淀</span>
+                <strong class="milestone-val" id="statsNoteTotal">0 字</strong>
+                <small class="milestone-sub" id="statsReviewDaysSub">已完成 0 天复盘</small>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. 三时段作息节律热力图面板 (早/中/晚 微胶囊) -->
+          <section class="stats-circadian-panel" aria-label="三时段活力热力图">
+            <header class="stats-panel-header">
+              <div>
+                <span class="eyebrow">作息节律与专注时序</span>
+                <h3 class="panel-title">近 12 周晨午暮活力热图</h3>
+              </div>
+              <div class="circadian-legend" aria-hidden="true">
+                <div class="legend-slot-tags">
+                  <span class="legend-tag morning"><i class="dot"></i>晨间 (05-12)</span>
+                  <span class="legend-tag afternoon"><i class="dot"></i>午后 (12-18)</span>
+                  <span class="legend-tag evening"><i class="dot"></i>晚间 (18-24+)</span>
+                </div>
+                <div class="legend-scale">
+                  <span>少</span>
+                  <i data-level="0"></i>
+                  <i data-level="1"></i>
+                  <i data-level="2"></i>
+                  <i data-level="3"></i>
+                  <i data-level="4"></i>
+                  <span>多</span>
+                </div>
+              </div>
+            </header>
+
+            <!-- 黄金时段摘要横幅 -->
+            <div class="circadian-insight-banner" id="circadianInsightBanner">
+              <i data-lucide="sparkles"></i>
+              <span id="circadianInsightText">计算您的黄金精力时段中…</span>
+            </div>
+
+            <!-- 热力图滚动网格 -->
+            <div class="circadian-chart-wrapper">
+              <div class="reader-activity-chart">
+                <div class="reader-activity-months" id="activityMonths" aria-hidden="true"></div>
+                <div class="reader-activity-weekdays" id="activityWeekdays" aria-hidden="true">
+                  <span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span>日</span>
+                </div>
+                <div class="reader-activity-grid circadian-capsule-grid" id="activityGrid"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. 三大学科深度资产纵深 -->
+          <section class="stats-subjects-section" aria-label="三大学科深度资产">
+            <header class="stats-panel-header">
+              <div>
+                <span class="eyebrow">学科资产分布</span>
+                <h3 class="panel-title">医学 · 政治 · 英语 纵深看板</h3>
+              </div>
+            </header>
+            <div class="stats-subject-cards" id="statsSubjectCards">
+              <!-- 1. 医学 -->
+              <div class="stats-subject-card medicine" data-subject-card="medicine">
+                <div class="subject-card-head">
+                  <div class="subject-card-title"><i data-lucide="stethoscope"></i><strong>医学全书</strong></div>
+                  <button type="button" class="subject-card-jump" data-shelf="medicine">前往学习 <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="subject-card-metrics">
+                  <div class="sc-metric"><span class="sc-label">累计学时</span><strong id="medTotalHours">0h</strong></div>
+                  <div class="sc-metric"><span class="sc-label">精读教材</span><strong id="medBooksCount">0 本</strong></div>
+                  <div class="sc-metric"><span class="sc-label">章节笔记</span><strong id="medNotesCount">0 篇</strong></div>
+                  <div class="sc-metric"><span class="sc-label">口腔词条已学</span><strong id="medOralCount">0 条</strong></div>
+                </div>
+              </div>
+
+              <!-- 2. 政治 -->
+              <div class="stats-subject-card politics" data-subject-card="politics">
+                <div class="subject-card-head">
+                  <div class="subject-card-title"><i data-lucide="landmark"></i><strong>政治理论</strong></div>
+                  <button type="button" class="subject-card-jump" data-shelf="politics">前往练习 <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="subject-card-metrics">
+                  <div class="sc-metric"><span class="sc-label">累计学时</span><strong id="polTotalHours">0h</strong></div>
+                  <div class="sc-metric"><span class="sc-label">做题总量</span><strong id="polQuestionsCount">0 题</strong></div>
+                  <div class="sc-metric"><span class="sc-label">正确题数</span><strong id="polCorrectCount">0 题</strong></div>
+                  <div class="sc-metric"><span class="sc-label">做题正确率</span><strong id="polAccuracy">0%</strong></div>
+                </div>
+              </div>
+
+              <!-- 3. 英语 -->
+              <div class="stats-subject-card english" data-subject-card="english">
+                <div class="subject-card-head">
+                  <div class="subject-card-title"><i data-lucide="languages"></i><strong>考研英语</strong></div>
+                  <button type="button" class="subject-card-jump" data-shelf="english">前往真题 <i data-lucide="arrow-right"></i></button>
+                </div>
+                <div class="subject-card-metrics">
+                  <div class="sc-metric"><span class="sc-label">累计学时</span><strong id="engTotalHours">0h</strong></div>
+                  <div class="sc-metric"><span class="sc-label">真题题量</span><strong id="engAttemptsCount">0 题</strong></div>
+                  <div class="sc-metric"><span class="sc-label">笔记沉淀</span><strong id="engNotebookChars">0 字</strong></div>
+                  <div class="sc-metric"><span class="sc-label">精析周数</span><strong id="engNotebookWeeks">0 周</strong></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5. 输入型 vs 输出型配比 & 活动类型分布 -->
+          <section class="stats-effort-section" aria-label="输入输出与活动类型汇总">
+            <div class="stats-effort-grid">
+              <!-- 左: 输入 vs 输出效率比 -->
+              <div class="stats-ratio-card">
+                <header class="ratio-card-head">
+                  <div>
+                    <span class="eyebrow">研学生产力杠杆</span>
+                    <h4>输入 VS 输出配比</h4>
+                  </div>
+                  <span class="ratio-hint">考研讲究“以测代练”的主动输出</span>
+                </header>
+                <div class="ratio-bar-wrapper">
+                  <div class="ratio-bar">
+                    <div class="ratio-fill input-fill" id="ratioInputFill" style="width: 50%;"></div>
+                    <div class="ratio-fill output-fill" id="ratioOutputFill" style="width: 50%;"></div>
+                  </div>
+                  <div class="ratio-legend">
+                    <div class="ratio-item"><span class="dot input-dot"></span><span>被动输入（教材精读、看解析）</span><strong id="ratioInputText">50%</strong></div>
+                    <div class="ratio-item"><span class="dot output-dot"></span><span>主动输出（客观题、背诵、复盘）</span><strong id="ratioOutputText">50%</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右: 按活动类型详细明细 -->
+              <div class="stats-types-card">
+                <header class="ratio-card-head">
+                  <div>
+                    <span class="eyebrow">行为轨迹</span>
+                    <h4>各活动类型投入</h4>
+                  </div>
+                </header>
+                <div class="activity-type-list" id="activityTypeList"></div>
+              </div>
+            </div>
+          </section>
+
         </div>
       </section>
     </main>
 
-    <nav class="mobile-nav" aria-label="移动端导航"><button class="active" type="button" data-dashboard><i data-lucide="house"></i><span>今日</span></button><button type="button" id="mobileLibrary"><i data-lucide="library"></i><span>学习</span></button><button type="button" id="mobileReview"><i data-lucide="history"></i><span>回顾</span></button><button type="button" id="mobileLogs"><i data-lucide="mails"></i><span>记录</span></button></nav>
+    <nav class="mobile-nav" aria-label="移动端导航"><button class="active" type="button" data-dashboard><i data-lucide="house"></i><span>今日</span></button><button type="button" id="mobileLibrary"><i data-lucide="library"></i><span>学习</span></button><button type="button" id="mobileReview"><i data-lucide="history"></i><span>回顾</span></button><button type="button" id="mobileLogs"><i data-lucide="mails"></i><span>记录</span></button><button type="button" id="mobileStats"><i data-lucide="chart-pie"></i><span>统计</span></button></nav>
   </div>
 
   <div class="section-note-float hidden" id="sectionNoteFloat">

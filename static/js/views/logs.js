@@ -169,14 +169,12 @@ export function renderTimelineCards() {
 function renderEmbeddedStats() {
   const container = $("logsStatsWrapper");
   if (!container) return;
-  const statsDashboard = document.querySelector("#statsView .reader-stats-dashboard");
+  const statsDashboard = document.querySelector("#statsView .stats-workspace");
   if (statsDashboard) {
     container.innerHTML = statsDashboard.innerHTML;
-    container.querySelectorAll("[data-stats-shelf]").forEach((button) => {
-      button.addEventListener("click", () => selectLibraryShelf(button.dataset.statsShelf));
+    container.querySelectorAll("[data-shelf]").forEach((button) => {
+      button.addEventListener("click", () => selectLibraryShelf(button.dataset.shelf));
     });
-    const backBtn = container.querySelector("#statsBackToRecords");
-    if (backBtn) backBtn.classList.add("hidden");
     refreshIcons();
   }
 }
@@ -244,52 +242,103 @@ export function bindLogsEvents() {
 export function renderStats() {
   const stats = state.stats || {};
   const totalActivitySeconds = Number(stats.total_activity_seconds ?? stats.total_learning_seconds ?? 0);
-  $("statsTodayDuration").textContent = formatDuration(stats.today_activity_seconds, true);
-  $("statsTotalDuration").textContent = formatDuration(totalActivitySeconds, true);
-  $("statsTotalReading").textContent = formatDuration(totalActivitySeconds, true);
-  $("statsActiveDays").textContent = formatInteger(stats.active_day_count);
-  $("statsStreak").textContent = `${formatInteger(stats.streak)} 天`;
-  $("activitySummary").textContent = `近 ${stats.weeks || 12} 周 · ${formatDuration(stats.heatmap_total_seconds)}`;
-  const legacySeconds = Number(stats.legacy_unmapped_reading_seconds || 0);
-  const legacyNote = $("statsLegacyNote");
-  legacyNote.classList.toggle("hidden", legacySeconds <= 0);
-  legacyNote.textContent = legacySeconds > 0 ? `另有 ${formatDuration(legacySeconds)} 历史阅读尚未安全映射，已保留兼容口径，未计入统一时长。` : "";
 
+  // 1. 四维里程碑
+  if ($("statsTotalDuration")) $("statsTotalDuration").textContent = formatDuration(totalActivitySeconds, true);
+  if ($("statsTodaySub")) $("statsTodaySub").textContent = `今日专注 ${formatDuration(stats.today_activity_seconds || 0, true)}`;
+  if ($("statsStreak")) $("statsStreak").textContent = `${formatInteger(stats.streak || 0)} 天`;
+  if ($("statsActiveDaysSub")) $("statsActiveDaysSub").textContent = `累计活跃 ${formatInteger(stats.active_day_count || 0)} 天`;
+  if ($("statsPracticeTotal")) $("statsPracticeTotal").textContent = `${formatInteger(stats.subject_assets?.politics?.answered_count || (stats.effort_summary?.practice?.answered_count || 0))} 题`;
+  if ($("statsAccuracySub")) $("statsAccuracySub").textContent = `综合正确率 ${stats.subject_assets?.politics?.accuracy || 0}%`;
+  if ($("statsNoteTotal")) $("statsNoteTotal").textContent = `${formatInteger(stats.note_character_count || 0)} 字`;
+  if ($("statsReviewDaysSub")) $("statsReviewDaysSub").textContent = `已完成 ${formatInteger(stats.review_day_count || 0)} 天复盘`;
+
+  // 2. 黄金时段摘要
+  if ($("circadianInsightText")) {
+    if (stats.golden_slot && stats.golden_slot.percent > 0) {
+      $("circadianInsightText").textContent = `恭喜！您的黄金专注期在【${stats.golden_slot.label}】，贡献了全天 ${stats.golden_slot.percent}% 的高强度学时。`;
+    } else {
+      $("circadianInsightText").textContent = "开启沉浸研习，系统将自动测算您的晨/午/暮黄金精力时段。";
+    }
+  }
+
+  // 3. 三时段微胶囊作息热力图
   const days = stats.days || [];
   const weeks = Math.max(1, stats.weeks || 12);
-  $("activityGrid").style.setProperty("--reader-activity-weeks", weeks);
-  $("activityMonths").style.setProperty("--reader-activity-weeks", weeks);
-  $("activityGrid").innerHTML = days.map((day) => {
-    const intensity = Number(day.activity_seconds || 0) || (day.active ? 1 : 0);
-    const level = activityLevel(intensity, stats.max || intensity);
-    const label = new Date(`${day.date}T00:00:00`).toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
-    const legacy = Number(day.legacy_unmapped_reading_seconds || 0);
-    const details = `${formatDuration(day.activity_seconds)} · ${formatInteger(day.activity_count || 0)} 个活动${legacy > 0 ? ` · 兼容阅读 ${formatDuration(legacy)}` : ""}`;
-    return `<span class="reader-activity-cell level-${level}${day.active ? " active-day" : ""}${day.future ? " future" : ""}${day.date === stats.today ? " today" : ""}" title="${escapeHtml(`${label}：${details}`)}" aria-label="${escapeHtml(`${label}，${details}`)}"></span>`;
-  }).join("");
-  const monthLabels = [];
-  for (let week = 0; week < weeks; week += 1) {
-    const day = days[week * 7];
-    const month = day ? new Date(`${day.date}T00:00:00`).getMonth() : -1;
-    const previous = week && days[(week - 1) * 7] ? new Date(`${days[(week - 1) * 7].date}T00:00:00`).getMonth() : -1;
-    monthLabels.push(`<span>${week === 0 || month !== previous ? `${month + 1}月` : ""}</span>`);
-  }
-  $("activityMonths").innerHTML = monthLabels.join("");
+  if ($("activityGrid")) {
+    $("activityGrid").style.setProperty("--reader-activity-weeks", weeks);
+    $("activityMonths").style.setProperty("--reader-activity-weeks", weeks);
 
-  const domainLabels = { medicine: "医学", politics: "政治", english: "英语", other: "其他兼容项" };
-  const domainIcons = { medicine: "stethoscope", politics: "landmark", english: "languages", other: "layers-2" };
-  const activityLabels = { read: "阅读", objective_practice: "客观题", subjective_practice: "主观题", notebook: "笔记", review: "回顾" };
+    $("activityGrid").innerHTML = days.map((day) => {
+      const circadian = day.circadian || { morning_seconds: 0, afternoon_seconds: 0, evening_seconds: 0 };
+      const mLevel = activityLevel(circadian.morning_seconds, 7200);
+      const aLevel = activityLevel(circadian.afternoon_seconds, 7200);
+      const eLevel = activityLevel(circadian.evening_seconds, 7200);
+      const label = new Date(`${day.date}T00:00:00`).toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
+      const details = `晨间 ${formatDuration(circadian.morning_seconds)} · 午后 ${formatDuration(circadian.afternoon_seconds)} · 晚间 ${formatDuration(circadian.evening_seconds)}（全天 ${formatDuration(day.activity_seconds || 0)}）`;
+      return `<div class="reader-circadian-cell${day.active ? " active-day" : ""}${day.future ? " future" : ""}${day.date === stats.today ? " today" : ""}" title="${escapeHtml(`${label}：${details}`)}" aria-label="${escapeHtml(`${label}，${details}`)}">
+        <i class="slot-morning level-${mLevel}"></i>
+        <i class="slot-afternoon level-${aLevel}"></i>
+        <i class="slot-evening level-${eLevel}"></i>
+      </div>`;
+    }).join("");
+
+    const monthLabels = [];
+    for (let week = 0; week < weeks; week += 1) {
+      const day = days[week * 7];
+      const month = day ? new Date(`${day.date}T00:00:00`).getMonth() : -1;
+      const previous = week && days[(week - 1) * 7] ? new Date(`${days[(week - 1) * 7].date}T00:00:00`).getMonth() : -1;
+      monthLabels.push(`<span>${week === 0 || month !== previous ? `${month + 1}月` : ""}</span>`);
+    }
+    $("activityMonths").innerHTML = monthLabels.join("");
+  }
+
+  // 4. 三大学科深度资产看板
+  const subAssets = stats.subject_assets || {};
+  if ($("medTotalHours")) $("medTotalHours").textContent = formatDuration(subAssets.medicine?.duration_seconds || 0, true);
+  if ($("medBooksCount")) $("medBooksCount").textContent = `${subAssets.medicine?.book_count || 0} 本`;
+  if ($("medNotesCount")) $("medNotesCount").textContent = `${subAssets.medicine?.note_count || 0} 篇`;
+  if ($("medOralCount")) $("medOralCount").textContent = `${subAssets.medicine?.oral_studied || 0} 条`;
+
+  if ($("polTotalHours")) $("polTotalHours").textContent = formatDuration(subAssets.politics?.duration_seconds || 0, true);
+  if ($("polQuestionsCount")) $("polQuestionsCount").textContent = `${subAssets.politics?.answered_count || 0} 题`;
+  if ($("polCorrectCount")) $("polCorrectCount").textContent = `${subAssets.politics?.correct_count || 0} 题`;
+  if ($("polAccuracy")) $("polAccuracy").textContent = `${subAssets.politics?.accuracy || 0}%`;
+
+  if ($("engTotalHours")) $("engTotalHours").textContent = formatDuration(subAssets.english?.duration_seconds || 0, true);
+  if ($("engAttemptsCount")) $("engAttemptsCount").textContent = `${(stats.activity_counts || {})["objective_practice"] || 0} 题`;
+  if ($("engNotebookChars")) $("engNotebookChars").textContent = `${formatInteger(subAssets.english?.notebook_characters || 0)} 字`;
+  if ($("engNotebookWeeks")) $("engNotebookWeeks").textContent = `${subAssets.english?.notebook_weeks || 0} 周`;
+
+  document.querySelectorAll("#statsSubjectCards [data-shelf]").forEach((button) => {
+    button.addEventListener("click", () => selectLibraryShelf(button.dataset.shelf));
+  });
+
+  // 5. 输入 vs 输出配比
+  const inOut = stats.input_output_ratio || { input_ratio: 50, output_ratio: 50, input_seconds: 0, output_seconds: 0 };
+  if ($("ratioInputFill")) $("ratioInputFill").style.width = `${inOut.input_ratio}%`;
+  if ($("ratioOutputFill")) $("ratioOutputFill").style.width = `${inOut.output_ratio}%`;
+  if ($("ratioInputText")) $("ratioInputText").textContent = `${inOut.input_ratio}% (${formatDuration(inOut.input_seconds, true)})`;
+  if ($("ratioOutputText")) $("ratioOutputText").textContent = `${inOut.output_ratio}% (${formatDuration(inOut.output_seconds, true)})`;
+
+  // 6. 活动类型清单
+  const activityLabels = { read: "阅读精读", objective_practice: "客观题练习", subjective_practice: "主观题/背诵", notebook: "词汇与句式笔记", review: "每日复盘总结" };
   const activityIcons = { read: "book-open", objective_practice: "circle-check-big", subjective_practice: "pen-line", notebook: "notebook-pen", review: "history" };
-  const domainTotals = stats.activity_domain_totals || {};
-  const domainCounts = stats.activity_domain_counts || {};
-  const domains = ["medicine", "politics", "english", "other"].filter((key) => Number(domainTotals[key] || 0) > 0 || Number(domainCounts[key] || 0) > 0);
-  const domainRows = domains.map((key) => {
-    const row = `<span class="reader-effort-icon"><i data-lucide="${domainIcons[key]}"></i></span><span class="reader-effort-name"><strong>${domainLabels[key]}</strong><small>${formatInteger(domainCounts[key] || 0)} 个活动</small></span><span class="reader-effort-value">${formatDuration(domainTotals[key], true)}</span><i data-lucide="${key === "other" ? "layers-2" : "arrow-up-right"}"></i>`;
-    return key === "other" ? `<div class="reader-effort-row">${row}</div>` : `<button type="button" class="reader-effort-row" data-stats-shelf="${key}">${row}</button>`;
-  }).join("");
-  const activityRows = Object.keys(activityLabels).map((key) => `<div class="reader-effort-row"><span class="reader-effort-icon"><i data-lucide="${activityIcons[key]}"></i></span><span class="reader-effort-name"><strong>${activityLabels[key]}</strong><small>${formatInteger((stats.activity_counts || {})[key] || 0)} 次活动</small></span><span class="reader-effort-value">${formatDuration((stats.activity_totals || {})[key], true)}</span><i data-lucide="minus"></i></div>`).join("");
-  $("effortDistribution").innerHTML = `<div class="reader-stats-group"><p class="eyebrow">按学科</p>${domainRows || `<span class="reader-stats-empty">完成一次学习后，这里会显示学科时长。</span>`}</div><div class="reader-stats-group"><p class="eyebrow">按活动类型</p>${activityRows}</div>`;
-  $("effortDistribution").querySelectorAll("[data-stats-shelf]").forEach((button) => button.addEventListener("click", () => selectLibraryShelf(button.dataset.statsShelf)));
+  if ($("activityTypeList")) {
+    $("activityTypeList").innerHTML = Object.keys(activityLabels).map((key) => {
+      const cnt = (stats.activity_counts || {})[key] || 0;
+      const dur = (stats.activity_totals || {})[key] || 0;
+      return `<div class="activity-type-row">
+        <div class="atr-left">
+          <i data-lucide="${activityIcons[key]}"></i>
+          <span>${activityLabels[key]}</span>
+          <small>${formatInteger(cnt)} 次</small>
+        </div>
+        <strong class="atr-val">${formatDuration(dur, true)}</strong>
+      </div>`;
+    }).join("");
+  }
+
   refreshIcons();
 }
 
@@ -297,13 +346,23 @@ export async function loadStats() {
   try {
     const response = await fetch("/api/stats", { cache: "no-store" });
     if (!response.ok) throw new Error("stats unavailable");
-    state.stats = await response.json(); renderHome(); renderStats();
-  } catch { renderHome(); renderStats(); }
+    state.stats = await response.json();
+    renderHome();
+    renderStats();
+  } catch {
+    renderHome();
+    renderStats();
+  }
 }
 
 export async function openStats() {
   setRouteHash("records/stats");
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); hideAllNoteFloats(); setActiveView("stats"); window.scrollTo({ top: 0, behavior: "auto" });
+  state.openRequest += 1;
+  stopReadingTimer();
+  closeNotePopover();
+  hideAllNoteFloats();
+  setActiveView("stats");
+  window.scrollTo({ top: 0, behavior: "auto" });
   await loadStats();
 }
 

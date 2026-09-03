@@ -835,6 +835,33 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         current_day = current.isoformat()
         primary_seconds = activity_seconds(current_day)
         unified_reading_seconds = activity_type_seconds(current_day, "read")
+
+        day_items = unified_by_day.get(current_day, [])
+        morning_seconds = 0
+        afternoon_seconds = 0
+        evening_seconds = 0
+        for item in day_items:
+            if not meaningful_activity(item):
+                continue
+            dur = max(0, int(item.get("duration_seconds") or 0))
+            ts = str(item.get("started_at") or item.get("last_active_at") or "")
+            hour = 14
+            if "T" in ts:
+                try:
+                    time_part = ts.split("T")[1]
+                    hour = int(time_part.split(":")[0])
+                except (ValueError, IndexError):
+                    hour = 14
+            if 5 <= hour < 12:
+                morning_seconds += dur
+            elif 12 <= hour < 18:
+                afternoon_seconds += dur
+            else:
+                evening_seconds += dur
+
+        if primary_seconds == 0 and day_seconds(value) > 0:
+            afternoon_seconds = day_seconds(value)
+
         heatmap_days.append(
             {
                 "date": current_day,
@@ -847,6 +874,11 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
                 "unified_reading_seconds": unified_reading_seconds,
                 "legacy_unmapped_reading_seconds": max(0, day_seconds(value) - unified_reading_seconds),
                 "activity_seconds": primary_seconds,
+                "circadian": {
+                    "morning_seconds": morning_seconds,
+                    "afternoon_seconds": afternoon_seconds,
+                    "evening_seconds": evening_seconds,
+                },
                 "reading_minutes": round(day_seconds(value) / 60, 1),
                 "section_opens": int(value["section_opens"]),
                 "section_count": len(value["sections"]),
@@ -1035,6 +1067,72 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     raw_unified_reading_seconds = max(0, int(raw_activity_totals.get("read") or 0))
     legacy_unmapped_reading_seconds = max(0, total_reading_seconds - raw_unified_reading_seconds)
     total_note_characters = sum(len(markdown) for _, markdown in note_files.values())
+
+    total_morning_seconds = sum(item.get("circadian", {}).get("morning_seconds", 0) for item in heatmap_days if not item["future"])
+    total_afternoon_seconds = sum(item.get("circadian", {}).get("afternoon_seconds", 0) for item in heatmap_days if not item["future"])
+    total_evening_seconds = sum(item.get("circadian", {}).get("evening_seconds", 0) for item in heatmap_days if not item["future"])
+    circadian_totals = {
+        "morning": total_morning_seconds,
+        "afternoon": total_afternoon_seconds,
+        "evening": total_evening_seconds,
+    }
+    slots_map = {"morning": "晨间 (05:00-12:00)", "afternoon": "午后 (12:00-18:00)", "evening": "晚间 (18:00-24:00+)"}
+    golden_slot_key = max(circadian_totals, key=circadian_totals.get) if any(circadian_totals.values()) else "evening"
+    golden_slot_label = slots_map[golden_slot_key]
+    golden_slot_percent = round(circadian_totals[golden_slot_key] / max(1, sum(circadian_totals.values())) * 100) if any(circadian_totals.values()) else 0
+
+    input_seconds = activity_totals.get("read", 0)
+    output_seconds = (
+        activity_totals.get("objective_practice", 0)
+        + activity_totals.get("subjective_practice", 0)
+        + activity_totals.get("notebook", 0)
+        + activity_totals.get("review", 0)
+    )
+    total_in_out = max(1, input_seconds + output_seconds)
+    input_ratio = round(input_seconds / total_in_out * 100)
+    output_ratio = round(output_seconds / total_in_out * 100)
+
+    try:
+        from yureader.oral_focus import load_oral_focus_progress, load_oral_focus
+        oral_progress = load_oral_focus_progress().get("items", {})
+        oral_studied = sum(
+            1 for item in oral_progress.values()
+            if isinstance(item, dict) and (
+                str(item.get("answer") or "").strip()
+                or str(item.get("memory_note") or "").strip()
+                or item.get("mastery") not in (None, "", "unseen")
+            )
+        )
+        oral_mastered = sum(1 for item in oral_progress.values() if isinstance(item, dict) and item.get("mastery") == "mastered")
+        _of_dataset, of_items = load_oral_focus()
+        oral_total_items = len(of_items)
+    except Exception:
+        oral_studied = 0
+        oral_mastered = 0
+        oral_total_items = 0
+
+    subject_assets = {
+        "medicine": {
+            "duration_seconds": activity_domain_totals.get("medicine", 0),
+            "book_count": sum(1 for b in books if b.get("domain") == "medicine"),
+            "note_count": sum(1 for sid in note_files if (sec := sections.get(sid)) and (bk := section_to_book.get(sid)) and bk.get("domain") == "medicine"),
+            "oral_studied": oral_studied,
+            "oral_mastered": oral_mastered,
+            "oral_total_items": oral_total_items,
+        },
+        "politics": {
+            "duration_seconds": activity_domain_totals.get("politics", 0),
+            "answered_count": practice_summary.get("answered_count", 0),
+            "correct_count": practice_summary.get("correct_count", 0),
+            "accuracy": round(practice_summary["correct_count"] / practice_summary["answered_count"] * 100, 1) if practice_summary.get("answered_count") else 0,
+        },
+        "english": {
+            "duration_seconds": activity_domain_totals.get("english", 0),
+            "notebook_weeks": notebook_summary.get("week_count", 0),
+            "notebook_characters": notebook_summary.get("character_count", 0),
+        },
+    }
+
     return {
         "today": today.isoformat(),
         "weeks": weeks,
@@ -1049,6 +1147,19 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         "review_day_count": sum(1 for value in days.values() if value["review_saved"]),
         "active_day_count": active_days,
         "streak": streak,
+        "circadian_totals": circadian_totals,
+        "golden_slot": {
+            "key": golden_slot_key,
+            "label": golden_slot_label,
+            "percent": golden_slot_percent,
+        },
+        "input_output_ratio": {
+            "input_seconds": input_seconds,
+            "output_seconds": output_seconds,
+            "input_ratio": input_ratio,
+            "output_ratio": output_ratio,
+        },
+        "subject_assets": subject_assets,
         # Keep the old field as a compatibility reference. New consumers use
         # total_activity_seconds, whose type/domain totals explain the sum.
         "total_reading_seconds": total_reading_seconds,

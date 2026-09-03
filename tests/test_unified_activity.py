@@ -286,6 +286,11 @@ class UnifiedActivityTests(unittest.TestCase):
         self.assertEqual(stats["active_day_count"], 0)
         self.assertIsNone(stats["review_pending"])
         self.assertEqual(stats["continue_target"]["item_id"], self.section_id)
+        self.assertIn("circadian", stats["days"][0])
+        self.assertIn("circadian_totals", stats)
+        self.assertIn("golden_slot", stats)
+        self.assertIn("input_output_ratio", stats)
+        self.assertIn("subject_assets", stats)
         self.assertEqual(app.reviewable_learning_days()[0], [])
 
     def test_activity_history_is_not_silently_pruned(self):
