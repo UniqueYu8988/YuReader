@@ -606,41 +606,22 @@ function renderQuestionsList() {
     return;
   }
 
-  const imageBase = state.current?.book_id ? `/api/book-assets/${encodeURIComponent(state.current.book_id)}/` : "";
-
   listEl.innerHTML = filtered.map((item, idx) => {
-    const isDef = item.type === "definition";
-    const tagClass = isDef ? "definition" : "essay";
-    const tagLabel = item.type_label || (isDef ? "名词解释" : "简答论述");
-    const stars = "★".repeat(Math.max(1, Math.min(5, Number(item.star_level) || 1)));
+    const starCount = Math.max(1, Math.min(5, Number(item.star_level) || 1));
+    const stars = "★".repeat(starCount);
     const prompt = item.prompt || item.source_title_raw || "";
-    const answerMarkdown = item.answer_markdown || "暂无可用的参考答案。";
 
     return `
-      <article class="rq-card" data-question-id="${escapeHtml(item.id)}">
-        <div class="rq-card-top">
-          <div class="rq-card-meta">
-            <span class="rq-card-num">Q${idx + 1}</span>
-            <span class="rq-card-tag ${tagClass}">${escapeHtml(tagLabel)}</span>
-            <span class="rq-card-stars" title="${escapeHtml(String(item.star_level || 1))}星考点">${stars}</span>
-          </div>
-          <button type="button" class="rq-card-copy-btn" data-copy-prompt="${escapeHtml(prompt)}" title="复制题目">
-            <i data-lucide="copy"></i>
-            <span>复制题目</span>
-          </button>
+      <div class="rq-item" data-question-id="${escapeHtml(item.id)}">
+        <div class="rq-item-lead">
+          <span class="rq-item-num">${idx + 1}.</span>
+          <span class="rq-item-stars" title="${escapeHtml(String(item.star_level || 1))}星考点">${stars}</span>
         </div>
-        <div class="rq-card-prompt">${escapeHtml(prompt)}</div>
-        <details class="rq-answer-collapse">
-          <summary class="rq-answer-summary">
-            <i data-lucide="chevron-right"></i>
-            <span>查看参考答案</span>
-            <small class="rq-char-hint">${item.character_count || answerMarkdown.length} 字</small>
-          </summary>
-          <div class="rq-answer-body knowledge-article">
-            ${renderMarkdown(answerMarkdown, imageBase)}
-          </div>
-        </details>
-      </article>
+        <div class="rq-item-title">${escapeHtml(prompt)}</div>
+        <button type="button" class="rq-item-copy-btn" data-copy-prompt="${escapeHtml(prompt)}" title="复制题目" aria-label="复制题目">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
     `;
   }).join("");
 
