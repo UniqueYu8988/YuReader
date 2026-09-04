@@ -39,10 +39,13 @@ class DailyGoalsTests(unittest.TestCase):
         self.data_dir = self.root / "data"
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.orig_goals_path = goals_mod.GOALS_PATH
+        self.orig_vocab_path = goals_mod.VOCAB_PROGRESS_PATH
         goals_mod.GOALS_PATH = self.data_dir / "goals.json"
+        goals_mod.VOCAB_PROGRESS_PATH = self.data_dir / "vocab_progress.json"
 
     def tearDown(self):
         goals_mod.GOALS_PATH = self.orig_goals_path
+        goals_mod.VOCAB_PROGRESS_PATH = self.orig_vocab_path
         self.temp.cleanup()
 
     def test_default_goals_loading(self):
@@ -51,21 +54,24 @@ class DailyGoalsTests(unittest.TestCase):
         self.assertEqual(goals["reading"]["medicine_hours"], 4.0)
         self.assertEqual(goals["reading"]["politics_hours"], 0.5)
         self.assertEqual(goals["practice"]["medicine_definition"], 20)
+        self.assertEqual(goals["practice"]["english_vocab"], 100)
 
     def test_save_and_reload_goals(self):
         new_goals = {
             "total_hours": 6.5,
             "reading": {"medicine_hours": 3.0, "politics_hours": 1.0, "english_hours": 0.5},
-            "practice": {"medicine_definition": 25, "medicine_essay": 15, "politics_units": 3, "english_reading": 4},
+            "practice": {"medicine_definition": 25, "medicine_essay": 15, "politics_units": 3, "english_reading": 4, "english_vocab": 150},
         }
         saved = goals_mod.save_goals(new_goals)
         self.assertEqual(saved["total_hours"], 6.5)
         self.assertEqual(saved["reading"]["medicine_hours"], 3.0)
         self.assertEqual(saved["practice"]["politics_units"], 3)
+        self.assertEqual(saved["practice"]["english_vocab"], 150)
 
         reloaded = goals_mod.load_goals()
         self.assertEqual(reloaded["total_hours"], 6.5)
         self.assertEqual(reloaded["practice"]["medicine_definition"], 25)
+        self.assertEqual(reloaded["practice"]["english_vocab"], 150)
 
     def test_http_get_and_post_goals(self):
         # 1. GET initial
@@ -121,6 +127,33 @@ class DailyGoalsTests(unittest.TestCase):
             self.assertGreaterEqual(practice["medicine_essay"], 1)
         finally:
             goals_mod.ORAL_FOCUS_PROGRESS_PATH = orig_prog_path
+
+    def test_vocab_progress_and_api(self):
+        day = "2026-09-05"
+        # 1. Direct save_vocab_progress
+        saved = goals_mod.save_vocab_progress(85, day)
+        self.assertEqual(saved["words_count"], 85)
+
+        # 2. Check daily_goals_payload
+        payload = goals_mod.daily_goals_payload(day)
+        self.assertEqual(payload["progress"]["practice"]["english_vocab"], 85)
+
+        # 3. GET /api/daily-vocab
+        harness_get = GoalsHandlerHarness("GET", f"/api/daily-vocab?day={day}")
+        harness_get.do_GET()
+        self.assertEqual(harness_get.status, 200)
+        res_get = json.loads(harness_get.wfile.getvalue().decode("utf-8"))
+        self.assertTrue(res_get["ok"])
+        self.assertEqual(res_get["vocab"]["words_count"], 85)
+
+        # 4. POST /api/daily-vocab
+        harness_post = GoalsHandlerHarness("POST", "/api/daily-vocab", {"day": day, "count": 120})
+        harness_post.do_POST()
+        self.assertEqual(harness_post.status, 200)
+        res_post = json.loads(harness_post.wfile.getvalue().decode("utf-8"))
+        self.assertTrue(res_post["ok"])
+        self.assertEqual(res_post["result"]["words_count"], 120)
+        self.assertEqual(res_post["goals"]["progress"]["practice"]["english_vocab"], 120)
 
 
 if __name__ == "__main__":

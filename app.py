@@ -210,6 +210,8 @@ from yureader.goals import (
     load_goals,
     save_goals,
     daily_goals_payload,
+    load_vocab_progress,
+    save_vocab_progress,
 )
 
 from yureader.chapter_questions import get_chapter_questions
@@ -255,6 +257,15 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 day = str(parse_qs(parsed.query).get("day", [""])[0]).strip()
                 self.send_json(daily_goals_payload(day))
             except ValueError as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/daily-vocab":
+            try:
+                day = str(parse_qs(parsed.query).get("day", [""])[0]).strip()
+                if not day:
+                    day = date.today().isoformat()
+                self.send_json({"ok": True, "day": day, "vocab": load_vocab_progress().get("days", {}).get(day, {})})
+            except Exception as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
         if path == "/api/reading-time":
@@ -528,7 +539,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/oral-focus/progress", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/practice/mistakes/resolve", "/api/subjective/response", "/api/daily-goals"}:
+        if parsed.path not in {"/api/notes", "/api/review-summary", "/api/weekly-summary", "/api/english-notebook", "/api/oral-focus/progress", "/api/activity", "/api/activity/heartbeat", "/api/reading-time", "/api/practice/answer", "/api/practice/analysis", "/api/practice/mistakes/resolve", "/api/subjective/response", "/api/daily-goals", "/api/daily-vocab"}:
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
             return
         try:
@@ -536,6 +547,14 @@ class ReaderHandler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length).decode("utf-8"))
             if parsed.path == "/api/daily-goals":
                 self.send_json(save_goals(body))
+                return
+            if parsed.path == "/api/daily-vocab":
+                count = int(body.get("count") or 0)
+                day = str(body.get("day") or "").strip()
+                if not day:
+                    day = date.today().isoformat()
+                result = save_vocab_progress(count, day)
+                self.send_json({"ok": True, "day": day, "result": result, "goals": daily_goals_payload(day)})
                 return
             if parsed.path == "/api/activity/heartbeat":
                 activity_type = str(body.get("activity_type") or "").strip()

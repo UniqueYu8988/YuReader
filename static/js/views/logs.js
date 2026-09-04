@@ -307,6 +307,7 @@ export function renderStats() {
 
   if ($("engTotalHours")) $("engTotalHours").textContent = formatDuration(subAssets.english?.duration_seconds || 0, true);
   if ($("engAttemptsCount")) $("engAttemptsCount").textContent = `${(stats.activity_counts || {})["objective_practice"] || 0} 题`;
+  if ($("engVocabWords")) $("engVocabWords").textContent = `${formatInteger(subAssets.english?.vocab_words || 0)} 词`;
   if ($("engNotebookChars")) $("engNotebookChars").textContent = `${formatInteger(subAssets.english?.notebook_characters || 0)} 字`;
   if ($("engNotebookWeeks")) $("engNotebookWeeks").textContent = `${subAssets.english?.notebook_weeks || 0} 周`;
 

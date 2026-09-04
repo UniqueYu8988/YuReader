@@ -250,6 +250,22 @@
                       <div class="reader-home-progress-fill" id="homeGoalEngReadCompFill" style="width: 0%;"></div>
                     </div>
                   </div>
+                  <div class="reader-home-goal-item" data-goal-target="eng-vocab">
+                    <div class="reader-home-goal-info">
+                      <span class="goal-item-name">每日单词</span>
+                      <div class="goal-item-manual-wrap" id="homeGoalEngVocabManualWrap">
+                        <input type="number" id="homeGoalEngVocabCountInput" class="goal-item-inline-input" min="0" max="2000" step="5" placeholder="0" title="输入今日已背单词数（回车保存）">
+                        <span class="goal-item-progress" id="homeGoalEngVocabStatus">/ 100 个 (0%)</span>
+                      </div>
+                    </div>
+                    <div class="goal-item-edit hidden">
+                      <input type="number" id="homeGoalEngVocabInput" min="0" max="1000" step="10" value="100">
+                      <span>个</span>
+                    </div>
+                    <div class="reader-home-progress-bar mini">
+                      <div class="reader-home-progress-fill" id="homeGoalEngVocabFill" style="width: 0%;"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1022,7 +1038,7 @@
                 <div class="subject-card-metrics">
                   <div class="sc-metric"><span class="sc-label">累计学时</span><strong id="engTotalHours">0h</strong></div>
                   <div class="sc-metric"><span class="sc-label">真题题量</span><strong id="engAttemptsCount">0 题</strong></div>
-                  <div class="sc-metric"><span class="sc-label">笔记沉淀</span><strong id="engNotebookChars">0 字</strong></div>
+                  <div class="sc-metric"><span class="sc-label">单词背诵</span><strong id="engVocabWords">0 词</strong></div>
                   <div class="sc-metric"><span class="sc-label">精析周数</span><strong id="engNotebookWeeks">0 周</strong></div>
                 </div>
               </div>

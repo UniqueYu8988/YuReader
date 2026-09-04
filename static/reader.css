@@ -1449,6 +1449,27 @@
 .goal-item-edit input { width: 56px; padding: 2px 4px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; font-size: 11px; outline: none; }
 .goal-item-edit input:focus { border-color: var(--primary); }
 .goal-item-edit span { font-size: 9.5px; color: var(--text-soft); }
+.goal-item-manual-wrap { display: inline-flex; align-items: baseline; gap: 4px; }
+.goal-item-inline-input {
+  width: 44px;
+  padding: 1px 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.goal-item-inline-input:hover { border-color: var(--primary); }
+.goal-item-inline-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--primary) 20%, transparent);
+}
 
 @media (max-width: 860px) {
   .reader-home-summary-row { flex-direction: column; align-items: stretch; gap: 14px; }

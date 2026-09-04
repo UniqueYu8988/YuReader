@@ -2,8 +2,9 @@ import { homeActivityTargetKey, resumeActivityTarget, selectLibraryShelf } from 
 import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { $, state } from "../core/state.js";
 import { syncAuraIndicator } from "../core/timer.js";
-import { escapeHtml, formatDuration, formatInteger, refreshIcons } from "../core/utils.js";
+import { escapeHtml, formatDuration, formatInteger, refreshIcons, showToast } from "../core/utils.js";
 import { openReview, reviewDateLabel } from "./review.js";
+import { loadStats } from "./logs.js";
 
 export function activityTypeLabel(type) {
   return ({ read: "阅读", objective_practice: "客观题", subjective_practice: "主观题", notebook: "笔记", review: "回顾" })[type] || "学习";
@@ -123,6 +124,20 @@ export function updateGoalsUI(data) {
   if (engCompStatus) engCompStatus.textContent = `${engCompCount} / ${engCompGoal} 篇 (${engCompPct}%)`;
   if (engCompFill) engCompFill.style.width = `${engCompPct}%`;
   if (engCompInput && !state.goalsEditMode) engCompInput.value = engCompGoal;
+
+  const engVocabGoal = practiceGoals.english_vocab || 100;
+  const engVocabCount = practiceProg.english_vocab || 0;
+  const engVocabPct = calculatePercent(engVocabCount, engVocabGoal);
+  const engVocabStatus = $("homeGoalEngVocabStatus");
+  const engVocabFill = $("homeGoalEngVocabFill");
+  const engVocabInput = $("homeGoalEngVocabInput");
+  const engVocabCountInput = $("homeGoalEngVocabCountInput");
+  if (engVocabStatus) engVocabStatus.textContent = `/ ${engVocabGoal} 个 (${engVocabPct}%)`;
+  if (engVocabFill) engVocabFill.style.width = `${engVocabPct}%`;
+  if (engVocabInput && !state.goalsEditMode) engVocabInput.value = engVocabGoal;
+  if (engVocabCountInput && document.activeElement !== engVocabCountInput) {
+    engVocabCountInput.value = engVocabCount || "";
+  }
   updateChecklistUI();
 }
 
@@ -151,6 +166,7 @@ export async function saveDailyGoals() {
       medicine_essay: parseInt($("homeGoalMedEssayInput")?.value, 10) || 0,
       politics_units: parseInt($("homeGoalPolUnitInput")?.value, 10) || 0,
       english_reading: parseInt($("homeGoalEngReadCompInput")?.value, 10) || 0,
+      english_vocab: parseInt($("homeGoalEngVocabInput")?.value, 10) || 100,
     },
   };
 
@@ -196,6 +212,41 @@ function initGoalsListeners() {
       }
     });
 
+    const vocabCountInput = $("homeGoalEngVocabCountInput");
+    if (vocabCountInput) {
+      vocabCountInput.addEventListener("click", (e) => e.stopPropagation());
+      const handleVocabSubmit = async () => {
+        const val = parseInt(vocabCountInput.value, 10);
+        const count = isNaN(val) ? 0 : Math.max(0, val);
+        try {
+          const res = await fetch("/api/daily-vocab", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ count }),
+          });
+          if (res.ok) {
+            const resData = await res.json();
+            if (resData.goals) {
+              updateGoalsUI(resData.goals);
+            } else {
+              await fetchDailyGoals();
+            }
+            loadStats();
+            showToast(`已更新今日单词完成量: ${count} 词`);
+          }
+        } catch (err) {
+          console.error("Failed to save daily vocab:", err);
+        }
+      };
+      vocabCountInput.addEventListener("change", handleVocabSubmit);
+      vocabCountInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          vocabCountInput.blur();
+        }
+      });
+    }
+
     document.querySelectorAll(".reader-home-goal-item[data-goal-target]").forEach((item) => {
       item.addEventListener("click", (event) => {
         if (state.goalsEditMode || event.target.closest(".goal-item-edit") || event.target.tagName === "INPUT") return;
@@ -211,6 +262,8 @@ function initGoalsListeners() {
         } else if (target === "eng-comp") {
           state.englishCenterType = "reading";
           selectLibraryShelf("english");
+        } else if (target === "eng-vocab") {
+          $("homeGoalEngVocabCountInput")?.focus();
         } else if (target === "pol-read" || target === "pol-unit") {
           selectLibraryShelf("politics");
         }

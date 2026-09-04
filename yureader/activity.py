@@ -1136,6 +1136,15 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         oral_mastered = 0
         oral_total_items = 0
 
+    try:
+        from yureader.goals import load_vocab_progress
+        vocab_days = load_vocab_progress().get("days", {})
+        vocab_total_words = sum(int(item.get("words_count") or 0) for item in vocab_days.values() if isinstance(item, dict))
+        vocab_today_words = int(vocab_days.get(today.isoformat(), {}).get("words_count") or 0)
+    except Exception:
+        vocab_total_words = 0
+        vocab_today_words = 0
+
     subject_assets = {
         "medicine": {
             "duration_seconds": activity_domain_totals.get("medicine", 0),
@@ -1153,6 +1162,8 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         },
         "english": {
             "duration_seconds": activity_domain_totals.get("english", 0),
+            "vocab_words": vocab_total_words,
+            "today_vocab_words": vocab_today_words,
             "notebook_weeks": notebook_summary.get("week_count", 0),
             "notebook_characters": notebook_summary.get("character_count", 0),
         },
