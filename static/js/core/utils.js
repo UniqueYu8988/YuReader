@@ -167,9 +167,9 @@ export function applyTheme(theme, { persist = true } = {}) {
   if (button) {
     const dark = next === "dark";
     const days = getExamRemainingDays();
-    button.innerHTML = `<span class="countdown-art-badge" id="sidebarCountdownBadge" data-theme-mode="${next}"><span class="countdown-art-num" id="sidebarCountdownNum">${days}</span></span>`;
-    button.setAttribute("aria-label", `考研倒计时 ${days} 天 · 点击切换${dark ? "日间" : "夜间"}模式`);
-    button.setAttribute("title", `考研倒计时 ${days} 天 · 点击切换${dark ? "日间" : "夜间"}模式`);
+    button.innerHTML = `<i data-lucide="${dark ? "sun" : "moon"}"></i><span class="theme-toggle-countdown" id="sidebarCountdownNum">${days}</span>`;
+    button.setAttribute("aria-label", dark ? "切换到日间模式" : "切换到夜间模式");
+    button.setAttribute("title", `${dark ? "切换到日间模式" : "切换到夜间模式"} · 倒计时 ${days} 天`);
     button.setAttribute("aria-pressed", String(dark));
   }
   refreshIcons();

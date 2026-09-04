@@ -6253,106 +6253,29 @@ body:has(.knowledge-workspace.reader-open) .app-guide-float,
 }
 
 /* ==========================================================================
-   Sidebar Artistic Countdown Toggle (Only Display Numbers)
+   Sidebar Countdown on Theme Toggle (Icon on Left, Number on Right)
    ========================================================================== */
-.nav-item.theme-toggle {
-  padding-left: 4.5px;
-  padding-right: 4.5px;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-.sidebar .nav-item .countdown-art-badge,
-.sidebar .nav-item .countdown-art-badge span {
-  min-width: 0 !important;
-  opacity: 1 !important;
-  transform: none !important;
-  pointer-events: auto !important;
-  white-space: normal !important;
-}
-
-.countdown-art-badge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line-strong));
-  background: radial-gradient(circle at 35% 30%, #fffcf8 0%, #f4ede1 100%);
-  box-shadow: 0 1.5px 4px rgba(45, 35, 25, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  user-select: none;
-  cursor: pointer;
-  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 180ms ease,
-              box-shadow 220ms ease,
-              background 220ms ease;
-}
-
-/* Subtle decorative inner ring for astronomical / seal craftsmanship */
-.countdown-art-badge::before {
-  content: "";
-  position: absolute;
-  inset: 1.5px;
-  border-radius: 50%;
-  border: 1px dashed color-mix(in srgb, var(--primary) 22%, transparent);
-  pointer-events: none;
-  opacity: 0.65;
-  transition: border-color 180ms ease, opacity 180ms ease;
-}
-
-.countdown-art-num {
+.nav-item .theme-toggle-countdown {
   font-family: "Cormorant Garamond", "Playfair Display", "Baskerville", "Georgia", "Noto Serif SC", "Source Han Serif SC", STSong, serif;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums proportional-nums;
   color: var(--primary);
-  transform: translateY(0.5px);
-  transition: color 180ms ease, text-shadow 180ms ease;
+  line-height: 1;
+  transition: color 150ms ease, opacity 130ms var(--ease-standard), transform 210ms var(--ease-out);
 }
 
-.nav-item.theme-toggle:hover .countdown-art-badge {
-  transform: scale(1.08);
-  border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(196, 104, 73, 0.22), inset 0 1px 0 #fff;
+:root[data-theme="dark"] .nav-item .theme-toggle-countdown {
+  color: #f3a88c;
+  text-shadow: 0 0 8px rgba(243, 168, 140, 0.4);
 }
 
-.nav-item.theme-toggle:hover .countdown-art-badge::before {
-  border-color: var(--primary);
-  opacity: 0.95;
+.nav-item.theme-toggle:hover .theme-toggle-countdown {
+  color: var(--primary-strong);
 }
 
-.nav-item.theme-toggle:active .countdown-art-badge {
-  transform: scale(0.95);
-}
-
-/* Dark mode aesthetic */
-:root[data-theme="dark"] .countdown-art-badge {
-  border-color: rgba(220, 139, 110, 0.38);
-  background: radial-gradient(circle at 35% 30%, #35312c 0%, #1e1b19 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 10px rgba(220, 139, 110, 0.18);
-}
-
-:root[data-theme="dark"] .countdown-art-badge::before {
-  border-color: rgba(220, 139, 110, 0.35);
-  opacity: 0.7;
-}
-
-:root[data-theme="dark"] .countdown-art-num {
-  color: #f6bda6;
-  text-shadow: 0 0 7px rgba(246, 189, 166, 0.5);
-}
-
-:root[data-theme="dark"] .nav-item.theme-toggle:hover .countdown-art-badge {
-  border-color: #f09b7b;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 16px rgba(240, 155, 123, 0.32);
-}
-
-:root[data-theme="dark"] .nav-item.theme-toggle:hover .countdown-art-num {
-  color: #fff1e8;
-  text-shadow: 0 0 10px rgba(246, 189, 166, 0.7);
+:root[data-theme="dark"] .nav-item.theme-toggle:hover .theme-toggle-countdown {
+  color: #ffc4af;
+  text-shadow: 0 0 12px rgba(243, 168, 140, 0.6);
 }
