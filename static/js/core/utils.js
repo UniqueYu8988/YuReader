@@ -116,7 +116,14 @@ export function renderSectionGuide(article, guideElement, guideItems, kind) {
   });
   if (!links.length) return;
 
-  guideElement.innerHTML = `<details open><summary><span><small>本节导航</small><strong>${links.length} 个${kind}</strong></span><i data-lucide="chevron-down"></i></summary><div class="section-guide-grid">${links.join("")}</div></details>`;
+  const midpoint = Math.ceil(links.length / 2);
+  const leftLinks = links.slice(0, midpoint);
+  const rightLinks = links.slice(midpoint);
+  const gridHtml = rightLinks.length
+    ? `<div class="section-guide-grid"><div class="section-guide-col">${leftLinks.join("")}</div><div class="section-guide-col">${rightLinks.join("")}</div></div>`
+    : `<div class="section-guide-grid is-single-col"><div class="section-guide-col">${leftLinks.join("")}</div></div>`;
+
+  guideElement.innerHTML = `<details open><summary><span><small>本节导航</small><strong>${links.length} 个${kind}</strong></span><i data-lucide="chevron-down"></i></summary>${gridHtml}</details>`;
   guideElement.classList.remove("hidden");
   guideElement.querySelectorAll("a").forEach((link) => link.addEventListener("click", (event) => {
     event.preventDefault();

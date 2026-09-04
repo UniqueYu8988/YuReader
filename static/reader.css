@@ -421,9 +421,13 @@
 .section-guide details > summary svg { width: 14px; color: var(--text-soft); transition: transform 160ms var(--ease-out); }
 .section-guide details[open] > summary svg { transform: rotate(180deg); }
 .section-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.section-guide-grid.is-single-col { grid-template-columns: 1fr; }
+.section-guide-col { display: flex; flex-direction: column; min-width: 0; }
+.section-guide-col:last-child:not(:first-child) { border-left: 1px solid var(--line); }
 .section-guide-grid a { display: grid; min-width: 0; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 10px 10px 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent); color: var(--text-secondary); text-decoration: none; transition: color 140ms var(--ease-standard), background 140ms var(--ease-standard), padding 160ms var(--ease-out); }
-.section-guide-grid a:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--line); }
-.section-guide-grid a:nth-last-child(-n + 2) { border-bottom: 0; }
+.section-guide-col:first-child a { padding-right: 14px; }
+.section-guide-col:last-child:not(:first-child) a { padding-left: 14px; }
+.section-guide-col a:last-child { border-bottom: 0; }
 .section-guide-grid a:hover { padding-right: 6px; color: var(--text); background: var(--surface-hover); }
 .section-guide-grid a > span { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
 .section-guide-grid a > strong { overflow: hidden; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 13px; font-weight: 500; line-height: 1.55; text-overflow: ellipsis; white-space: nowrap; }
@@ -546,9 +550,11 @@
 @media (max-width: 620px) {
   .section-guide { margin-bottom: 14px; }
   .section-guide-grid { grid-template-columns: 1fr; }
-  .section-guide-grid a:nth-child(even) { padding-left: 0; border-left: 0; }
-  .section-guide-grid a:nth-last-child(-n + 2) { border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent); }
-  .section-guide-grid a:last-child { border-bottom: 0; }
+  .section-guide-col:last-child:not(:first-child) { border-left: 0; }
+  .section-guide-col:first-child a { padding-right: 0; }
+  .section-guide-col:last-child:not(:first-child) a { padding-left: 0; }
+  .section-guide-col:first-child a:last-child { border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent); }
+  .section-guide-col:last-child a:last-child { border-bottom: 0; }
 }
 
 /* The five top-level entries share one shelf; books, exams and notes remain
