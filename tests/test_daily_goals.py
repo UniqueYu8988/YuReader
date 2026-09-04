@@ -47,8 +47,8 @@ class DailyGoalsTests(unittest.TestCase):
 
     def test_default_goals_loading(self):
         goals = goals_mod.load_goals()
-        self.assertEqual(goals["total_hours"], 8.0)
-        self.assertEqual(goals["reading"]["medicine_hours"], 2.0)
+        self.assertEqual(goals["total_hours"], 10.0)
+        self.assertEqual(goals["reading"]["medicine_hours"], 4.0)
         self.assertEqual(goals["reading"]["politics_hours"], 0.5)
         self.assertEqual(goals["practice"]["medicine_definition"], 20)
 
@@ -78,15 +78,49 @@ class DailyGoalsTests(unittest.TestCase):
 
         # 2. POST update
         update_data = {
-            "total_hours": 10.0,
-            "reading": {"medicine_hours": 4.0, "politics_hours": 1.5, "english_hours": 1.0},
+            "total_hours": 12.0,
+            "reading": {"medicine_hours": 5.0, "politics_hours": 1.5, "english_hours": 1.0},
             "practice": {"medicine_definition": 30, "medicine_essay": 10, "politics_units": 5, "english_reading": 3},
         }
         harness_post = GoalsHandlerHarness("POST", "/api/daily-goals", update_data)
         harness_post.do_POST()
         self.assertEqual(harness_post.status, 200)
         saved_resp = json.loads(harness_post.wfile.getvalue().decode("utf-8"))
-        self.assertEqual(saved_resp["total_hours"], 10.0)
+        self.assertEqual(saved_resp["total_hours"], 12.0)
+
+    def test_oral_focus_progress_counts_in_daily_goals(self):
+        item_types = goals_mod._load_oral_item_types()
+        if not item_types:
+            self.skipTest("Oral focus content dataset not present in environment")
+        
+        # Pick one definition and one essay item
+        def_id = next((k for k, v in item_types.items() if v == "definition"), None)
+        essay_id = next((k for k, v in item_types.items() if v == "essay"), None)
+        self.assertIsNotNone(def_id)
+        self.assertIsNotNone(essay_id)
+
+        # Mock oral focus progress
+        today_iso = goals_mod.date.today().isoformat()
+        orig_prog_path = goals_mod.ORAL_FOCUS_PROGRESS_PATH
+        mock_prog_path = self.data_dir / "oral_progress.json"
+        mock_prog_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "items": {
+                    def_id: {"updated_at": f"{today_iso}T10:00:00+08:00", "mastery": "learning", "memory_note": "Test note"},
+                    essay_id: {"updated_at": f"{today_iso}T11:00:00+08:00", "mastery": "learning", "memory_note": "Essay note"},
+                }
+            }, ensure_ascii=False),
+            encoding="utf-8"
+        )
+        try:
+            goals_mod.ORAL_FOCUS_PROGRESS_PATH = mock_prog_path
+            payload = goals_mod.daily_goals_payload(today_iso)
+            practice = payload["progress"]["practice"]
+            self.assertGreaterEqual(practice["medicine_definition"], 1)
+            self.assertGreaterEqual(practice["medicine_essay"], 1)
+        finally:
+            goals_mod.ORAL_FOCUS_PROGRESS_PATH = orig_prog_path
 
 
 if __name__ == "__main__":

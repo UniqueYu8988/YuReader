@@ -38,7 +38,7 @@ export function updateGoalsUI(data) {
   const practiceProg = progress.practice || {};
 
   // 1. Total study duration
-  const totalTargetHours = goals.total_hours || 8.0;
+  const totalTargetHours = goals.total_hours || 10.0;
   const totalCurrSeconds = progress.total_seconds || 0;
   const totalCurrHours = totalCurrSeconds / 3600;
   const totalPercent = calculatePercent(totalCurrHours, totalTargetHours);
@@ -53,7 +53,7 @@ export function updateGoalsUI(data) {
   if (totalInput && !state.goalsEditMode) totalInput.value = totalTargetHours;
 
   // 2. Reading goals
-  const medReadGoal = readingGoals.medicine_hours || 2.0;
+  const medReadGoal = readingGoals.medicine_hours || 4.0;
   const medReadSec = readingProg.medicine_seconds || 0;
   const medReadPct = calculatePercent(medReadSec / 3600, medReadGoal);
   const medReadStatus = $("homeGoalMedReadStatus");
@@ -140,7 +140,7 @@ export async function fetchDailyGoals() {
 
 export async function saveDailyGoals() {
   const payload = {
-    total_hours: parseFloat($("homeGoalTotalInput")?.value) || 8.0,
+    total_hours: parseFloat($("homeGoalTotalInput")?.value) || 10.0,
     reading: {
       medicine_hours: parseFloat($("homeGoalMedReadInput")?.value) || 0,
       politics_hours: parseFloat($("homeGoalPolReadInput")?.value) || 0,

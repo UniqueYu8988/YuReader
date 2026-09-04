@@ -18,9 +18,9 @@ from yureader.activity import load_activity, activity_records_payload
 GOALS_PATH = DATA_DIR / "goals.json"
 
 DEFAULT_GOALS = {
-    "total_hours": 8.0,
+    "total_hours": 10.0,
     "reading": {
-        "medicine_hours": 2.0,
+        "medicine_hours": 4.0,
         "politics_hours": 0.5,
         "english_hours": 0.5,
     },
@@ -85,16 +85,12 @@ def save_goals(payload: dict) -> dict:
 
 def _load_oral_item_types() -> dict[str, str]:
     """Cache map of oral item id -> type (definition/essay)."""
-    item_types: dict[str, str] = {}
-    if ORAL_FOCUS_CONTENT_PATH.is_file():
-        try:
-            content = json.loads(ORAL_FOCUS_CONTENT_PATH.read_text(encoding="utf-8-sig"))
-            for item in content.get("items", []):
-                if isinstance(item, dict) and "id" in item and "type" in item:
-                    item_types[item["id"]] = str(item["type"])
-        except (OSError, json.JSONDecodeError):
-            pass
-    return item_types
+    try:
+        from yureader.oral_focus import load_oral_focus
+        _dataset, items = load_oral_focus()
+        return {iid: str(rec.get("type") or "definition") for iid, rec in items.items() if isinstance(rec, dict)}
+    except Exception:
+        return {}
 
 
 def daily_goals_payload(day: str = "") -> dict:

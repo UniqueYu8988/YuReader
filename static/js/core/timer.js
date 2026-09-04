@@ -106,7 +106,7 @@ export function syncAuraIndicator() {
     const domain = book?.domain || (state.current?.book_id?.startsWith("politics-") ? "politics" : state.current?.book_id?.startsWith("english-") ? "english" : "medicine");
 
     let domainLabel = "医学阅读";
-    let targetHours = Number(readingGoals.medicine_hours ?? 2.0);
+    let targetHours = Number(readingGoals.medicine_hours ?? 4.0);
     let baseSeconds = Number(readingProg.medicine_seconds || 0);
 
     if (domain === "politics") {
@@ -129,7 +129,7 @@ export function syncAuraIndicator() {
     tooltip = `${domainLabel}目标：${curHours} / ${targetHours.toFixed(1)}小时 (${pct}%)${isTiming ? " · 计时中" : ""}`;
   } else if (view === "home") {
     // Today's page: track total study duration metric
-    const targetHours = Number(goals.total_hours ?? 8.0);
+    const targetHours = Number(goals.total_hours ?? 10.0);
     const baseSeconds = Number(prog.total_seconds || 0);
     const pendingSeconds = Math.max(0, (state.readingPendingSeconds || 0) + (state.workspacePendingSeconds || 0));
     const totalSeconds = baseSeconds + pendingSeconds;
@@ -198,13 +198,13 @@ export function syncAuraIndicator() {
       tooltip = mistakesRemaining > 0 ? `错题攻坚：剩余 ${mistakesRemaining} 道错题` : "错题攻坚：错题本已清零";
       progress = mistakesRemaining > 0 ? 0.3 : 1.0;
     } else {
-      const targetHours = Number(readingGoals.medicine_hours ?? 2.0);
+      const targetHours = Number(readingGoals.medicine_hours ?? 4.0);
       const baseSec = Number(readingProg.medicine_seconds || 0);
       progress = targetHours > 0 ? Math.min(1, baseSec / (targetHours * 3600)) : 0;
       tooltip = `医学阅读目标：${(baseSec / 3600).toFixed(1)} / ${targetHours.toFixed(1)}小时 (${Math.round(progress * 100)}%)`;
     }
   } else {
-    const targetHours = Number(goals.total_hours ?? 8.0);
+    const targetHours = Number(goals.total_hours ?? 10.0);
     const totalSec = Number(prog.total_seconds || 0) + Math.max(0, (state.readingPendingSeconds || 0) + (state.workspacePendingSeconds || 0));
     progress = Math.min(1, Math.max(0, totalSec / Math.max(1, targetHours * 3600)));
     tooltip = `今日总时长目标：${(totalSec / 3600).toFixed(1)} / ${targetHours.toFixed(1)}小时 (${Math.round(progress * 100)}%)`;

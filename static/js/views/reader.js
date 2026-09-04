@@ -929,7 +929,7 @@ export async function pasteQuestionNote(item, text) {
       body: JSON.stringify({
         item_id: item.id,
         memory_note: trimmed,
-        mastery: "learning",
+        mastery: (item.mastery && item.mastery !== "unseen") ? item.mastery : "learning",
       }),
     });
     if (res.ok) {
@@ -942,6 +942,7 @@ export async function pasteQuestionNote(item, text) {
 
   item.memory_note = trimmed;
   item.has_note = true;
+  if (!item.mastery || item.mastery === "unseen") item.mastery = "learning";
   viewedQuestionIds.add(item.id);
   saveViewedQuestionIds(viewedQuestionIds);
 
@@ -994,6 +995,15 @@ export async function pasteQuestionNote(item, text) {
       window.setTimeout(() => targetCard.classList.remove("note-card-pulse-highlight"), 2400);
     }
   }, 180);
+
+  // 6. Refresh activities, daily goals, and checklist in background
+  try {
+    loadStats();
+    window.fetchDailyGoals?.();
+    window.updateChecklistUI?.();
+  } catch (e) {
+    console.warn("Goals refresh error:", e);
+  }
 
   showToast(`已将「${item.prompt}」同步至背诵笔记与切片流`);
 }
