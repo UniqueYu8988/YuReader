@@ -1120,50 +1120,233 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
     try:
         from yureader.oral_focus import load_oral_focus_progress, load_oral_focus
         oral_progress = load_oral_focus_progress().get("items", {})
-        oral_studied = sum(
-            1 for item in oral_progress.values()
-            if isinstance(item, dict) and (
-                str(item.get("answer") or "").strip()
-                or str(item.get("memory_note") or "").strip()
-                or item.get("mastery") not in (None, "", "unseen")
-            )
-        )
-        oral_mastered = sum(1 for item in oral_progress.values() if isinstance(item, dict) and item.get("mastery") == "mastered")
         _of_dataset, of_items = load_oral_focus()
         oral_total_items = len(of_items)
+        oral_mastered = sum(1 for item in oral_progress.values() if isinstance(item, dict) and item.get("mastery") == "mastered")
+        oral_reviewing = sum(1 for item in oral_progress.values() if isinstance(item, dict) and item.get("mastery") == "reviewing")
+        oral_learning = sum(
+            1 for item in oral_progress.values()
+            if isinstance(item, dict)
+            and item.get("mastery") not in ("mastered", "reviewing")
+            and (
+                item.get("mastery") == "learning"
+                or str(item.get("answer") or "").strip()
+                or str(item.get("memory_note") or "").strip()
+            )
+        )
+        oral_studied = oral_mastered + oral_reviewing + oral_learning
+        oral_unseen = max(0, oral_total_items - oral_studied)
+        oral_mastery_rate = round(oral_mastered / max(1, oral_total_items) * 100, 1)
     except Exception:
+        oral_progress = {}
         oral_studied = 0
         oral_mastered = 0
+        oral_reviewing = 0
+        oral_learning = 0
+        oral_unseen = 0
         oral_total_items = 0
+        oral_mastery_rate = 0.0
 
     try:
         from yureader.goals import load_vocab_progress
         vocab_days = load_vocab_progress().get("days", {})
         vocab_total_words = sum(int(item.get("words_count") or 0) for item in vocab_days.values() if isinstance(item, dict))
         vocab_today_words = int(vocab_days.get(today.isoformat(), {}).get("words_count") or 0)
+        vocab_active_days = sum(1 for item in vocab_days.values() if isinstance(item, dict) and int(item.get("words_count") or 0) > 0)
     except Exception:
         vocab_total_words = 0
         vocab_today_words = 0
+        vocab_active_days = 0
+
+    # 1. 口腔重点背诵熟练度漏斗
+    try:
+        from yureader.oral_focus import load_oral_focus_due
+        due_items = load_oral_focus_due(today.isoformat()).get("items", [])
+        due_today_count = len(due_items)
+    except Exception:
+        due_today_count = 0
+
+    oral_funnel = {
+        "total_items": oral_total_items,
+        "unseen_count": oral_unseen,
+        "learning_count": oral_learning,
+        "reviewing_count": oral_reviewing,
+        "mastered_count": oral_mastered,
+        "mastery_rate": oral_mastery_rate,
+        "due_today": due_today_count,
+    }
+
+    # 2. 客观题错题攻坚与消灭率
+    try:
+        from yureader.practice import mistakes_overview
+        m_overview = mistakes_overview()
+        total_mistakes = m_overview.get("total", 0)
+        resolved_mistakes = m_overview.get("resolved", 0)
+        unresolved_mistakes = m_overview.get("pending", m_overview.get("unresolved", 0))
+        mistake_resolve_rate = round(resolved_mistakes / max(1, total_mistakes) * 100, 1) if total_mistakes else 0
+    except Exception:
+        total_mistakes = 0
+        resolved_mistakes = 0
+        unresolved_mistakes = 0
+        mistake_resolve_rate = 0
+
+    mistake_analytics = {
+        "total": total_mistakes,
+        "resolved": resolved_mistakes,
+        "unresolved": unresolved_mistakes,
+        "pending": unresolved_mistakes,
+        "resolve_rate": mistake_resolve_rate,
+    }
+
+    # 3. 三科学力动力平衡环 (考研 300:100:100 -> 黄金配比 60% : 20% : 20%)
+    med_sec = activity_domain_totals.get("medicine", 0)
+    pol_sec = activity_domain_totals.get("politics", 0)
+    eng_sec = activity_domain_totals.get("english", 0)
+    total_tri_sec = max(1, med_sec + pol_sec + eng_sec)
+    med_pct = round(med_sec / total_tri_sec * 100)
+    pol_pct = round(pol_sec / total_tri_sec * 100)
+    eng_pct = max(0, 100 - med_pct - pol_pct)
+
+    target_med, target_pol, target_eng = 60, 20, 20
+    deviation = (abs(med_pct - target_med) + abs(pol_pct - target_pol) + abs(eng_pct - target_eng)) / 2
+    balance_score = max(40, round(100 - deviation))
+
+    dominant_dict = {"medicine": med_sec, "politics": pol_sec, "english": eng_sec}
+    dominant_key = max(dominant_dict, key=dominant_dict.get) if any(dominant_dict.values()) else "medicine"
+    dominant_label = {"medicine": "口腔医学专综", "politics": "思想政治理论", "english": "考研英语"}.get(dominant_key, "口腔医学专综")
+
+    subject_balance = {
+        "total_seconds": total_tri_sec,
+        "medicine_seconds": med_sec,
+        "politics_seconds": pol_sec,
+        "english_seconds": eng_sec,
+        "medicine_percent": med_pct,
+        "politics_percent": pol_pct,
+        "english_percent": eng_pct,
+        "target_percents": {"medicine": target_med, "politics": target_pol, "english": target_eng},
+        "balance_score": balance_score,
+        "dominant_key": dominant_key,
+        "dominant_label": dominant_label,
+    }
+
+    # 4. 近 7 天时序趋势 (三科堆叠柱 + 产出折线)
+    past_days = [d for d in heatmap_days if not d.get("future")]
+    recent_7 = past_days[-7:] if len(past_days) >= 7 else past_days
+    day_domain_map = {}
+    day_output_map = {}
+    for item in unified_activities:
+        act_date = str(item.get("timestamp") or "")[:10]
+        if not act_date:
+            continue
+        domain = str(item.get("domain") or "other")
+        dur = max(0, int(item.get("duration_seconds") or 0))
+        act_type = str(item.get("activity_type") or "")
+        day_domain_map.setdefault(act_date, {})[domain] = day_domain_map.setdefault(act_date, {}).get(domain, 0) + dur
+        if act_type in ("objective_practice", "subjective_practice", "notebook", "review"):
+            day_output_map[act_date] = day_output_map.get(act_date, 0) + 1
+
+    last_7_days = []
+    weekdays_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    for d in recent_7:
+        d_str = d["date"]
+        try:
+            dt = date.fromisoformat(d_str)
+            w_str = weekdays_cn[dt.weekday()]
+        except Exception:
+            w_str = ""
+        doms = day_domain_map.get(d_str, {})
+        m_s = doms.get("medicine", 0)
+        p_s = doms.get("politics", 0)
+        e_s = doms.get("english", 0)
+        tot_s = d.get("activity_seconds", 0)
+        if tot_s > 0 and (m_s + p_s + e_s) == 0:
+            m_s = tot_s
+        out_cnt = day_output_map.get(d_str, 0)
+        if d_str in vocab_days and int(vocab_days[d_str].get("words_count") or 0) > 0:
+            out_cnt += 1
+        last_7_days.append({
+            "date": d_str,
+            "weekday": w_str,
+            "label": f"{int(d_str[5:7])}月{int(d_str[8:10])}日",
+            "short_date": f"{int(d_str[5:7])}.{int(d_str[8:10])}",
+            "is_today": d_str == today.isoformat(),
+            "medicine_seconds": m_s,
+            "politics_seconds": p_s,
+            "english_seconds": e_s,
+            "total_seconds": tot_s,
+            "output_events": out_cnt,
+        })
+
+    # 5. 考研战略备考诊断
+    strategic_insights = []
+    if med_pct < 45:
+        strategic_insights.append({
+            "type": "warning",
+            "tag": "学力平衡预警",
+            "content": f"当前医学专综用时占比为 {med_pct}%。口腔医学专综初试分值高达 300 分（占总分 60%），建议加大晨间或晚间黄金时段的教材精读与名解背诵投入。",
+        })
+    else:
+        strategic_insights.append({
+            "type": "positive",
+            "tag": "主科投入扎实",
+            "content": f"医学专综学时占比达到 {med_pct}%，核心主力学科基本盘稳固，建议持续通过“带着问题读”驱动深度背诵与主动输出。",
+        })
+
+    if due_today_count > 0:
+        strategic_insights.append({
+            "type": "urgent",
+            "tag": "背诵复盘窗口",
+            "content": f"今日重点背诵库中有 {due_today_count} 道词条到达艾宾浩斯复习临界点，及时复盘可将短期记忆转化为长久斩杀掌握。",
+        })
+    elif oral_mastery_rate > 0:
+        strategic_insights.append({
+            "type": "positive",
+            "tag": "背诵斩杀稳健",
+            "content": f"口腔重点背诵累计斩杀率已达 {oral_mastery_rate}%，今日无到期复习项，可继续开辟新章节考点。",
+        })
+
+    if unresolved_mistakes > 0:
+        strategic_insights.append({
+            "type": "action",
+            "tag": "错题攻坚建议",
+            "content": f"题库累计积压 {unresolved_mistakes} 道待攻坚错题（当前消化率 {mistake_resolve_rate}%），建议启动错题专练会话进行二次斩杀。",
+        })
+
+    # 6. 三大学科深度资产重塑
+    total_med_sections = max(1, sum(len(b.get("sections", [])) for b in books if safe_domain(b.get("domain")) == "medicine"))
+    learned_med_sections = len(effort_domains["medicine"]["section_ids"])
+    med_coverage = round(learned_med_sections / total_med_sections * 100, 1)
 
     subject_assets = {
         "medicine": {
             "duration_seconds": activity_domain_totals.get("medicine", 0),
             "book_count": sum(1 for b in books if b.get("domain") == "medicine"),
+            "learned_sections": learned_med_sections,
+            "total_sections": total_med_sections,
+            "coverage_percent": med_coverage,
             "note_count": sum(1 for sid in note_files if (sec := sections.get(sid)) and (bk := section_to_book.get(sid)) and bk.get("domain") == "medicine"),
             "oral_studied": oral_studied,
             "oral_mastered": oral_mastered,
+            "oral_mastery_rate": oral_mastery_rate,
             "oral_total_items": oral_total_items,
+            "oral_due_today": due_today_count,
         },
         "politics": {
             "duration_seconds": activity_domain_totals.get("politics", 0),
             "answered_count": practice_summary.get("answered_count", 0),
             "correct_count": practice_summary.get("correct_count", 0),
             "accuracy": round(practice_summary["correct_count"] / practice_summary["answered_count"] * 100, 1) if practice_summary.get("answered_count") else 0,
+            "mistakes_total": total_mistakes,
+            "mistakes_resolved": resolved_mistakes,
+            "mistakes_unresolved": unresolved_mistakes,
+            "mistake_resolve_rate": mistake_resolve_rate,
         },
         "english": {
             "duration_seconds": activity_domain_totals.get("english", 0),
             "vocab_words": vocab_total_words,
             "today_vocab_words": vocab_today_words,
+            "vocab_active_days": vocab_active_days,
+            "attempts_count": sum(1 for item in practice_items if str(item.get("bank_id", "")).startswith("english") or "english" in str(item.get("question_id", "")).lower()),
             "notebook_weeks": notebook_summary.get("week_count", 0),
             "notebook_characters": notebook_summary.get("character_count", 0),
         },
@@ -1195,6 +1378,11 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
             "input_ratio": input_ratio,
             "output_ratio": output_ratio,
         },
+        "subject_balance": subject_balance,
+        "oral_funnel": oral_funnel,
+        "mistake_analytics": mistake_analytics,
+        "last_7_days_trend": last_7_days,
+        "strategic_insights": strategic_insights,
         "subject_assets": subject_assets,
         # Keep the old field as a compatibility reference. New consumers use
         # total_activity_seconds, whose type/domain totals explain the sum.

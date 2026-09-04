@@ -236,7 +236,307 @@ export function bindLogsEvents() {
     window.scrollTo({ top: 0, behavior: "auto" });
   });
 
+  $("statsJumpMistakesBtn")?.addEventListener("click", () => {
+    selectLibraryShelf("mistakes");
+  });
+
   logsEventsBound = true;
+}
+
+function renderSubjectBalanceDonut(balance) {
+  const svg = $("statsBalanceSvg");
+  if (!svg) return;
+
+  const medPct = Math.round(Number(balance?.medicine_percent || 0));
+  const polPct = Math.round(Number(balance?.politics_percent || 0));
+  const engPct = Math.round(Number(balance?.english_percent || 0));
+  const totalSec = Number(balance?.total_seconds || 0);
+
+  if ($("balanceScoreValue")) $("balanceScoreValue").textContent = balance?.balance_score ?? 85;
+  if ($("balanceDominantLabel")) $("balanceDominantLabel").textContent = balance?.dominant_label || "医学专综";
+  const domPct = balance?.dominant_key === "medicine" ? medPct : (balance?.dominant_key === "politics" ? polPct : engPct);
+  if ($("balanceDominantPct")) $("balanceDominantPct").textContent = `${domPct}%`;
+
+  if ($("balanceMedPct")) $("balanceMedPct").textContent = `${medPct}% (${formatDuration(balance?.medicine_seconds || 0, true)})`;
+  if ($("balancePolPct")) $("balancePolPct").textContent = `${polPct}% (${formatDuration(balance?.politics_seconds || 0, true)})`;
+  if ($("balanceEngPct")) $("balanceEngPct").textContent = `${engPct}% (${formatDuration(balance?.english_seconds || 0, true)})`;
+
+  const R = 58;
+  const C = 2 * Math.PI * R; // ≈ 364.4249
+  const strokeW = 18;
+
+  let html = `<circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--line)" stroke-width="${strokeW}" opacity="0.35" class="donut-bg-track"></circle>`;
+
+  const sumPct = medPct + polPct + engPct;
+  if (sumPct > 0) {
+    const lenMed = (medPct / sumPct) * C;
+    const lenPol = (polPct / sumPct) * C;
+    const lenEng = (engPct / sumPct) * C;
+
+    const offset1 = 0;
+    const offset2 = -lenMed;
+    const offset3 = -(lenMed + lenPol);
+
+    html += `
+      <g transform="rotate(-90 80 80)">
+        <circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--primary)" stroke-width="${strokeW}" stroke-dasharray="${lenMed.toFixed(2)} ${(C - lenMed).toFixed(2)}" stroke-dashoffset="${offset1.toFixed(2)}" class="donut-seg seg-medicine"><title>医学专综: ${medPct}%</title></circle>
+        <circle cx="80" cy="80" r="${R}" fill="none" stroke="#f59e0b" stroke-width="${strokeW}" stroke-dasharray="${lenPol.toFixed(2)} ${(C - lenPol).toFixed(2)}" stroke-dashoffset="${offset2.toFixed(2)}" class="donut-seg seg-politics"><title>思想政治: ${polPct}%</title></circle>
+        <circle cx="80" cy="80" r="${R}" fill="none" stroke="#3b82f6" stroke-width="${strokeW}" stroke-dasharray="${lenEng.toFixed(2)} ${(C - lenEng).toFixed(2)}" stroke-dashoffset="${offset3.toFixed(2)}" class="donut-seg seg-english"><title>考研英语: ${engPct}%</title></circle>
+      </g>
+    `;
+  } else {
+    html += `<circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--primary)" stroke-width="${strokeW}" stroke-dasharray="8 6" opacity="0.4"></circle>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+function render7DayTrendChart(trend) {
+  const container = $("statsTrendChartWrap");
+  if (!container) return;
+
+  const days = Array.isArray(trend) ? trend : [];
+  if (!days.length) {
+    container.innerHTML = `<div class="trend-chart-empty">暂无近 7 天研学记录</div>`;
+    return;
+  }
+
+  const maxSec = Math.max(...days.map((d) => d.total_seconds || 0), 3600);
+  const scaleMaxSec = Math.max(7200, Math.ceil((maxSec * 1.25) / 1800) * 1800);
+  const maxOut = Math.max(...days.map((d) => d.output_events || 0), 4);
+
+  const W = 520;
+  const H = 200;
+  const padLeft = 46;
+  const padRight = 36;
+  const padTop = 24;
+  const padBottom = 42;
+  const chartW = W - padLeft - padRight;
+  const chartH = H - padTop - padBottom;
+  const colW = chartW / days.length;
+  const barW = Math.min(26, Math.max(16, colW * 0.42));
+
+  let gridHtml = "";
+  const gridLevels = [
+    { pct: 0, label: "0" },
+    { pct: 0.5, label: formatDuration(scaleMaxSec * 0.5, true) },
+    { pct: 1.0, label: formatDuration(scaleMaxSec, true) },
+  ];
+  for (const g of gridLevels) {
+    const yPos = (padTop + chartH) - g.pct * chartH;
+    gridHtml += `
+      <line x1="${padLeft}" y1="${yPos}" x2="${W - padRight}" y2="${yPos}" stroke="var(--line)" stroke-dasharray="3 3" opacity="0.6"/>
+      <text x="${padLeft - 8}" y="${yPos + 3.5}" text-anchor="end" class="chart-axis-text">${g.label}</text>
+    `;
+  }
+
+  let barsHtml = "";
+  let linePoints = [];
+  let pointsHtml = "";
+  let xLabelsHtml = "";
+
+  days.forEach((d, i) => {
+    const cx = padLeft + (i + 0.5) * colW;
+    const x = cx - barW / 2;
+    const base = padTop + chartH;
+
+    const mSec = d.medicine_seconds || 0;
+    const pSec = d.politics_seconds || 0;
+    const eSec = d.english_seconds || 0;
+    const tSec = d.total_seconds || (mSec + pSec + eSec);
+
+    const hMed = Math.round((mSec / scaleMaxSec) * chartH);
+    const hPol = Math.round((pSec / scaleMaxSec) * chartH);
+    const hEng = Math.round((eSec / scaleMaxSec) * chartH);
+
+    const yEng = base - hEng;
+    const yPol = yEng - hPol;
+    const yMed = yPol - hMed;
+
+    if (tSec > 0) {
+      if (hEng > 0) {
+        barsHtml += `<rect x="${x}" y="${yEng}" width="${barW}" height="${hEng}" fill="#3b82f6" rx="2" class="bar-seg seg-eng"><title>${d.label} 英语: ${formatDuration(eSec, true)}</title></rect>`;
+      }
+      if (hPol > 0) {
+        barsHtml += `<rect x="${x}" y="${yPol}" width="${barW}" height="${hPol}" fill="#f59e0b" rx="2" class="bar-seg seg-pol"><title>${d.label} 政治: ${formatDuration(pSec, true)}</title></rect>`;
+      }
+      if (hMed > 0) {
+        barsHtml += `<rect x="${x}" y="${yMed}" width="${barW}" height="${hMed}" fill="var(--primary)" rx="2" class="bar-seg seg-med"><title>${d.label} 医学: ${formatDuration(mSec, true)}</title></rect>`;
+      }
+    } else {
+      barsHtml += `<circle cx="${cx}" cy="${base - 3}" r="2" fill="var(--line)" opacity="0.6"/>`;
+    }
+
+    const outCount = Number(d.output_events || 0);
+    const yLine = Math.round(base - (outCount / maxOut) * (chartH * 0.88));
+    linePoints.push(`${cx},${yLine}`);
+
+    pointsHtml += `
+      <circle cx="${cx}" cy="${yLine}" r="${outCount > 0 ? 3.5 : 2}" fill="${outCount > 0 ? '#f43f5e' : 'var(--line)'}" stroke="var(--surface)" stroke-width="1.5" class="trend-point">
+        <title>${d.label} 产出动能: ${outCount} 项</title>
+      </circle>
+    `;
+    if (outCount > 0) {
+      pointsHtml += `<text x="${cx}" y="${yLine - 6}" text-anchor="middle" class="chart-point-val">${outCount}</text>`;
+    }
+
+    const isToday = Boolean(d.is_today);
+    xLabelsHtml += `
+      <text x="${cx}" y="${base + 16}" text-anchor="middle" class="chart-x-weekday${isToday ? ' is-today' : ''}">${escapeHtml(d.weekday || '')}</text>
+      <text x="${cx}" y="${base + 28}" text-anchor="middle" class="chart-x-date">${escapeHtml(d.short_date || '')}</text>
+    `;
+  });
+
+  const pathD = linePoints.length ? `M ${linePoints.join(" L ")}` : "";
+  const lineHtml = pathD ? `<path d="${pathD}" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="trend-line-path"/>` : "";
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="stats-trend-svg" aria-label="近7天学时与产出动能图">
+      <g class="trend-grid">${gridHtml}</g>
+      <g class="trend-bars">${barsHtml}</g>
+      <g class="trend-line">${lineHtml}${pointsHtml}</g>
+      <g class="trend-x-axis">${xLabelsHtml}</g>
+    </svg>
+  `;
+}
+
+function renderOralMasteryFunnel(funnel) {
+  const stepsList = $("funnelStepsList");
+  if (!stepsList) return;
+
+  const f = funnel || {};
+  const total = Number(f.total_items || 2216);
+  const unseen = Number(f.unseen_count || 0);
+  const learning = Number(f.learning_count || 0);
+  const reviewing = Number(f.reviewing_count || 0);
+  const mastered = Number(f.mastered_count || 0);
+  const masteryRate = f.mastery_rate || 0;
+  const dueToday = Number(f.due_today || 0);
+
+  if ($("funnelMasteryRate")) $("funnelMasteryRate").textContent = `${masteryRate}%`;
+  if ($("funnelDueToday")) $("funnelDueToday").textContent = `${formatInteger(dueToday)} 条`;
+  if ($("funnelTotal")) $("funnelTotal").textContent = `${formatInteger(total)} 题`;
+
+  const steps = [
+    {
+      title: "待攻克新考点",
+      sub: "全书未激活词条",
+      count: unseen,
+      pct: total ? Math.round((unseen / total) * 100) : 0,
+      color: "var(--text-soft)",
+      cls: "stage-unseen"
+    },
+    {
+      title: "正在研读学习",
+      sub: "初步背诵或练习 1-2 次",
+      count: learning,
+      pct: total ? Math.round((learning / total) * 100) : 0,
+      color: "#f59e0b",
+      cls: "stage-learning"
+    },
+    {
+      title: "周期巩固复核",
+      sub: "复盘 3-4 次熟练强化",
+      count: reviewing,
+      pct: total ? Math.round((reviewing / total) * 100) : 0,
+      color: "#3b82f6",
+      cls: "stage-reviewing"
+    },
+    {
+      title: "熟练斩杀掌握",
+      sub: "掌握 5 次以上形成肌肉记忆",
+      count: mastered,
+      pct: total ? Math.round((mastered / total) * 100) : 0,
+      color: "var(--primary)",
+      cls: "stage-mastered"
+    },
+  ];
+
+  stepsList.innerHTML = steps.map((s) => `
+    <div class="funnel-step-item ${s.cls}">
+      <div class="fsi-header">
+        <div class="fsi-title">
+          <span class="fsi-dot" style="background: ${s.color};"></span>
+          <strong>${escapeHtml(s.title)}</strong>
+          <small>${escapeHtml(s.sub)}</small>
+        </div>
+        <div class="fsi-stats">
+          <strong class="fsi-num">${formatInteger(s.count)} 题</strong>
+          <span class="fsi-pct">${s.pct}%</span>
+        </div>
+      </div>
+      <div class="fsi-bar-track">
+        <div class="fsi-bar-fill" style="width: ${Math.max(2, s.pct)}%; background: ${s.color};"></div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderMistakeAnalytics(mistakes) {
+  const m = mistakes || {};
+  const total = Number(m.total || 0);
+  const resolved = Number(m.resolved || 0);
+  const unresolved = Number(m.unresolved || 0);
+  const rate = Number(m.resolve_rate || 0);
+
+  if ($("mistakesTotal")) $("mistakesTotal").textContent = formatInteger(total);
+  if ($("mistakesResolved")) $("mistakesResolved").textContent = formatInteger(resolved);
+  if ($("mistakesUnresolved")) $("mistakesUnresolved").textContent = formatInteger(unresolved);
+  if ($("mistakeResolveRate")) $("mistakeResolveRate").textContent = `${rate}%`;
+
+  const bar = $("mistakeGaugeBar");
+  if (bar) {
+    const C = 2 * Math.PI * 42; // ≈ 263.89
+    const offset = C * (1 - rate / 100);
+    bar.style.strokeDasharray = `${C.toFixed(2)}`;
+    bar.style.strokeDashoffset = `${offset.toFixed(2)}`;
+  }
+
+  if ($("mistakeAdviceText")) {
+    if (total === 0) {
+      $("mistakeAdviceText").textContent = "题库做题暂无错题记录，持续刷题将自动归纳错题薄。";
+    } else if (unresolved === 0) {
+      $("mistakeAdviceText").textContent = "太棒了！所有错题已全部消化斩杀，继续保持巅峰手感！";
+    } else {
+      $("mistakeAdviceText").textContent = `尚有 ${formatInteger(unresolved)} 道待消灭错题，建议点击上方按钮启动错题专项攻坚！`;
+    }
+  }
+}
+
+function renderStrategicInsights(insights) {
+  const container = $("statsStrategyInsights");
+  if (!container) return;
+
+  const list = Array.isArray(insights) ? insights : [];
+  if (!list.length) {
+    container.innerHTML = `
+      <div class="strategy-insight-card positive">
+        <div class="sic-head">
+          <i data-lucide="sparkles"></i>
+          <span class="sic-tag">研学状态良好</span>
+        </div>
+        <p class="sic-content">各科研读稳步推进中，保持节奏，按计划完成每日任务指标。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const icons = {
+    warning: "alert-triangle",
+    positive: "trophy",
+    urgent: "flame",
+    action: "target",
+  };
+
+  container.innerHTML = list.map((item) => `
+    <div class="strategy-insight-card ${escapeHtml(item.type || 'positive')}">
+      <div class="sic-head">
+        <i data-lucide="${icons[item.type] || 'info'}"></i>
+        <span class="sic-tag">${escapeHtml(item.tag || '备考诊断')}</span>
+      </div>
+      <p class="sic-content">${escapeHtml(item.content || '')}</p>
+    </div>
+  `).join("");
 }
 
 export function renderStats() {
@@ -293,36 +593,46 @@ export function renderStats() {
     $("activityMonths").innerHTML = monthLabels.join("");
   }
 
-  // 4. 三大学科深度资产看板
+  // 4. 三科平衡动力环与 7 天趋势图
+  renderSubjectBalanceDonut(stats.subject_balance);
+  render7DayTrendChart(stats.last_7_days_trend);
+
+  // 5. 攻坚漏斗与错题看板
+  renderOralMasteryFunnel(stats.oral_funnel);
+  renderMistakeAnalytics(stats.mistake_analytics);
+
+  // 6. 战略备考诊断
+  renderStrategicInsights(stats.strategic_insights);
+
+  // 7. 三大学科深度资产看板
   const subAssets = stats.subject_assets || {};
   if ($("medTotalHours")) $("medTotalHours").textContent = formatDuration(subAssets.medicine?.duration_seconds || 0, true);
-  if ($("medBooksCount")) $("medBooksCount").textContent = `${subAssets.medicine?.book_count || 0} 本`;
+  if ($("medCoverage")) $("medCoverage").textContent = `${subAssets.medicine?.coverage_percent || 0}% (${subAssets.medicine?.learned_sections || 0}节)`;
+  if ($("medOralMastery")) $("medOralMastery").textContent = `${subAssets.medicine?.oral_mastered || 0} 斩杀 / ${subAssets.medicine?.oral_studied || 0} 已学`;
   if ($("medNotesCount")) $("medNotesCount").textContent = `${subAssets.medicine?.note_count || 0} 篇`;
-  if ($("medOralCount")) $("medOralCount").textContent = `${subAssets.medicine?.oral_studied || 0} 条`;
 
   if ($("polTotalHours")) $("polTotalHours").textContent = formatDuration(subAssets.politics?.duration_seconds || 0, true);
   if ($("polQuestionsCount")) $("polQuestionsCount").textContent = `${subAssets.politics?.answered_count || 0} 题`;
-  if ($("polCorrectCount")) $("polCorrectCount").textContent = `${subAssets.politics?.correct_count || 0} 题`;
   if ($("polAccuracy")) $("polAccuracy").textContent = `${subAssets.politics?.accuracy || 0}%`;
+  if ($("polMistakeRate")) $("polMistakeRate").textContent = `${subAssets.politics?.mistake_resolve_rate || 0}%`;
 
   if ($("engTotalHours")) $("engTotalHours").textContent = formatDuration(subAssets.english?.duration_seconds || 0, true);
   if ($("engAttemptsCount")) $("engAttemptsCount").textContent = `${(stats.activity_counts || {})["objective_practice"] || 0} 题`;
   if ($("engVocabWords")) $("engVocabWords").textContent = `${formatInteger(subAssets.english?.vocab_words || 0)} 词`;
-  if ($("engNotebookChars")) $("engNotebookChars").textContent = `${formatInteger(subAssets.english?.notebook_characters || 0)} 字`;
-  if ($("engNotebookWeeks")) $("engNotebookWeeks").textContent = `${subAssets.english?.notebook_weeks || 0} 周`;
+  if ($("engVocabStreak")) $("engVocabStreak").textContent = `${subAssets.english?.vocab_active_days || 0} 天`;
 
   document.querySelectorAll("#statsSubjectCards [data-shelf]").forEach((button) => {
     button.addEventListener("click", () => selectLibraryShelf(button.dataset.shelf));
   });
 
-  // 5. 输入 vs 输出配比
+  // 8. 输入 vs 输出配比
   const inOut = stats.input_output_ratio || { input_ratio: 50, output_ratio: 50, input_seconds: 0, output_seconds: 0 };
   if ($("ratioInputFill")) $("ratioInputFill").style.width = `${inOut.input_ratio}%`;
   if ($("ratioOutputFill")) $("ratioOutputFill").style.width = `${inOut.output_ratio}%`;
   if ($("ratioInputText")) $("ratioInputText").textContent = `${inOut.input_ratio}% (${formatDuration(inOut.input_seconds, true)})`;
   if ($("ratioOutputText")) $("ratioOutputText").textContent = `${inOut.output_ratio}% (${formatDuration(inOut.output_seconds, true)})`;
 
-  // 6. 活动类型清单
+  // 9. 活动类型清单
   const activityLabels = { read: "阅读精读", objective_practice: "客观题练习", subjective_practice: "主观题/背诵", notebook: "词汇与句式笔记", review: "每日复盘总结" };
   const activityIcons = { read: "book-open", objective_practice: "circle-check-big", subjective_practice: "pen-line", notebook: "notebook-pen", review: "history" };
   if ($("activityTypeList")) {
@@ -363,6 +673,7 @@ export async function openStats() {
   closeNotePopover();
   hideAllNoteFloats();
   setActiveView("stats");
+  bindLogsEvents();
   window.scrollTo({ top: 0, behavior: "auto" });
   await loadStats();
 }
