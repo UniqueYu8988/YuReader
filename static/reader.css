@@ -5693,3 +5693,464 @@ body:has(.knowledge-workspace.reader-open) .app-guide-float,
   font-weight: 700;
   color: var(--text-secondary);
 }
+
+/* ==========================================================================
+   Multi-Entry Note Cards & Stream Styles
+   ========================================================================== */
+#sectionNotePopover {
+  width: min(480px, calc(100vw - 32px));
+  max-height: min(78vh, 640px, var(--note-popover-space, 78vh));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.note-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.note-cards-container {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.note-cards-list {
+  flex: 1;
+  min-height: 100px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.note-cards-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.note-cards-list::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+
+.note-card-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.note-card-item:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.nci-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 6px;
+}
+
+.nci-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nci-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.nci-meta {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.nci-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.nci-action-btn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-soft);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.nci-action-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.nci-action-btn.danger:hover {
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+}
+
+.nci-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.nci-content {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text);
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.nci-content p:last-child {
+  margin-bottom: 0;
+}
+
+.note-cards-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-soft);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+}
+
+.note-cards-empty svg {
+  width: 36px;
+  height: 36px;
+  color: var(--text-soft);
+  margin-bottom: 10px;
+  opacity: 0.55;
+}
+
+.note-cards-empty p {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.note-cards-empty small {
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+
+.note-quick-bar {
+  display: flex;
+  margin-top: 4px;
+}
+
+.note-append-clipboard-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.note-append-clipboard-btn:hover {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border-color: var(--primary-strong);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.note-append-clipboard-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.note-source-container {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-source-container textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 220px;
+  max-height: 420px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+/* Full-screen Note Stream view */
+.note-stream-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 0 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.note-stream-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 680px) {
+  .note-stream-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.nsb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.nsb-tag svg {
+  width: 13px;
+  height: 13px;
+}
+
+.nsb-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.nsb-title em {
+  font-style: normal;
+  color: var(--primary);
+  margin: 0 2px;
+}
+
+.nsb-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.nsb-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nsb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.nsb-btn.primary {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+}
+
+.nsb-btn.primary:hover {
+  background: var(--primary-strong);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.nsb-btn.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+
+.nsb-btn.secondary:hover {
+  background: var(--surface-hover);
+}
+
+.nsb-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.note-stream-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.note-stream-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.note-stream-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.nsc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: color-mix(in srgb, var(--surface-subtle, #f8f9fa) 60%, var(--surface));
+  border-bottom: 1px solid var(--line);
+}
+
+.nsc-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nsc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.nsc-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.nsc-chars {
+  font-size: 11px;
+  color: var(--text-soft);
+  opacity: 0.8;
+}
+
+.nsc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nsc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 11.5px;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text-soft);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.nsc-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.nsc-btn.copied {
+  background: color-mix(in srgb, #10b981 12%, transparent);
+  color: #10b981;
+  border-color: #10b981;
+}
+
+.nsc-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.nsc-content {
+  padding: 20px 24px;
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+
+.note-empty-paste-btn {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.note-empty-paste-btn:hover {
+  background: var(--primary-strong);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.note-empty-paste-btn svg {
+  width: 15px;
+  height: 15px;
+}

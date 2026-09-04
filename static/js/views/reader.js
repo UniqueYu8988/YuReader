@@ -258,6 +258,8 @@ export async function openSection(sectionId) {
   const isWordMethod = book?.id === "english-method-wordbook";
   const materialLabel = isWorkbook ? "练习册 · 原书练习模板" : isWordMethod ? "词汇方法补充 · 辅助方法书" : (section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown");
   const lengthLabel = formatCharacters(section.character_count); $("readerBookMeta").textContent = `${materialLabel}${lengthLabel ? ` · ${lengthLabel}` : ""}`; $("readerBookMeta").title = section.path || materialLabel; $("readerNoteMeta").textContent = section.note?.trim() ? "已有笔记" : "暂无笔记";
+  if ($("sectionNote")) $("sectionNote").value = section.note || "";
+  renderNoteCards();
   state.material = "cleaned"; closeSectionMenu(); closeChapterQuestions(); closeNotePopover(); renderSectionMenu(); renderChapterQuestions(section.chapter_questions || []); renderMaterial(); setNavigationState(); renderBooks(); loadSectionPractice();
   const savedScroll = Number(localStorage.getItem(`yureader_scroll_${section.id}`) || 0);
   if (savedScroll > 80) {
@@ -433,11 +435,10 @@ function showWordPopover(word, x, y) {
   refreshIcons();
 
   lookupPopoverEl.querySelector("#rwpAddNote")?.addEventListener("click", () => {
-    const existing = $("sectionNote").value || "";
+    const existing = $("sectionNote")?.value || state.current?.note || "";
     const noteEntry = `- **${word}**: [考研重点词，待复习巩固]`;
     if (!existing.includes(`**${word}**`)) {
-      $("sectionNote").value = existing ? `${existing.trim()}\n${noteEntry}` : noteEntry;
-      scheduleNoteSave();
+      appendNoteEntry(noteEntry);
       showToast(`已将 "${word}" 收录至本节生词笔记`);
     } else {
       showToast(`"${word}" 已在生词笔记中`);
@@ -491,7 +492,24 @@ export function renderMaterial() {
   article.classList.toggle("note-stream", state.material === "note");
   if (state.material === "note") {
     guide.classList.add("hidden"); guide.innerHTML = "";
-    article.innerHTML = !state.current?.note?.trim() ? `<div class="section-material-empty"><i data-lucide="notebook-pen"></i><strong>这一节还没有笔记</strong><span>打开右下角笔记入口，粘贴 AI 整理结果即可。</span></div>` : renderMarkdown(source || "暂无内容", imageBase);
+    const entries = parseNoteEntries(state.current?.note || "");
+    if (entries.length === 0) {
+      article.innerHTML = `
+        <div class="section-material-empty">
+          <i data-lucide="notebook-pen"></i>
+          <strong>这一节还没有笔记</strong>
+          <span>点击右下角极速追加按钮，或打开浮窗粘贴 AI 整理结果。</span>
+          <button type="button" class="note-empty-paste-btn" id="emptyAppendNoteBtn">
+            <i data-lucide="clipboard-paste"></i>
+            <span>从剪贴板粘贴首条笔记</span>
+          </button>
+        </div>`;
+      article.querySelector("#emptyAppendNoteBtn")?.addEventListener("click", () => appendClipboardToNote());
+      refreshIcons();
+    } else {
+      article.innerHTML = renderNoteStreamHtml(entries, imageBase);
+      bindNoteStreamEvents(article, entries);
+    }
   } else {
     const prepared = prepareSectionMarkdown(source || "暂无内容", state.current?.title || "");
     article.innerHTML = renderMarkdown(prepared.markdown, imageBase);
@@ -502,6 +520,80 @@ export function renderMaterial() {
     initEnglishReadingLookup(article);
   }
   document.querySelectorAll("[data-section-material]").forEach((button) => { const active = button.dataset.sectionMaterial === state.material; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); }); refreshIcons();
+}
+
+export function renderNoteStreamHtml(entries, imageBase) {
+  return `
+    <div class="note-stream-wrapper">
+      <div class="note-stream-banner">
+        <div class="nsb-content">
+          <span class="nsb-tag"><i data-lucide="layers"></i> 结构化笔记切片流</span>
+          <h2 class="nsb-title">本节共归档 <em>${entries.length}</em> 条研读切片</h2>
+          <p class="nsb-desc">单节多次粘贴已按卡片规范隔离，支持独立切片复制与管理，无缝同步至 Obsidian 笔记库。</p>
+        </div>
+        <div class="nsb-actions">
+          <button type="button" class="nsb-btn primary" id="streamAppendClipboardBtn">
+            <i data-lucide="clipboard-paste"></i>
+            <span>从剪贴板追加切片</span>
+          </button>
+          <button type="button" class="nsb-btn secondary" id="streamOpenPopoverBtn">
+            <i data-lucide="sliders-horizontal"></i>
+            <span>卡片管理 / 源码</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="note-stream-grid">
+        ${entries.map((entry, idx) => `
+          <article class="note-stream-card" data-stream-card="${idx}">
+            <header class="nsc-header">
+              <div class="nsc-meta">
+                <span class="nsc-badge">#${String(idx + 1).padStart(2, "0")}</span>
+                <span class="nsc-label">知识切片</span>
+                <span class="nsc-chars">${formatCharacters(entry.length)}</span>
+              </div>
+              <div class="nsc-actions">
+                <button type="button" class="nsc-btn" data-stream-copy="${idx}" title="复制此切片内容">
+                  <i data-lucide="copy"></i>
+                  <span>复制切片</span>
+                </button>
+              </div>
+            </header>
+            <div class="nsc-content knowledge-article">
+              ${renderMarkdown(entry, imageBase)}
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+export function bindNoteStreamEvents(article, entries) {
+  article.querySelector("#streamAppendClipboardBtn")?.addEventListener("click", () => appendClipboardToNote());
+  article.querySelector("#streamOpenPopoverBtn")?.addEventListener("click", (e) => openNotePopover(e.currentTarget));
+  article.querySelectorAll("[data-stream-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = parseInt(btn.dataset.streamCopy, 10);
+      if (isNaN(idx) || !entries[idx]) return;
+      try {
+        await navigator.clipboard.writeText(entries[idx]);
+        const origContent = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="check"></i><span>已复制</span>`;
+        btn.classList.add("copied");
+        refreshIcons();
+        showToast(`已复制切片 #${String(idx + 1).padStart(2, "0")}`);
+        setTimeout(() => {
+          btn.innerHTML = origContent;
+          btn.classList.remove("copied");
+          refreshIcons();
+        }, 1800);
+      } catch {
+        showToast("复制失败，请手动选择复制");
+      }
+    });
+  });
+  refreshIcons();
 }
 
 export function navigateSection(step) {
@@ -515,9 +607,215 @@ export function setNoteControlsExpanded(expanded) {
   });
 }
 
+let currentNoteViewMode = "cards";
+
+export function setNoteViewMode(mode) {
+  currentNoteViewMode = mode === "source" ? "source" : "cards";
+  const cardsContainer = $("noteCardsContainer");
+  const sourceContainer = $("noteSourceContainer");
+  const toggleBtn = $("noteViewModeToggle");
+  if (!cardsContainer || !sourceContainer) return;
+
+  if (currentNoteViewMode === "cards") {
+    cardsContainer.classList.remove("hidden");
+    sourceContainer.classList.add("hidden");
+    if (toggleBtn) {
+      toggleBtn.title = "切换至源码模式 (Markdown)";
+      toggleBtn.setAttribute("aria-label", "切换至源码模式 (Markdown)");
+      toggleBtn.innerHTML = `<i data-lucide="code"></i>`;
+    }
+    renderNoteCards();
+  } else {
+    cardsContainer.classList.add("hidden");
+    sourceContainer.classList.remove("hidden");
+    if (toggleBtn) {
+      toggleBtn.title = "切换至卡片列表模式";
+      toggleBtn.setAttribute("aria-label", "切换至卡片列表模式");
+      toggleBtn.innerHTML = `<i data-lucide="layout-list"></i>`;
+    }
+    const textarea = $("sectionNote");
+    if (textarea) {
+      textarea.focus();
+    }
+  }
+  refreshIcons();
+}
+
+export function toggleNoteViewMode() {
+  setNoteViewMode(currentNoteViewMode === "cards" ? "source" : "cards");
+}
+
+export function parseNoteEntries(raw) {
+  if (!raw || typeof raw !== "string" || !raw.trim()) return [];
+  const parts = raw.split(/(?:^|\r?\n)[ \t]*(?:[-*_][ \t]*){3,}(?:\r?\n|$)/);
+  return parts.map((p) => p.trim()).filter((p) => p.length > 0);
+}
+
+export function serializeNoteEntries(entries) {
+  if (!Array.isArray(entries)) return "";
+  return entries.map((e) => String(e || "").trim()).filter(Boolean).join("\n\n---\n\n");
+}
+
+function findEntryCharPosition(text, targetIdx) {
+  if (!text || targetIdx <= 0) return 0;
+  const regex = /(?:^|\r?\n)[ \t]*(?:[-*_][ \t]*){3,}(?:\r?\n|$)/g;
+  let match;
+  let count = 0;
+  while ((match = regex.exec(text)) !== null) {
+    count++;
+    if (count === targetIdx) {
+      return match.index + match[0].length;
+    }
+  }
+  return 0;
+}
+
+export function renderNoteCards() {
+  const listEl = $("noteCardsList");
+  const emptyEl = $("noteCardsEmpty");
+  const badgeEl = $("noteCountBadge");
+  const raw = $("sectionNote")?.value ?? state.current?.note ?? "";
+  const entries = parseNoteEntries(raw);
+
+  if (badgeEl) {
+    badgeEl.textContent = `${entries.length} 条`;
+  }
+
+  if (!listEl) return;
+
+  if (entries.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl?.classList.remove("hidden");
+    return;
+  }
+
+  emptyEl?.classList.add("hidden");
+  const imageBase = state.current?.book_id ? `/api/book-assets/${encodeURIComponent(state.current.book_id)}/` : "";
+
+  listEl.innerHTML = entries.map((entry, index) => {
+    return `
+      <article class="note-card-item" data-note-index="${index}">
+        <header class="nci-header">
+          <div class="nci-info">
+            <span class="nci-badge">#${String(index + 1).padStart(2, "0")}</span>
+            <small class="nci-meta">${formatCharacters(entry.length)}</small>
+          </div>
+          <div class="nci-actions">
+            <button type="button" class="nci-action-btn" data-nci-action="copy" data-nci-index="${index}" title="复制此条" aria-label="复制此条">
+              <i data-lucide="copy"></i>
+            </button>
+            <button type="button" class="nci-action-btn" data-nci-action="edit" data-nci-index="${index}" title="编辑此条" aria-label="编辑此条">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button type="button" class="nci-action-btn danger" data-nci-action="delete" data-nci-index="${index}" title="删除此条" aria-label="删除此条">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </header>
+        <div class="nci-content knowledge-article">
+          ${renderMarkdown(entry, imageBase)}
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-nci-action]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.nciAction;
+      const idx = parseInt(btn.dataset.nciIndex, 10);
+      if (isNaN(idx) || idx < 0 || idx >= entries.length) return;
+
+      if (action === "copy") {
+        try {
+          await navigator.clipboard.writeText(entries[idx]);
+          showToast(`已复制第 #${String(idx + 1).padStart(2, "0")} 条笔记`);
+        } catch {
+          showToast("复制失败，请手动选择复制");
+        }
+      } else if (action === "edit") {
+        setNoteViewMode("source");
+        const textarea = $("sectionNote");
+        if (textarea) {
+          const pos = findEntryCharPosition(textarea.value, idx);
+          textarea.focus();
+          if (pos >= 0) {
+            textarea.setSelectionRange(pos, pos + entries[idx].length);
+          }
+        }
+      } else if (action === "delete") {
+        if (confirm(`确定要删除第 #${String(idx + 1).padStart(2, "0")} 条笔记吗？`)) {
+          entries.splice(idx, 1);
+          const newContent = serializeNoteEntries(entries);
+          if ($("sectionNote")) $("sectionNote").value = newContent;
+          state.current.note = newContent;
+          scheduleNoteSave();
+          renderNoteCards();
+          if (state.material === "note") renderMaterial();
+          showToast("已删除该条笔记");
+        }
+      }
+    });
+  });
+
+  refreshIcons();
+}
+
+export function appendNoteEntry(text) {
+  if (!state.current || !text || !text.trim()) return;
+  const existing = state.current.note || $("sectionNote")?.value || "";
+  const entries = parseNoteEntries(existing);
+  entries.push(text.trim());
+  const newContent = serializeNoteEntries(entries);
+  if ($("sectionNote")) $("sectionNote").value = newContent;
+  state.current.note = newContent;
+  scheduleNoteSave();
+  renderNoteCards();
+  if (state.material === "note") {
+    renderMaterial();
+  }
+  showToast(`已追加第 ${entries.length} 条笔记切片`);
+}
+
+export async function appendClipboardToNote() {
+  if (!state.current) {
+    showToast("请先打开一节研读内容");
+    return;
+  }
+  let text = "";
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      text = await navigator.clipboard.readText();
+    }
+  } catch (err) {
+    console.warn("Clipboard read permission issue:", err);
+  }
+  if (text && text.trim()) {
+    appendNoteEntry(text.trim());
+  } else {
+    openNotePopover();
+    setNoteViewMode("source");
+    const textarea = $("sectionNote");
+    if (textarea) {
+      const val = textarea.value.trim();
+      textarea.value = val ? `${val}\n\n---\n\n` : "";
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+    showToast("剪贴板为空或未授权，已就绪请按 Ctrl+V 粘贴");
+  }
+}
+
 export function openNotePopover(trigger = null) {
-  state.noteOpen = true; state.noteTrigger = trigger;
-  $("sectionNoteFloat").classList.add("note-is-open"); $("sectionNotePopover").classList.add("is-open"); $("sectionNotePopover").setAttribute("aria-hidden", "false"); setNoteControlsExpanded(true); window.setTimeout(() => $("sectionNote").focus(), 120);
+  state.noteOpen = true;
+  state.noteTrigger = trigger;
+  if ($("sectionNote")) $("sectionNote").value = state.current?.note || "";
+  renderNoteCards();
+  setNoteViewMode("cards");
+  $("sectionNoteFloat")?.classList.add("note-is-open");
+  $("sectionNotePopover")?.classList.add("is-open");
+  $("sectionNotePopover")?.setAttribute("aria-hidden", "false");
+  setNoteControlsExpanded(true);
 }
 
 export function closeNotePopover({ restoreFocus = false } = {}) {
@@ -527,7 +825,6 @@ export function closeNotePopover({ restoreFocus = false } = {}) {
 }
 
 export function closeSectionMenu() { $("readerCrumbMenu")?.classList.add("hidden"); $("readerSectionPicker")?.classList.remove("active"); $("readerSectionPicker")?.setAttribute("aria-expanded", "false"); }
-
 
 export function scheduleNoteSave() {
   if (!state.current) return;
@@ -539,7 +836,14 @@ export function scheduleNoteSave() {
       if (!response.ok) throw new Error("save failed"); const result = await response.json();
       const cached = state.sections.get(sectionId); if (cached) state.sections.set(sectionId, { ...cached, note: content });
       if (state.current?.id !== sectionId) return;
-      state.current.note = content; $("openObsidian").href = result.obsidian_uri || "obsidian://open"; $("noteSavedText").textContent = content.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存"; $("readerNoteMeta").textContent = content.trim() ? "已有笔记" : "暂无笔记"; if (state.material === "note") renderMaterial(); loadStats();
+      state.current.note = content;
+      $("openObsidian").href = result.obsidian_uri || "obsidian://open";
+      $("noteSavedText").textContent = content.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存";
+      $("readerNoteMeta").textContent = content.trim() ? "已有笔记" : "暂无笔记";
+      const entries = parseNoteEntries(content);
+      if ($("noteCountBadge")) $("noteCountBadge").textContent = `${entries.length} 条`;
+      if (state.material === "note") renderMaterial();
+      loadStats();
     } catch { if (state.current?.id === sectionId) $("noteSavedText").textContent = "保存失败，请稍后重试"; }
   }, 420);
 }

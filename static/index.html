@@ -1084,15 +1084,59 @@
         <span class="dock-tooltip">笔记流</span>
       </button>
       <span class="reader-dock-sep" aria-hidden="true"></span>
+      <button class="reader-dock-btn" id="quickPasteNoteDock" type="button" aria-label="快捷追加剪贴板笔记" title="快捷追加剪贴板笔记 (点击直接追加)">
+        <i data-lucide="clipboard-paste"></i>
+        <span class="dock-tooltip">快捷追加</span>
+      </button>
       <button class="reader-dock-btn reader-dock-obsidian" id="toggleSectionNoteDock" type="button" aria-label="打开本节笔记" aria-controls="sectionNotePopover" aria-expanded="false" title="浮窗速记 (Obsidian)">
         <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
         <span class="dock-tooltip">浮窗笔记</span>
       </button>
     </nav>
     <section class="section-note-popover" id="sectionNotePopover" role="dialog" aria-hidden="true" aria-label="本节笔记">
-      <header class="section-note-heading"><div><p class="eyebrow">本节笔记</p><span id="noteSavedText">输入后自动保存</span></div><div class="section-note-actions"><a class="note-icon-button" id="openObsidian" href="obsidian://open" title="打开 Obsidian" aria-label="打开 Obsidian"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a><button class="note-icon-button" id="closeSectionNote" type="button" title="收起笔记" aria-label="收起笔记"><i data-lucide="x"></i></button></div></header>
-      <textarea id="sectionNote" rows="9" placeholder="粘贴侧边栏 AI 的整理结果，或记录自己的理解"></textarea>
-      <footer class="section-note-footer"><span>Markdown · 自动保存</span></footer>
+      <header class="section-note-heading">
+        <div>
+          <p class="eyebrow">本节笔记 <span class="note-count-badge" id="noteCountBadge">0 条</span></p>
+          <span id="noteSavedText">输入后自动保存</span>
+        </div>
+        <div class="section-note-actions">
+          <button class="note-icon-button" id="noteViewModeToggle" type="button" title="切换卡片/源码视图" aria-label="切换卡片/源码视图">
+            <i data-lucide="layout-list"></i>
+          </button>
+          <button class="note-icon-button" id="noteQuickPasteBtn" type="button" title="从剪贴板追加笔记" aria-label="从剪贴板追加笔记">
+            <i data-lucide="clipboard-paste"></i>
+          </button>
+          <a class="note-icon-button" id="openObsidian" href="obsidian://open" title="打开 Obsidian" aria-label="打开 Obsidian">
+            <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+          </a>
+          <button class="note-icon-button" id="closeSectionNote" type="button" title="收起笔记" aria-label="收起笔记">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- 卡片列表视图 (默认，避免多次粘贴堆积) -->
+      <div class="note-cards-container" id="noteCardsContainer">
+        <div class="note-cards-list" id="noteCardsList"></div>
+        <div class="note-cards-empty hidden" id="noteCardsEmpty">
+          <i data-lucide="notebook-pen"></i>
+          <p>本节暂无笔记条目</p>
+          <small>点击下方按钮直接从剪贴板追加</small>
+        </div>
+        <div class="note-quick-bar">
+          <button type="button" class="note-append-clipboard-btn" id="noteAppendClipboardBtn">
+            <i data-lucide="clipboard-paste"></i>
+            <span>从剪贴板追加新笔记</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 源码编辑视图 -->
+      <div class="note-source-container hidden" id="noteSourceContainer">
+        <textarea id="sectionNote" rows="9" placeholder="粘贴侧边栏 AI 的整理结果，或记录自己的理解（条目间用 --- 分隔）"></textarea>
+      </div>
+
+      <footer class="section-note-footer"><span>Markdown · 自动按条目归档</span></footer>
     </section>
   </div>
 

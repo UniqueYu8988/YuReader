@@ -7,7 +7,7 @@ import { bindFlashcardEvents, loadOralFocus, openOralFocusIndex, renderOralFocus
 import { finishPracticeSession, handlePracticeKeydown, renderPracticeQuestion, returnFromPractice, returnFromSubjectivePractice, reviewFirstFlaggedPracticeQuestion, reviewFirstWrongPracticeQuestion, schedulePracticeAnalysisSave, scheduleSubjectiveSave, setPracticeNoteOpen, submitPracticeAnswer, togglePracticeFlag, togglePracticeSessionMap, toggleSubjectiveReference } from "./js/modules/practice.js";
 import { fetchDailyGoals, renderHome } from "./js/views/home.js";
 import { loadStats, openLogs, openStats, openWeeklyReport, renderTimelineCards, scheduleWeeklySave, setWeeklyNoteOpen } from "./js/views/logs.js";
-import { closeChapterQuestions, closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave, setChapterQuestionsFilter, toggleChapterQuestions } from "./js/views/reader.js";
+import { appendClipboardToNote, closeChapterQuestions, closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave, setChapterQuestionsFilter, toggleChapterQuestions, toggleNoteViewMode } from "./js/views/reader.js";
 import { markReviewNoText, openReview, scheduleDailySummarySave, setReviewNoteOpen } from "./js/views/review.js";
 import { bindGlobalSearch } from "./js/modules/search.js";
 import { bindGuideEvents } from "./js/modules/guide.js";
@@ -55,6 +55,10 @@ export function bindNavigation() {
   $("readerSectionPicker").addEventListener("click", () => { const menu = $("readerCrumbMenu"); const willOpen = menu.classList.contains("hidden"); if (willOpen) { closeChapterQuestions(); renderSectionMenu(); menu.classList.remove("hidden"); $("readerSectionPicker").classList.add("active"); $("readerSectionPicker").setAttribute("aria-expanded", "true"); } else closeSectionMenu(); });
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => button?.addEventListener("click", () => navigateSection(-1)));
   [$("readerNextSection"), $("nextSectionLink"), $("readerEndNextSection")].forEach((button) => button?.addEventListener("click", () => navigateSection(1)));
+  $("quickPasteNoteDock")?.addEventListener("click", () => appendClipboardToNote());
+  $("noteQuickPasteBtn")?.addEventListener("click", () => appendClipboardToNote());
+  $("noteAppendClipboardBtn")?.addEventListener("click", () => appendClipboardToNote());
+  $("noteViewModeToggle")?.addEventListener("click", () => toggleNoteViewMode());
   $("toggleSectionNoteDock").addEventListener("click", (event) => state.noteOpen ? closeNotePopover() : openNotePopover(event.currentTarget)); $("closeSectionNote").addEventListener("click", () => closeNotePopover({ restoreFocus: true })); $("sectionNote").addEventListener("input", scheduleNoteSave);
   $("reviewReportBack").addEventListener("click", setHomeMode); $("reviewDailySummary").addEventListener("input", scheduleDailySummarySave); $("reviewMarkNoText").addEventListener("click", markReviewNoText);
   $("statsBackToRecords")?.addEventListener("click", openLogs);
