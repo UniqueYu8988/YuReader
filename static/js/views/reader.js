@@ -547,6 +547,24 @@ export function scheduleNoteSave() {
 let currentChapterQuestions = [];
 let activeQuestionsFilter = "all";
 
+const VIEWED_QUESTIONS_STORAGE_KEY = "yureader_viewed_chapter_questions";
+let viewedQuestionIds = loadViewedQuestionIds();
+
+function loadViewedQuestionIds() {
+  try {
+    const raw = localStorage.getItem(VIEWED_QUESTIONS_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveViewedQuestionIds(idsSet) {
+  try {
+    localStorage.setItem(VIEWED_QUESTIONS_STORAGE_KEY, JSON.stringify([...idsSet]));
+  } catch {}
+}
+
 export function closeChapterQuestions() {
   const drawer = $("readerQuestionsDrawer");
   const trigger = $("readerToolbarQuestions");
@@ -610,20 +628,48 @@ function renderQuestionsList() {
     const starCount = Math.max(1, Math.min(5, Number(item.star_level) || 1));
     const stars = "★".repeat(starCount);
     const prompt = item.prompt || item.source_title_raw || "";
+    const isDef = item.type === "definition";
+    const isEssay = item.type === "essay";
+    const typePrefix = isDef ? "名词解释：" : (isEssay ? "简答论述：" : (item.type_label ? `${item.type_label}：` : ""));
+    const copyText = `${typePrefix}${prompt}`;
+    const isViewed = viewedQuestionIds.has(item.id);
 
     return `
-      <div class="rq-item" data-question-id="${escapeHtml(item.id)}">
+      <div class="rq-item ${isViewed ? "is-viewed" : ""}" data-question-id="${escapeHtml(item.id)}" role="button" tabindex="0" title="点击标记已查看/取消">
         <div class="rq-item-lead">
           <span class="rq-item-num">${idx + 1}.</span>
           <span class="rq-item-stars" title="${escapeHtml(String(item.star_level || 1))}星考点">${stars}</span>
         </div>
         <div class="rq-item-title">${escapeHtml(prompt)}</div>
-        <button type="button" class="rq-item-copy-btn" data-copy-prompt="${escapeHtml(prompt)}" title="复制题目" aria-label="复制题目">
+        <button type="button" class="rq-item-copy-btn" data-copy-prompt="${escapeHtml(copyText)}" title="复制题目（含题型）" aria-label="复制题目">
           <i data-lucide="copy"></i>
         </button>
       </div>
     `;
   }).join("");
+
+  listEl.querySelectorAll(".rq-item").forEach((row) => {
+    row.addEventListener("click", () => {
+      const sel = window.getSelection()?.toString();
+      if (sel && sel.trim().length > 0) return;
+      const qId = row.dataset.questionId;
+      if (!qId) return;
+      if (viewedQuestionIds.has(qId)) {
+        viewedQuestionIds.delete(qId);
+        row.classList.remove("is-viewed");
+      } else {
+        viewedQuestionIds.add(qId);
+        row.classList.add("is-viewed");
+      }
+      saveViewedQuestionIds(viewedQuestionIds);
+    });
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        row.click();
+      }
+    });
+  });
 
   listEl.querySelectorAll("[data-copy-prompt]").forEach((btn) => {
     btn.addEventListener("click", (e) => {

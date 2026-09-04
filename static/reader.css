@@ -219,11 +219,27 @@
   background: var(--surface);
   border: 1px solid transparent;
   border-radius: 6px;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 130ms ease, border-color 130ms ease;
 }
 .rq-item:hover {
   background: var(--surface-hover);
   border-color: var(--line);
+}
+.rq-item.is-viewed {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+}
+.rq-item.is-viewed:hover {
+  background: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.rq-item.is-viewed .rq-item-num {
+  color: var(--primary-strong);
+}
+.rq-item.is-viewed .rq-item-title {
+  color: var(--text-secondary);
 }
 
 .rq-item-lead {
