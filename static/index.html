@@ -1068,8 +1068,8 @@
             </div>
           </section>
 
-          <!-- 5. 核心攻坚中枢 (口腔重点背诵熟练度漏斗 + 客观题错题攻坚消灭) -->
-          <section class="stats-drill-section" aria-label="核心攻坚中枢">
+          <!-- 5. 核心攻坚进阶与行为轨迹 (左: 艾宾浩斯熟练度转化漏斗 | 右: 行为轨迹) -->
+          <section class="stats-drill-section" aria-label="攻坚进阶与行为轨迹">
             <div class="stats-drill-grid">
               <!-- 左: 口腔重点背诵熟练度转化漏斗 -->
               <div class="stats-drill-card stats-funnel-card">
@@ -1092,7 +1092,44 @@
                 </footer>
               </div>
 
-              <!-- 右: 客观题错题攻坚与消化率看板 -->
+              <!-- 右: 各活动类型投入明细 (行为轨迹) -->
+              <div class="stats-viz-card stats-types-card">
+                <header class="viz-card-header">
+                  <div>
+                    <span class="eyebrow">行为轨迹</span>
+                    <h4 class="viz-card-title">各活动类型投入明细</h4>
+                  </div>
+                </header>
+                <div class="activity-type-list" id="activityTypeList"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 6. 效能配比与靶向歼灭 (左: 研学生产力杠杆 | 右: 靶向错题歼灭) -->
+          <section class="stats-effort-section" aria-label="效能配比与靶向歼灭">
+            <div class="stats-effort-grid">
+              <!-- 左: 研学生产力杠杆 (输入 vs 输出配比) -->
+              <div class="stats-ratio-card">
+                <header class="viz-card-header">
+                  <div>
+                    <span class="eyebrow">研学生产力杠杆</span>
+                    <h4 class="viz-card-title">输入 VS 输出配比</h4>
+                  </div>
+                  <span class="ratio-hint">以测代练 · 主动输出</span>
+                </header>
+                <div class="ratio-bar-wrapper">
+                  <div class="ratio-bar">
+                    <div class="ratio-fill input-fill" id="ratioInputFill" style="width: 50%;"></div>
+                    <div class="ratio-fill output-fill" id="ratioOutputFill" style="width: 50%;"></div>
+                  </div>
+                  <div class="ratio-legend">
+                    <div class="ratio-item"><span class="dot input-dot"></span><span>被动输入（教材精读、看解析）</span><strong id="ratioInputText">50%</strong></div>
+                    <div class="ratio-item"><span class="dot output-dot"></span><span>主动输出（客观题、背诵、复盘）</span><strong id="ratioOutputText">50%</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右: 客观题错题攻坚与消化率看板 (靶向错题歼灭) -->
               <div class="stats-drill-card stats-mistakes-card">
                 <header class="viz-card-header">
                   <div>
@@ -1134,19 +1171,6 @@
                   <span id="mistakeAdviceText">错题是提分最高效的杠杆，建议定期进入专项攻坚清零错题。</span>
                 </footer>
               </div>
-            </div>
-          </section>
-
-          <!-- 6. 考研战略备考诊断 -->
-          <section class="stats-strategy-section" id="statsStrategySection" aria-label="考研战略备考诊断">
-            <header class="stats-panel-header">
-              <div>
-                <span class="eyebrow">动态研学诊断</span>
-                <h3 class="panel-title">备考战略提分攻坚指引</h3>
-              </div>
-            </header>
-            <div class="strategy-insights-grid" id="statsStrategyInsights">
-              <!-- Dynamically populated -->
             </div>
           </section>
 
@@ -1203,40 +1227,16 @@
             </div>
           </section>
 
-          <!-- 5. 输入型 vs 输出型配比 & 活动类型分布 -->
-          <section class="stats-effort-section" aria-label="输入输出与活动类型汇总">
-            <div class="stats-effort-grid">
-              <!-- 左: 输入 vs 输出效率比 -->
-              <div class="stats-ratio-card">
-                <header class="ratio-card-head">
-                  <div>
-                    <span class="eyebrow">研学生产力杠杆</span>
-                    <h4>输入 VS 输出配比</h4>
-                  </div>
-                  <span class="ratio-hint">考研讲究“以测代练”的主动输出</span>
-                </header>
-                <div class="ratio-bar-wrapper">
-                  <div class="ratio-bar">
-                    <div class="ratio-fill input-fill" id="ratioInputFill" style="width: 50%;"></div>
-                    <div class="ratio-fill output-fill" id="ratioOutputFill" style="width: 50%;"></div>
-                  </div>
-                  <div class="ratio-legend">
-                    <div class="ratio-item"><span class="dot input-dot"></span><span>被动输入（教材精读、看解析）</span><strong id="ratioInputText">50%</strong></div>
-                    <div class="ratio-item"><span class="dot output-dot"></span><span>主动输出（客观题、背诵、复盘）</span><strong id="ratioOutputText">50%</strong></div>
-                  </div>
-                </div>
+          <!-- 8. 考研战略备考诊断 (置于页面最底部) -->
+          <section class="stats-strategy-section" id="statsStrategySection" aria-label="考研战略备考诊断">
+            <header class="stats-panel-header">
+              <div>
+                <span class="eyebrow">动态研学诊断</span>
+                <h3 class="panel-title">备考战略提分攻坚指引</h3>
               </div>
-
-              <!-- 右: 按活动类型详细明细 -->
-              <div class="stats-types-card">
-                <header class="ratio-card-head">
-                  <div>
-                    <span class="eyebrow">行为轨迹</span>
-                    <h4>各活动类型投入</h4>
-                  </div>
-                </header>
-                <div class="activity-type-list" id="activityTypeList"></div>
-              </div>
+            </header>
+            <div class="strategy-insights-grid" id="statsStrategyInsights">
+              <!-- Dynamically populated -->
             </div>
           </section>
 

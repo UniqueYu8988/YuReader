@@ -1669,11 +1669,44 @@
   height: 10px;
   border-radius: 2px;
 }
-.legend-scale i[data-level="0"] { background: var(--surface-muted); border: 1px solid var(--line); }
-.legend-scale i[data-level="1"] { background: color-mix(in srgb, var(--primary) 35%, var(--surface-strong)); }
-.legend-scale i[data-level="2"] { background: color-mix(in srgb, var(--primary) 60%, var(--surface-strong)); }
-.legend-scale i[data-level="3"] { background: var(--primary); }
-.legend-scale i[data-level="4"] { background: var(--primary-strong); }
+
+/* 热力图 5 级动态高反差色阶 (动态差值越大幅度越深) */
+:root {
+  --heat-level-0: color-mix(in srgb, var(--line) 30%, transparent);
+  --heat-level-1: #f7d2c3;
+  --heat-level-2: #e29371;
+  --heat-level-3: #bd5430;
+  --heat-level-4: #75220c;
+}
+:root[data-theme="dark"] {
+  --heat-level-0: rgba(255, 255, 255, 0.07);
+  --heat-level-1: #5c2e1f;
+  --heat-level-2: #9a482d;
+  --heat-level-3: #db6a43;
+  --heat-level-4: #ff7548;
+}
+
+.legend-scale i[data-level="0"],
+.reader-circadian-cell i.level-0 {
+  background: var(--heat-level-0);
+}
+.legend-scale i[data-level="1"],
+.reader-circadian-cell i.level-1 {
+  background: var(--heat-level-1);
+}
+.legend-scale i[data-level="2"],
+.reader-circadian-cell i.level-2 {
+  background: var(--heat-level-2);
+}
+.legend-scale i[data-level="3"],
+.reader-circadian-cell i.level-3 {
+  background: var(--heat-level-3);
+}
+.legend-scale i[data-level="4"],
+.reader-circadian-cell i.level-4 {
+  background: var(--heat-level-4);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--heat-level-4) 40%, transparent);
+}
 
 .circadian-insight-banner {
   display: flex;
@@ -1772,22 +1805,6 @@
   border-radius: 1.5px;
   background: color-mix(in srgb, var(--surface-strong) 40%, transparent);
   transition: background 140ms;
-}
-}
-.reader-circadian-cell i.level-0 {
-  background: color-mix(in srgb, var(--line) 40%, transparent);
-}
-.reader-circadian-cell i.level-1 {
-  background: color-mix(in srgb, var(--primary) 35%, var(--surface-strong));
-}
-.reader-circadian-cell i.level-2 {
-  background: color-mix(in srgb, var(--primary) 65%, var(--surface-strong));
-}
-.reader-circadian-cell i.level-3 {
-  background: var(--primary);
-}
-.reader-circadian-cell i.level-4 {
-  background: var(--primary-strong);
 }
 
 /* 4. 三科动力平衡环与近7天趋势图 */

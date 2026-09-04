@@ -569,11 +569,36 @@ export function renderStats() {
     $("activityGrid").style.setProperty("--reader-activity-weeks", weeks);
     $("activityMonths").style.setProperty("--reader-activity-weeks", weeks);
 
+    // 动态差值与色阶感知基准：
+    // 计算所有历史天数中单一时段的最大学习时长 maxSlotSec，下限设为 3600 秒 (1小时)
+    // 当存在超长专注或高强度学习时，maxSlotSec 随之动态拉大，差值拉大时高段位颜色相对更深更鲜明
+    let maxSlotSec = 0;
+    days.forEach((d) => {
+      if (d.future) return;
+      const c = d.circadian || {};
+      const m = Number(c.morning_seconds) || 0;
+      const a = Number(c.afternoon_seconds) || 0;
+      const e = Number(c.evening_seconds) || 0;
+      if (m > maxSlotSec) maxSlotSec = m;
+      if (a > maxSlotSec) maxSlotSec = a;
+      if (e > maxSlotSec) maxSlotSec = e;
+    });
+    const dynamicCeiling = Math.max(3600, maxSlotSec);
+
+    const getDynamicCircadianLevel = (sec) => {
+      if (!sec || sec < 60) return 0;
+      const ratio = sec / dynamicCeiling;
+      if (ratio < 0.18) return 1;
+      if (ratio < 0.45) return 2;
+      if (ratio < 0.75) return 3;
+      return 4;
+    };
+
     $("activityGrid").innerHTML = days.map((day) => {
       const circadian = day.circadian || { morning_seconds: 0, afternoon_seconds: 0, evening_seconds: 0 };
-      const mLevel = activityLevel(circadian.morning_seconds, 7200);
-      const aLevel = activityLevel(circadian.afternoon_seconds, 7200);
-      const eLevel = activityLevel(circadian.evening_seconds, 7200);
+      const mLevel = getDynamicCircadianLevel(circadian.morning_seconds);
+      const aLevel = getDynamicCircadianLevel(circadian.afternoon_seconds);
+      const eLevel = getDynamicCircadianLevel(circadian.evening_seconds);
       const label = new Date(`${day.date}T00:00:00`).toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
       const details = `晨间 ${formatDuration(circadian.morning_seconds)} · 午后 ${formatDuration(circadian.afternoon_seconds)} · 晚间 ${formatDuration(circadian.evening_seconds)}（全天 ${formatDuration(day.activity_seconds || 0)}）`;
       return `<div class="reader-circadian-cell${day.active ? " active-day" : ""}${day.future ? " future" : ""}${day.date === stats.today ? " today" : ""}" title="${escapeHtml(`${label}：${details}`)}" aria-label="${escapeHtml(`${label}，${details}`)}">
