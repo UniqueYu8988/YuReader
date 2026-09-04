@@ -198,14 +198,28 @@ export async function openPractice(entry, returnTo, startIndex = 0) {
   state.practiceReturn = returnTo;
   state.practiceOverviewBankId = returnTo === "english-exam-overview" ? entry.bank_id : "";
   state.practiceIndex = Math.max(0, Number(startIndex) || 0);
+  state.practiceFlagged = new Set();
+  state.practiceEliminated = new Map();
   state.subjectivePractice = null;
   $("subjectivePracticeWorkspace")?.classList.add("hidden");
   $("practiceWorkspace")?.classList.remove("hidden");
   try {
-    const query = new URLSearchParams({ bank_id: entry.bank_id, knowledge_id: entry.knowledge_id, match_level: entry.match_level });
-    const response = await fetch(`/api/practice/session?${query}`, { cache: "no-store" });
-    if (!response.ok) throw new Error("practice unavailable");
-    const session = await response.json();
+    let session;
+    if (entry.is_mistakes_session || entry.bank_id === "mistakes-session") {
+      const domainParam = entry.domain ? `?domain=${encodeURIComponent(entry.domain)}` : "";
+      const response = await fetch(`/api/practice/mistakes/session${domainParam}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("mistakes session unavailable");
+      session = await response.json();
+      if (!session.available || !session.questions?.length) {
+        showToast("太棒了！当前分类下暂无待攻坚错题。");
+        return;
+      }
+    } else {
+      const query = new URLSearchParams({ bank_id: entry.bank_id, knowledge_id: entry.knowledge_id, match_level: entry.match_level });
+      const response = await fetch(`/api/practice/session?${query}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("practice unavailable");
+      session = await response.json();
+    }
     if (entry.unit_label) {
       const scoped = (session.questions || []).filter((question) => (question.unit_label || question.unit) === entry.unit_label);
       if (scoped.length) { session.questions = scoped; session.question_count = scoped.length; session.answered_count = scoped.filter((question) => question.answered).length; state.practiceIndex = 0; }
@@ -223,7 +237,8 @@ export function practiceSessionStats() {
   const answered = questions.filter((item) => item.answered).length;
   const correct = questions.filter((item) => item.answered && item.correct === true).length;
   const wrong = questions.filter((item) => item.answered && item.correct === false).length;
-  return { total: questions.length, answered, correct, wrong, unanswered: Math.max(0, questions.length - answered) };
+  const flagged = questions.filter((item) => state.practiceFlagged?.has(item.question_id)).length;
+  return { total: questions.length, answered, correct, wrong, flagged, unanswered: Math.max(0, questions.length - answered) };
 }
 
 export function practiceUnitGroups() {
@@ -239,11 +254,19 @@ export function practiceUnitGroups() {
 
 export function renderPracticeSessionMap() {
   const map = $("practiceUnitMap"); if (!map || !state.practice) return;
-  const stats = practiceSessionStats(); $("practiceSessionState").textContent = `${stats.answered} / ${stats.total} 已答${stats.wrong ? ` · ${stats.wrong} 题待梳理` : ""}`;
+  const stats = practiceSessionStats();
+  $("practiceSessionState").textContent = `${stats.answered} / ${stats.total} 已答${stats.wrong ? ` · ${stats.wrong} 题待梳理` : ""}${stats.flagged ? ` · ${stats.flagged} 存疑` : ""}`;
   map.innerHTML = practiceUnitGroups().map((group, groupIndex) => {
     const current = group.items.some((item) => item.index === state.practiceIndex);
     const answered = group.items.filter((item) => item.answered).length;
-    return `<details class="practice-map-unit" ${current || groupIndex === 0 ? "open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${answered} / ${group.items.length} 已答</small></span><i data-lucide="chevron-right"></i></summary><nav>${group.items.map((item) => `<button class="practice-map-number${item.index === state.practiceIndex ? " current" : ""}${item.answered ? (item.correct ? " correct" : " wrong") : ""}" type="button" data-practice-index="${item.index}" aria-label="第 ${escapeHtml(item.local_number || item.index + 1)} 题${item.answered ? (item.correct ? "，已答对" : "，已答错") : "，未作答"}">${escapeHtml(item.local_number || item.index + 1)}</button>`).join("")}</nav></details>`;
+    return `<details class="practice-map-unit" ${current || groupIndex === 0 ? "open" : ""}><summary><span><strong>${escapeHtml(group.label)}</strong><small>${answered} / ${group.items.length} 已答</small></span><i data-lucide="chevron-right"></i></summary><nav>${group.items.map((item) => {
+      const isFlagged = state.practiceFlagged?.has(item.question_id);
+      const classes = ["practice-map-number"];
+      if (item.index === state.practiceIndex) classes.push("current");
+      if (item.answered) classes.push(item.correct ? "correct" : "wrong");
+      if (isFlagged) classes.push("flagged");
+      return `<button class="${classes.join(" ")}" type="button" data-practice-index="${item.index}" aria-label="第 ${escapeHtml(item.local_number || item.index + 1)} 题${item.answered ? (item.correct ? "，已答对" : "，已答错") : "，未作答"}${isFlagged ? "，已标记存疑" : ""}">${escapeHtml(item.local_number || item.index + 1)}</button>`;
+    }).join("")}</nav></details>`;
   }).join("");
   map.querySelectorAll("[data-practice-index]").forEach((button) => button.addEventListener("click", () => {
     state.practiceIndex = Number(button.dataset.practiceIndex); $("practiceSessionMap").classList.add("hidden"); $("practiceMapToggle").setAttribute("aria-expanded", "false"); renderPracticeQuestion(); window.scrollTo({ top: 0, behavior: "auto" });
@@ -263,14 +286,58 @@ export function finishPracticeSession() {
   const stats = practiceSessionStats(); stopWorkspaceTimer();
   $("practiceSessionMap").classList.add("hidden"); $("practiceMapToggle").setAttribute("aria-expanded", "false");
   $("practiceQuestionSurface").classList.add("hidden"); $("practiceResult").classList.add("hidden"); $("practicePagination").classList.add("hidden"); $("practiceSessionSummary").classList.remove("hidden");
-  $("practiceSummaryFacts").innerHTML = `<div><span>已完成</span><strong>${stats.answered}</strong><small>共 ${stats.total} 题</small></div><div><span>回答正确</span><strong>${stats.correct}</strong><small>${stats.answered ? `${Math.round((stats.correct / stats.answered) * 100)}% 正确率` : "尚未作答"}</small></div><div><span>需要梳理</span><strong>${stats.wrong}</strong><small>可直接回到错题</small></div><div><span>未作答</span><strong>${stats.unanswered}</strong><small>下次继续完成</small></div>`;
-  $("practiceReviewWrong").classList.toggle("hidden", !stats.wrong); loadStats(); refreshIcons(); window.scrollTo({ top: 0, behavior: "smooth" });
+  const isMistakes = Boolean(state.practice.is_mistakes_session || state.practice.entry?.is_mistakes_session || state.practice.bank?.id === "mistakes-session");
+  let factsHtml;
+  if (isMistakes) {
+    factsHtml = `<div><span>本次攻坚</span><strong>${stats.answered}</strong><small>共 ${stats.total} 道错题</small></div><div><span>成功攻克</span><strong>${stats.correct}</strong><small>${stats.answered ? `${Math.round((stats.correct / stats.answered) * 100)}% 斩杀率` : "尚未作答"}</small></div><div><span>仍需复习</span><strong>${stats.wrong}</strong><small>保留在错题本中</small></div>`;
+  } else {
+    factsHtml = `<div><span>已完成</span><strong>${stats.answered}</strong><small>共 ${stats.total} 题</small></div><div><span>回答正确</span><strong>${stats.correct}</strong><small>${stats.answered ? `${Math.round((stats.correct / stats.answered) * 100)}% 正确率` : "尚未作答"}</small></div><div><span>需要梳理</span><strong>${stats.wrong}</strong><small>可直接回到错题</small></div>`;
+  }
+  if (stats.flagged > 0) {
+    factsHtml += `<div><span>标记存疑</span><strong>${stats.flagged}</strong><small>考前复查不确定题</small></div>`;
+  } else {
+    factsHtml += `<div><span>未作答</span><strong>${stats.unanswered}</strong><small>下次继续完成</small></div>`;
+  }
+  $("practiceSummaryFacts").innerHTML = factsHtml;
+  $("practiceReviewWrong").classList.toggle("hidden", !stats.wrong);
+  const reviewFlagged = $("practiceReviewFlagged");
+  if (reviewFlagged) reviewFlagged.classList.toggle("hidden", !stats.flagged);
+  loadStats(); refreshIcons(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 export function reviewFirstWrongPracticeQuestion() {
   const index = (state.practice?.questions || []).findIndex((item) => item.answered && item.correct === false);
   if (index < 0) return;
   state.practiceIndex = index; $("practiceSessionSummary").classList.add("hidden"); $("practiceQuestionSurface").classList.remove("hidden"); $("practicePagination").classList.remove("hidden"); renderPracticeQuestion(); window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+export function reviewFirstFlaggedPracticeQuestion() {
+  const index = (state.practice?.questions || []).findIndex((item) => state.practiceFlagged?.has(item.question_id));
+  if (index < 0) return;
+  state.practiceIndex = index; $("practiceSessionSummary").classList.add("hidden"); $("practiceQuestionSurface").classList.remove("hidden"); $("practicePagination").classList.remove("hidden"); renderPracticeQuestion(); window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+export function togglePracticeFlag(targetQuestionId = null) {
+  const currentQ = state.practice?.question?.question;
+  const questionId = targetQuestionId || currentQ?.question_id || state.practice?.questions?.[state.practiceIndex]?.question_id;
+  if (!questionId) return;
+  if (!state.practiceFlagged) state.practiceFlagged = new Set();
+  const isFlagged = state.practiceFlagged.has(questionId);
+  if (isFlagged) {
+    state.practiceFlagged.delete(questionId);
+  } else {
+    state.practiceFlagged.add(questionId);
+  }
+  const nextFlagged = !isFlagged;
+  const btn = $("practiceFlagBtn");
+  if (btn) {
+    btn.classList.toggle("is-flagged", nextFlagged);
+    const span = btn.querySelector("span");
+    if (span) span.textContent = nextFlagged ? "已标记存疑" : "标记存疑";
+    btn.setAttribute("aria-pressed", String(nextFlagged));
+  }
+  renderPracticeSessionMap();
+  refreshIcons();
 }
 
 export function isClozeQuestion(question) {
@@ -370,29 +437,104 @@ export function updateReadingProgress() {
   $("practiceProgressBar").style.setProperty("--practice-progress", `${total ? (answered / total) * 100 : 0}%`);
 }
 
+export function linkParagraphReferences(html) {
+  return String(html || "").replace(/\b(Paragraph\s+(\d+)|para(?:\.|graph)?\s*(\d+)|第\s*(\d+)\s*段)\b/gi, (match, p1, p2, p3, p4) => {
+    const num = p2 || p3 || p4;
+    return `<button type="button" class="stem-para-ref" data-target-para="${num}" title="定位至正文第 ${num} 段">${escapeHtml(match)}</button>`;
+  });
+}
+
 export function readingQuestionHtml(payload, index) {
   const question = payload?.question || {};
   const attempt = payload?.attempt;
   const prior = attempt?.selected_answers || [];
   const revealed = Boolean(attempt);
   const inputType = question.question_type === "multiple_choice" ? "checkbox" : "radio";
+  const isFocused = index === (state.readingActiveIndex ?? 0);
   const options = (question.options || []).map((option) => {
     const label = String(option.label || "");
     const selected = prior.includes(label);
     const correct = revealed && (question.correct_answers || []).includes(label);
     const incorrect = revealed && selected && !correct;
-    return `<label class="practice-option${selected ? " selected" : ""}${correct ? " correct" : ""}${incorrect ? " incorrect" : ""}"><input type="${inputType}" name="reading-answer-${index}" value="${escapeHtml(label)}" ${selected ? "checked" : ""}${revealed ? " disabled" : ""}><strong class="practice-option-label">${escapeHtml(label)}</strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true">${correct ? '<i data-lucide="check"></i>' : (incorrect ? '<i data-lucide="x"></i>' : "")}</span></label>`;
+    return `<label class="practice-option${selected ? " selected" : ""}${correct ? " correct" : ""}${incorrect ? " incorrect" : ""}" data-reading-option="${escapeHtml(label)}"><input type="${inputType}" name="reading-answer-${index}" value="${escapeHtml(label)}" ${selected ? "checked" : ""}${revealed ? " disabled" : ""}><strong class="practice-option-label">${escapeHtml(label)}<kbd class="practice-key-hint">${escapeHtml(label)}</kbd></strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true">${correct ? '<i data-lucide="check"></i>' : (incorrect ? '<i data-lucide="x"></i>' : "")}</span></label>`;
   }).join("");
-  const feedback = revealed ? `<section class="reading-question-feedback" aria-live="polite"><header><span class="practice-result-icon${attempt.correct ? "" : " wrong"}"><i data-lucide="${attempt.correct ? "check" : "x"}"></i></span><div><strong>${attempt.correct ? "回答正确" : "继续梳理这个知识点"}</strong><small>正确答案：${escapeHtml((question.correct_answers || []).join("、"))}</small></div></header><section class="reading-question-analysis"><h4>原书解析</h4><article class="knowledge-article">${renderMarkdown(question.source_analysis_md || "暂无原书解析")}</article></section><section class="reading-personal-analysis"><header><div><strong>个人解析</strong><small data-reading-analysis-status>${payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"}</small></div><a class="note-icon-button" href="obsidian://open" data-reading-obsidian aria-label="在 Obsidian 中打开练习笔记"><img src="/assets/obsidian.svg" alt=""></a></header><textarea rows="6" data-reading-analysis placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程">${escapeHtml(payload.personal_analysis || "")}</textarea></section></section>` : "";
-  return `<article class="reading-question-block" data-reading-index="${index}"><header class="reading-question-heading"><div><span>第 ${escapeHtml(question.local_number || index + 1)} 题</span><small>${escapeHtml(readingQuestionType(question))}</small></div><em data-reading-status>${readingAnswerStatus(payload)}</em></header><div class="knowledge-article reading-question-stem">${renderMarkdown(question.stem_md || "")}</div><div class="reading-question-options${revealed ? " is-revealed" : ""}">${options}</div><div class="reading-question-actions">${revealed ? "" : `<button class="secondary-button reading-question-submit" type="button" data-reading-submit="${index}"${prior.length ? "" : " disabled"}>提交答案</button>`}</div>${feedback}</article>`;
+  const currentAnalysis = String(payload.personal_analysis || "");
+  const errorTags = (!attempt?.correct && revealed) ? `<div class="practice-error-tags-wrap reading-error-tags"><span class="practice-error-tags-label"><i data-lucide="tag"></i> 错因归因：</span><div class="practice-error-tags-list">${ERROR_ATTRIBUTION_TAGS.map((tag) => {
+    const isApplied = currentAnalysis.includes(`【错因诊断：${tag}】`);
+    return `<button type="button" class="practice-error-tag${isApplied ? " is-applied" : ""}" data-reading-error-tag="${escapeHtml(tag)}"><i data-lucide="${isApplied ? "check" : "plus"}"></i><span>${escapeHtml(tag)}</span></button>`;
+  }).join("")}</div></div>` : "";
+  const feedback = revealed ? `<section class="reading-question-feedback" aria-live="polite"><header><span class="practice-result-icon${attempt.correct ? "" : " wrong"}"><i data-lucide="${attempt.correct ? "check" : "x"}"></i></span><div><strong>${attempt.correct ? "回答正确" : "继续梳理这个知识点"}</strong><small>正确答案：${escapeHtml((question.correct_answers || []).join("、"))}</small></div></header>${errorTags}<section class="reading-question-analysis"><h4>原书解析</h4><article class="knowledge-article">${renderMarkdown(question.source_analysis_md || "暂无原书解析")}</article></section><section class="reading-personal-analysis"><header><div><strong>个人解析</strong><small data-reading-analysis-status>${payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"}</small></div><a class="note-icon-button" href="obsidian://open" data-reading-obsidian aria-label="在 Obsidian 中打开练习笔记"><img src="/assets/obsidian.svg" alt=""></a></header><textarea rows="6" data-reading-analysis placeholder="粘贴侧边栏 AI 的解析，或写下自己的判断过程">${escapeHtml(payload.personal_analysis || "")}</textarea></section></section>` : "";
+  return `<article class="reading-question-block${isFocused ? " is-focused" : ""}" data-reading-index="${index}"><header class="reading-question-heading"><div><span><span class="reading-num-shortcut"><kbd>${index + 1}</kbd></span>第 ${escapeHtml(question.local_number || index + 1)} 题</span><small>${escapeHtml(readingQuestionType(question))}</small></div><em data-reading-status>${readingAnswerStatus(payload)}</em></header><div class="knowledge-article reading-question-stem">${linkParagraphReferences(renderMarkdown(question.stem_md || ""))}</div><div class="reading-question-options${revealed ? " is-revealed" : ""}">${options}</div><div class="reading-question-actions">${revealed ? "" : `<button class="secondary-button reading-question-submit" type="button" data-reading-submit="${index}"${prior.length ? "" : " disabled"}>提交答案</button>`}</div>${feedback}</article>`;
+}
+
+export function setReadingActiveIndex(index) {
+  state.readingActiveIndex = index;
+  document.querySelectorAll(".reading-question-block").forEach((block) => {
+    const bIndex = Number(block.dataset.readingIndex);
+    block.classList.toggle("is-focused", bIndex === index);
+  });
+  const activeBlock = document.querySelector(`[data-reading-index="${index}"]`);
+  if (activeBlock) {
+    activeBlock.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 }
 
 export function bindReadingQuestion(index) {
   const block = document.querySelector(`[data-reading-index="${index}"]`); const item = state.practiceReadingItems[index]; if (!block || !item) return;
+  block.addEventListener("click", () => {
+    if (state.readingActiveIndex !== index) {
+      setReadingActiveIndex(index);
+    }
+  });
   block.querySelectorAll(".practice-option input").forEach((input) => input.addEventListener("change", () => {
     block.querySelectorAll(".practice-option").forEach((option) => option.classList.toggle("selected", option.querySelector("input")?.checked));
     const submit = block.querySelector("[data-reading-submit]"); if (submit) submit.disabled = !block.querySelector("input:checked");
   }));
+  block.querySelectorAll(".practice-option").forEach((optLabel) => {
+    optLabel.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (item.attempt) return;
+      optLabel.classList.toggle("is-eliminated");
+      const input = optLabel.querySelector("input");
+      if (input && input.checked && optLabel.classList.contains("is-eliminated")) {
+        input.checked = false;
+        block.querySelectorAll(".practice-option").forEach((opt) => opt.classList.toggle("selected", opt.querySelector("input")?.checked));
+        const submit = block.querySelector("[data-reading-submit]");
+        if (submit) submit.disabled = !block.querySelector("input:checked");
+      }
+    });
+  });
+  block.querySelectorAll(".stem-para-ref").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const paraNum = btn.dataset.targetPara;
+      const targetP = document.getElementById(`readingPara${paraNum}`);
+      if (targetP) {
+        targetP.scrollIntoView({ behavior: "smooth", block: "center" });
+        targetP.classList.add("is-para-highlight");
+        window.clearTimeout(targetP._highlightTimer);
+        targetP._highlightTimer = window.setTimeout(() => targetP.classList.remove("is-para-highlight"), 1800);
+      }
+    });
+  });
+  block.querySelectorAll("[data-reading-error-tag]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tag = btn.dataset.readingErrorTag;
+      const textarea = block.querySelector("[data-reading-analysis]");
+      if (!textarea) return;
+      const tagMark = `【错因诊断：${tag}】`;
+      if (textarea.value.includes(tagMark)) {
+        showToast(`已标记过「${tag}」`);
+        return;
+      }
+      textarea.value = textarea.value.trim() ? `${tagMark}\n${textarea.value}` : `${tagMark}\n`;
+      btn.classList.add("is-applied");
+      const icon = btn.querySelector("i");
+      if (icon) icon.setAttribute("data-lucide", "check");
+      scheduleReadingAnalysisSave(index);
+      showToast(`已记入「${tag}」并同步 Obsidian`);
+      refreshIcons();
+    });
+  });
   block.querySelector("[data-reading-submit]")?.addEventListener("click", () => submitReadingAnswer(index));
   block.querySelector("[data-reading-analysis]")?.addEventListener("input", () => scheduleReadingAnalysisSave(index));
 }
@@ -428,11 +570,10 @@ export function scheduleReadingAnalysisSave(index) {
 
 export async function renderReadingComprehension() {
   const practice = state.practice; const requestId = state.openRequest; const layout = $("practiceReadingLayout"); const body = $("practiceReadingBody"); const questions = $("practiceReadingQuestions");
-  state.practiceReadingToken += 1; const token = state.practiceReadingToken; state.practiceReadingItems = [];
+  state.practiceReadingToken += 1; const token = state.practiceReadingToken; state.practiceReadingItems = []; state.readingActiveIndex = 0;
   $("practiceWorkspace")?.classList.add("reading-comprehension-active"); $("practiceQuestionSurface").classList.add("is-reading-comprehension"); layout.classList.remove("hidden"); $("practiceResult").classList.add("hidden"); $("practicePagination").classList.add("hidden");
   $("practiceEyebrow").textContent = `${practice.entry?.label || "阅读理解"} · 真实题库`; $("practiceTitle").textContent = concisePracticeBankTitle(practice.bank.title); $("practiceTitle").title = practice.bank.title;
   $("practiceQuestionType").textContent = "阅读理解"; $("practiceQuestionNumber").textContent = "整篇阅读"; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题 · 先读完整文章，再自由选择题目作答`;
-  $("practiceReadingMeta").textContent = `${practice.entry?.label || "阅读理解"} · ${practice.questions.length} 题`;
   body.innerHTML = `<p class="practice-reading-loading">正在读取整篇文章…</p>`; questions.innerHTML = `<p class="practice-reading-loading">正在读取全部题目…</p>`; updateReadingProgress();
   let results;
   try {
@@ -446,7 +587,24 @@ export async function renderReadingComprehension() {
   const firstQuestion = results[0]?.question;
   if (firstQuestion) startWorkspaceTimer({ activity_type: "objective_practice", domain: practice.bank.domain || "english", subject_id: firstQuestion.subject_label || practice.bank.subject || practice.bank.id, resource_id: practice.bank.id, item_id: firstQuestion.question_id, resume_target: { view: "practice", resource_id: practice.bank.id, item_id: firstQuestion.question_id, question_id: firstQuestion.question_id } });
   const firstContext = results.map((item) => String(item.question?.context_md || "").trim()).find(Boolean) || ""; const paragraphCount = firstContext ? firstContext.split(/\n\s*\n/).filter((item) => item.trim()).length : 0;
-  $("practiceReadingMeta").textContent = `${practice.entry?.label || "阅读理解"}${paragraphCount ? ` · ${paragraphCount} 段` : ""}`; body.innerHTML = firstContext ? renderMarkdown(firstContext) : `<p class="practice-reading-empty">这组题目没有附带可显示的阅读原文。</p>`; questions.innerHTML = results.map((item, index) => readingQuestionHtml(item, index)).join(""); results.forEach((_, index) => bindReadingQuestion(index)); updateReadingProgress(); refreshIcons();
+  $("practiceReadingMeta").textContent = `${practice.entry?.label || "阅读理解"}${paragraphCount ? ` · ${paragraphCount} 段` : ""}`;
+  if (firstContext) {
+    body.innerHTML = renderMarkdown(firstContext);
+    body.querySelectorAll("p").forEach((p, idx) => {
+      const paraNum = idx + 1;
+      p.classList.add("reading-para-target");
+      p.id = `readingPara${paraNum}`;
+      p.dataset.paraNum = String(paraNum);
+      const badge = document.createElement("span");
+      badge.className = "reading-para-badge";
+      badge.textContent = `P${paraNum}`;
+      badge.setAttribute("aria-label", `第 ${paraNum} 段`);
+      p.prepend(badge);
+    });
+  } else {
+    body.innerHTML = `<p class="practice-reading-empty">这组题目没有附带可显示的阅读原文。</p>`;
+  }
+  questions.innerHTML = results.map((item, index) => readingQuestionHtml(item, index)).join(""); results.forEach((_, index) => bindReadingQuestion(index)); updateReadingProgress(); setReadingActiveIndex(0); refreshIcons();
 }
 
 export async function renderPracticeQuestion() {
@@ -459,24 +617,118 @@ export async function renderPracticeQuestion() {
   await renderSinglePracticeQuestion();
 }
 
+export const ERROR_ATTRIBUTION_TAGS = ["概念混淆", "审题失误", "知识盲区", "偷换概念", "无中生有", "粗心失误"];
+
+export function renderErrorAttributionTags(payload) {
+  const wrap = $("practiceErrorTagsWrap");
+  if (!wrap) return;
+  const attempt = payload?.attempt;
+  if (!attempt || attempt.correct) {
+    wrap.classList.add("hidden");
+    wrap.innerHTML = "";
+    return;
+  }
+  const currentAnalysis = String(payload?.personal_analysis || $("practicePersonalAnalysis")?.value || "");
+  wrap.classList.remove("hidden");
+  wrap.innerHTML = `<span class="practice-error-tags-label"><i data-lucide="tag"></i> 错因归因：</span><div class="practice-error-tags-list">${ERROR_ATTRIBUTION_TAGS.map((tag) => {
+    const isApplied = currentAnalysis.includes(`【错因诊断：${tag}】`);
+    return `<button type="button" class="practice-error-tag${isApplied ? " is-applied" : ""}" data-error-tag="${escapeHtml(tag)}"><i data-lucide="${isApplied ? "check" : "plus"}"></i><span>${escapeHtml(tag)}</span></button>`;
+  }).join("")}</div>`;
+
+  wrap.querySelectorAll("[data-error-tag]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tag = btn.dataset.errorTag;
+      applyErrorAttributionTag(tag, btn);
+    });
+  });
+}
+
+export function applyErrorAttributionTag(tag, btn) {
+  const textarea = $("practicePersonalAnalysis");
+  if (!textarea) return;
+  const tagMark = `【错因诊断：${tag}】`;
+  if (textarea.value.includes(tagMark)) {
+    showToast(`已标记过「${tag}」`);
+    return;
+  }
+  textarea.value = textarea.value.trim() ? `${tagMark}\n${textarea.value}` : `${tagMark}\n`;
+  if (btn) {
+    btn.classList.add("is-applied");
+    const icon = btn.querySelector("i");
+    if (icon) icon.setAttribute("data-lucide", "check");
+  }
+  schedulePracticeAnalysisSave();
+  showToast(`已记入「${tag}」并同步 Obsidian`);
+  refreshIcons();
+}
+
 export async function renderSinglePracticeQuestion() {
   const practice = state.practice; const item = practice?.questions?.[state.practiceIndex]; if (!item) return;
   $("practiceEyebrow").textContent = practice.entry.match_level === "comprehensive" ? "综合测试 · 真实题库" : `${practiceEntryLabel(practice.entry)} · 真实题库`;
   $("practiceTitle").textContent = concisePracticeBankTitle(practice.bank.title); $("practiceTitle").title = practice.bank.title; $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题 · ${practiceWorkflowHint(item)}`;
   $("practiceProgressText").textContent = `${state.practiceIndex + 1} / ${practice.question_count}`; $("practiceProgressBar").style.setProperty("--practice-progress", `${((state.practiceIndex + 1) / practice.question_count) * 100}%`);
   $("practiceResult").classList.add("hidden"); $("practiceSubmit").classList.remove("hidden"); $("practiceSubmit").disabled = true;
+  $("practicePrevious").disabled = state.practiceIndex === 0;
+  const lastQ = state.practiceIndex >= practice.question_count - 1;
+  $("practiceNext").disabled = false;
+  $("practiceNext").querySelector("span").textContent = lastQ ? "完成本组" : "下一题";
   const query = new URLSearchParams({ bank_id: practice.bank.id, question_id: item.question_id }); const response = await fetch(`/api/practice/question?${query}`, { cache: "no-store" }); if (!response.ok) { showToast("题目读取失败"); return; }
   const payload = await response.json(); const question = payload.question; state.practice.question = payload;
   startWorkspaceTimer({ activity_type: "objective_practice", domain: question.domain || practice.bank.domain || "english", subject_id: question.subject_label || practice.bank.subject || practice.bank.id, resource_id: practice.bank.id, item_id: question.question_id, resume_target: { view: "practice", resource_id: practice.bank.id, item_id: question.question_id, question_id: question.question_id } });
   const unitLabel = question.unit_label || question.unit || "题目"; const answerType = question.question_type === "multiple_choice" ? "多项选择" : "单项选择";
   $("practiceMeta").textContent = `${practice.bank.subject} · ${practice.question_count} 题 · ${practiceWorkflowHint(question)}`;
   $("practiceQuestionType").textContent = `${unitLabel} · ${answerType}`; $("practiceQuestionNumber").textContent = `第 ${question.local_number || state.practiceIndex + 1} 题`;
+
+  // Update Flag button state
+  const isFlagged = Boolean(state.practiceFlagged?.has(question.question_id));
+  const flagBtn = $("practiceFlagBtn");
+  if (flagBtn) {
+    flagBtn.classList.toggle("is-flagged", isFlagged);
+    const flagSpan = flagBtn.querySelector("span");
+    if (flagSpan) flagSpan.textContent = isFlagged ? "已标记存疑" : "标记存疑";
+    flagBtn.setAttribute("aria-pressed", String(isFlagged));
+  }
+
   const context = String(question.context_md || "").trim(); const paragraphCount = context ? context.split(/\n\s*\n/).filter((item) => item.trim()).length : 0; const cloze = isClozeQuestion(question); $("practiceContext").classList.toggle("hidden", !context); $("practiceContext").open = Boolean(context); $("practiceContextLabel").textContent = context ? `${cloze ? "完形填空全文" : "阅读原文"} · ${unitLabel}${paragraphCount ? `（${paragraphCount}段）` : ""}` : "阅读原文"; $("practiceContextBody").innerHTML = context ? (cloze ? renderClozeContext(context, question.local_number) : renderMarkdown(context)) : "";
   $("practiceContextBody").querySelectorAll("[data-cloze-index]").forEach((button) => button.addEventListener("click", () => focusClozeBlank(Number(button.dataset.clozeIndex))));
   $("practiceStem").innerHTML = cloze ? `<p class="cloze-instruction">点击正文中的任意空格，选项会在正文下方出现。</p>` : renderMarkdown(question.stem_md || ""); const prior = payload.attempt?.selected_answers || [];
-  $("practiceOptions").innerHTML = (question.options || []).map((option) => `<label class="practice-option${prior.includes(option.label) ? " selected" : ""}"><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${prior.includes(option.label) ? "checked" : ""}><strong class="practice-option-label">${escapeHtml(option.label)}</strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true"></span></label>`).join("");
+
+  // Options with elimination and key hints
+  const qId = question.question_id;
+  const eliminated = state.practiceEliminated?.get(qId) || new Set();
+  $("practiceOptions").innerHTML = (question.options || []).map((option) => {
+    const isElim = eliminated.has(option.label);
+    const isSelected = prior.includes(option.label);
+    return `<label class="practice-option${isSelected ? " selected" : ""}${isElim ? " is-eliminated" : ""}" data-option-label="${escapeHtml(option.label)}"><input type="${question.question_type === "multiple_choice" ? "checkbox" : "radio"}" name="practice-answer" value="${escapeHtml(option.label)}" ${isSelected ? "checked" : ""}><strong class="practice-option-label">${escapeHtml(option.label)}<kbd class="practice-key-hint">${escapeHtml(option.label)}</kbd></strong><span class="practice-option-text">${renderMarkdown(option.text_md || "")}</span><span class="practice-option-state" aria-hidden="true"></span></label>`;
+  }).join("");
+
   $("practiceOptions").classList.toggle("hidden", cloze); renderClozeChoices(question, payload.attempt);
   $("practiceOptions").querySelectorAll("input").forEach((input) => input.addEventListener("change", updatePracticeOptionState));
+
+  // Context menu (Right-click) option elimination
+  $("practiceOptions").querySelectorAll(".practice-option").forEach((optLabel) => {
+    optLabel.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (state.practice?.question?.attempt) return;
+      const label = optLabel.dataset.optionLabel;
+      if (!state.practiceEliminated) state.practiceEliminated = new Map();
+      let elimSet = state.practiceEliminated.get(qId);
+      if (!elimSet) { elimSet = new Set(); state.practiceEliminated.set(qId, elimSet); }
+      if (elimSet.has(label)) {
+        elimSet.delete(label);
+        optLabel.classList.remove("is-eliminated");
+      } else {
+        elimSet.add(label);
+        optLabel.classList.add("is-eliminated");
+        const input = optLabel.querySelector("input");
+        if (input && input.checked) {
+          input.checked = false;
+          updatePracticeOptionState();
+        }
+      }
+    });
+  });
+
   updatePracticeOptionState();
   $("practicePrevious").disabled = state.practiceIndex === 0; const last = state.practiceIndex >= practice.question_count - 1; $("practiceNext").disabled = false; $("practiceNext").querySelector("span").textContent = last ? "完成本组" : "下一题";
   if (payload.attempt) showPracticeResult(payload); renderPracticeSessionMap(); refreshIcons();
@@ -492,7 +744,12 @@ export function showPracticeResult(payload) {
     option.classList.toggle("correct", correct.has(label)); option.classList.toggle("incorrect", selected.has(label) && !correct.has(label));
     option.querySelector(".practice-option-state").innerHTML = correct.has(label) ? '<i data-lucide="check"></i>' : (selected.has(label) ? '<i data-lucide="x"></i>' : "");
   });
-  renderClozeChoices(question, attempt); $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析"); $("practicePersonalAnalysis").value = payload.personal_analysis || ""; $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存"; refreshIcons();
+  renderClozeChoices(question, attempt);
+  renderErrorAttributionTags(payload);
+  $("practiceSourceAnalysis").innerHTML = renderMarkdown(question.source_analysis_md || "暂无原书解析");
+  $("practicePersonalAnalysis").value = payload.personal_analysis || "";
+  $("practiceAnalysisSaved").textContent = payload.personal_analysis?.trim() ? "已保存到练习笔记" : "粘贴侧边栏的分析，自动保存";
+  refreshIcons();
 }
 
 export function updatePracticeOptionState() {
@@ -506,6 +763,183 @@ export async function submitPracticeAnswer() {
   if (!selected.length) { showToast("请先选择答案"); return; }
   $("practiceSubmit").disabled = true;
   try { const response = await fetch("/api/practice/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bank_id: question.bank_id, question_id: question.question_id, selected_answers: selected }) }); if (!response.ok) throw new Error("answer failed"); const result = await response.json(); state.practice.question = { ...state.practice.question, question: result.question, attempt: result.attempt }; showPracticeResult(state.practice.question); state.practice.questions[state.practiceIndex] = { ...state.practice.questions[state.practiceIndex], answered: true, correct: result.attempt.correct }; renderPracticeSessionMap(); } catch { $("practiceSubmit").disabled = false; showToast("提交失败，请稍后重试"); }
+}
+
+export function handleReadingPracticeKeydown(e) {
+  const items = state.practiceReadingItems || [];
+  if (!items.length) return;
+  const activeIdx = state.readingActiveIndex ?? 0;
+  const currentItem = items[activeIdx];
+  const block = document.querySelector(`[data-reading-index="${activeIdx}"]`);
+  const revealed = Boolean(currentItem?.attempt);
+
+  // Tab: cycle through questions
+  if (e.code === "Tab" || e.key === "Tab") {
+    e.preventDefault();
+    const nextIdx = e.shiftKey ? (activeIdx - 1 + items.length) % items.length : (activeIdx + 1) % items.length;
+    setReadingActiveIndex(nextIdx);
+    return;
+  }
+
+  // 1..5 keys: focus question 1..5
+  const digitMatch = (e.code || "").match(/^Digit([1-5])$/) || (e.key || "").match(/^([1-5])$/);
+  if (digitMatch) {
+    const num = parseInt(digitMatch[1], 10);
+    if (num >= 1 && num <= items.length) {
+      e.preventDefault();
+      setReadingActiveIndex(num - 1);
+      return;
+    }
+  }
+
+  // A..D keys: select option on active question
+  const key = (e.key || "").toUpperCase();
+  const optionKeys = { KeyA: "A", KeyB: "B", KeyC: "C", KeyD: "D", A: "A", B: "B", C: "C", D: "D" };
+  const targetLabel = optionKeys[e.code] || optionKeys[key];
+
+  if (targetLabel && block && !revealed) {
+    e.preventDefault();
+    const input = block.querySelector(`input[value="${targetLabel}"]`);
+    if (input && !input.disabled) {
+      const optLabel = input.closest(".practice-option");
+      if (optLabel && optLabel.classList.contains("is-eliminated")) {
+        optLabel.classList.remove("is-eliminated");
+      }
+      const isMulti = currentItem.question?.question_type === "multiple_choice";
+      if (isMulti) {
+        input.checked = !input.checked;
+      } else {
+        input.checked = true;
+      }
+      block.querySelectorAll(".practice-option").forEach((opt) => {
+        opt.classList.toggle("selected", opt.querySelector("input")?.checked);
+      });
+      const submitBtn = block.querySelector("[data-reading-submit]");
+      if (submitBtn) submitBtn.disabled = !block.querySelector("input:checked");
+    }
+    return;
+  }
+
+  // Enter key: submit active question if ready, or advance to next unanswered question
+  if (e.code === "Enter" || e.key === "Enter") {
+    e.preventDefault();
+    if (!revealed && block) {
+      const submitBtn = block.querySelector("[data-reading-submit]");
+      if (submitBtn && !submitBtn.disabled) {
+        submitReadingAnswer(activeIdx);
+      }
+    } else {
+      const nextUnanswered = items.findIndex((it) => !it.attempt);
+      if (nextUnanswered !== -1) {
+        setReadingActiveIndex(nextUnanswered);
+      } else {
+        showToast("本篇阅读理解题目已全部提交完成");
+      }
+    }
+    return;
+  }
+}
+
+export function handlePracticeKeydown(e) {
+  if (!$("practiceView")?.classList.contains("active")) return;
+  if (e.target?.matches?.("input:not([type='radio']):not([type='checkbox']), textarea, [contenteditable='true']") || state.practiceNoteOpen) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const reading = isReadingComprehensionPractice(state.practice);
+  if (reading) {
+    handleReadingPracticeKeydown(e);
+    return;
+  }
+
+  const question = state.practice?.question?.question;
+  if (!question) return;
+  const revealed = Boolean(state.practice?.question?.attempt);
+
+  const key = (e.key || "").toUpperCase();
+  const optionKeys = {
+    KeyA: "A", KeyB: "B", KeyC: "C", KeyD: "D",
+    Digit1: "A", Digit2: "B", Digit3: "C", Digit4: "D",
+    A: "A", B: "B", C: "C", D: "D",
+    "1": "A", "2": "B", "3": "C", "4": "D"
+  };
+  const targetLabel = optionKeys[e.code] || optionKeys[key];
+
+  if (targetLabel && !revealed) {
+    e.preventDefault();
+    const isCloze = isClozeQuestion(question);
+    if (isCloze) {
+      const trayBtn = document.querySelector(`[data-cloze-answer="${targetLabel}"]`);
+      if (trayBtn) trayBtn.click();
+    } else {
+      const input = document.querySelector(`#practiceOptions input[value="${targetLabel}"]`);
+      if (input && !input.disabled) {
+        const optLabel = input.closest(".practice-option");
+        if (optLabel && optLabel.classList.contains("is-eliminated")) {
+          optLabel.classList.remove("is-eliminated");
+          state.practiceEliminated?.get(question.question_id)?.delete(targetLabel);
+        }
+        if (question.question_type === "multiple_choice") {
+          input.checked = !input.checked;
+        } else {
+          input.checked = true;
+        }
+        updatePracticeOptionState();
+      }
+    }
+    return;
+  }
+
+  if (e.code === "Enter" || e.key === "Enter") {
+    e.preventDefault();
+    if (!revealed) {
+      const submitBtn = $("practiceSubmit");
+      if (submitBtn && !submitBtn.disabled && !submitBtn.classList.contains("hidden")) {
+        submitPracticeAnswer();
+      }
+    } else {
+      const nextBtn = $("practiceNext");
+      if (nextBtn && !nextBtn.disabled) nextBtn.click();
+    }
+    return;
+  }
+
+  if (e.code === "Space" || e.key === " " || e.key === "Spacebar") {
+    if (revealed) {
+      e.preventDefault();
+      const nextBtn = $("practiceNext");
+      if (nextBtn && !nextBtn.disabled) nextBtn.click();
+    }
+    return;
+  }
+
+  if (e.code === "ArrowRight" || e.key === "ArrowRight") {
+    if (revealed || e.shiftKey) {
+      e.preventDefault();
+      const nextBtn = $("practiceNext");
+      if (nextBtn && !nextBtn.disabled) nextBtn.click();
+    }
+    return;
+  }
+
+  if (e.code === "ArrowLeft" || e.key === "ArrowLeft") {
+    if (state.practiceIndex > 0) {
+      e.preventDefault();
+      const prevBtn = $("practicePrevious");
+      if (prevBtn && !prevBtn.disabled) {
+        prevBtn.click();
+      } else {
+        state.practiceIndex -= 1;
+        renderPracticeQuestion();
+      }
+    }
+    return;
+  }
+
+  if (e.code === "KeyF" || key === "F") {
+    e.preventDefault();
+    togglePracticeFlag();
+    return;
+  }
 }
 
 export function schedulePracticeAnalysisSave() {
@@ -526,6 +960,7 @@ export function returnFromPractice() {
   setPracticeNoteOpen(false);
   $("practiceNoteFloat")?.classList.add("hidden");
   if (state.practiceReturn === "home") setHomeMode();
+  else if (state.practiceReturn === "mistakes") { setLibraryMode(); selectLibraryShelf("mistakes"); }
   else if (state.practiceReturn === "learning-center") setLibraryMode();
   else if (state.practiceReturn === "english-exams") { setActiveView("library"); renderEnglishExams(); }
   else if (state.practiceReturn === "english-exam-overview" && state.practiceOverviewBankId) openEnglishExamOverview(state.practiceOverviewBankId);
@@ -533,3 +968,7 @@ export function returnFromPractice() {
   else if (state.current?.id) setReaderMode();
   else setLibraryMode();
 }
+
+window.setReadingActiveIndex = setReadingActiveIndex;
+window.handleReadingPracticeKeydown = handleReadingPracticeKeydown;
+window.openPractice = openPractice;

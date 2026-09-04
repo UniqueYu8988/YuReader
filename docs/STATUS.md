@@ -1,5 +1,13 @@
 # 当前状态
 
+## 学习中心综合体验升级（2026-09-04）
+
+- 英语学习中心收敛为五本可发布资料，书架严格排除 `status != ready` 的内容；真题训练补齐年份、题型与阅读 Text 分组的稳定入口，并新增相应契约测试。艾宾浩斯词表继续保持隔离状态，不以 UI 规则掩盖内容质量问题。
+- 口腔重点升级为章节卡片学习：支持题目/答案统一切换、挖空模式、单卡 Obsidian 笔记、闪卡复习和按到期时间生成的今日复习池；既有题目稳定 ID、进度与源 DOCX 不改写。
+- 错题中心补齐 `/api/practice/mistakes` 尾斜杠兼容与专项练习会话，练习页增加题目标记、错因归类、段落引用和键盘导航；首页加入可编辑的每日目标、今日清单与首次引导，仍沿用本地活动和真实学习成果统计。
+- 阅读页增加英语词汇/阅读结构增强与政治正文结构增强，移动端继续保留原文、笔记和章节导航的单一学习路径；本阶段不引入模型 API，也不提交书籍、OCR、笔记或学习数据。
+- 验证：YuReader `167 passed, 5 subtests passed`，YuBook `31 passed`，YuPractice `56 passed, 5 subtests passed`；`py_compile` 与全部变更 JavaScript 的 `node --check` 通过。独立端口 8776 冒烟确认 `/api/health`、`/api/bootstrap`、`/api/practice/mistakes`、`/api/oral-focus/due` 返回成功，未中断正式 8775 服务。
+
 ## 口腔名解双语 OCR 标题清理（2026-09-03）
 
 - 问题并非 UI 截断，而是 12 份原始 DOCX 中的统一双语词条格式进入了题目标题：583 条名解中有 451 条符合“英文：中文”（如 `oral and maxillofacial surgery：口腔颌面外科学`、`anesthesia：麻醉`）。本轮在 `yureader/oral_focus.py` 的导入层归一化，网页题目只使用冒号后的中文术语；英文部分保留为 `aliases`，原始完整标题保留为 `source_title`，没有改写源 DOCX，也没有用 UI 规则遮掩。

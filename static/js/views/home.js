@@ -2,7 +2,7 @@ import { homeActivityTargetKey, resumeActivityTarget, selectLibraryShelf } from 
 import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { $, state } from "../core/state.js";
 import { escapeHtml, formatDuration, formatInteger, refreshIcons } from "../core/utils.js";
-import { reviewDateLabel } from "./review.js";
+import { openReview, reviewDateLabel } from "./review.js";
 
 export function activityTypeLabel(type) {
   return ({ read: "阅读", objective_practice: "客观题", subjective_practice: "主观题", notebook: "笔记", review: "回顾" })[type] || "学习";
@@ -121,6 +121,7 @@ export function updateGoalsUI(data) {
   if (engCompStatus) engCompStatus.textContent = `${engCompCount} / ${engCompGoal} 篇 (${engCompPct}%)`;
   if (engCompFill) engCompFill.style.width = `${engCompPct}%`;
   if (engCompInput && !state.goalsEditMode) engCompInput.value = engCompGoal;
+  updateChecklistUI();
 }
 
 export async function fetchDailyGoals() {
@@ -252,6 +253,85 @@ export function updateExamCountdown() {
   });
 }
 
+let checklistInitialized = false;
+
+export async function updateChecklistUI() {
+  let oralDone = false;
+  let mistakesDone = false;
+
+  // 1. Oral focus due
+  try {
+    const res = await fetch("/api/oral-focus/due", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      const dueCount = data.total_due || 0;
+      const chkOralCard = $("chkOralCard");
+      const chkOralBadge = $("chkOralBadge");
+      const chkOralDesc = $("chkOralDesc");
+      if (dueCount > 0) {
+        if (chkOralBadge) {
+          chkOralBadge.textContent = `${dueCount} 词待复习`;
+          chkOralBadge.className = "hci-status is-pending";
+        }
+        if (chkOralDesc) chkOralDesc.textContent = `${dueCount} 个考点待复习`;
+        chkOralCard?.classList.remove("is-completed");
+        oralDone = false;
+      } else {
+        if (chkOralBadge) {
+          chkOralBadge.textContent = "已清空";
+          chkOralBadge.className = "hci-status is-done";
+        }
+        if (chkOralDesc) chkOralDesc.textContent = "今日无到期复习";
+        chkOralCard?.classList.add("is-completed");
+        oralDone = true;
+      }
+    }
+  } catch {}
+
+  // 2. Mistakes
+  try {
+    const res = await fetch("/api/practice/mistakes", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      const count = data.pending ?? (data.total || 0);
+      const chkMistakesCard = $("chkMistakesCard");
+      const chkMistakesBadge = $("chkMistakesBadge");
+      const chkMistakesDesc = $("chkMistakesDesc");
+      if (count > 0) {
+        if (chkMistakesBadge) {
+          chkMistakesBadge.textContent = `${count} 题待攻坚`;
+          chkMistakesBadge.className = "hci-status is-pending";
+        }
+        if (chkMistakesDesc) chkMistakesDesc.textContent = `${count} 道客观错题待消灭`;
+        chkMistakesCard?.classList.remove("is-completed");
+        mistakesDone = false;
+      } else {
+        if (chkMistakesBadge) {
+          chkMistakesBadge.textContent = "已清空";
+          chkMistakesBadge.className = "hci-status is-done";
+        }
+        if (chkMistakesDesc) chkMistakesDesc.textContent = "错题本已清零";
+        chkMistakesCard?.classList.add("is-completed");
+        mistakesDone = true;
+      }
+    }
+  } catch {}
+
+  // 3. Celebration Banner
+  const celebration = $("homeChecklistCelebration");
+  if (celebration) {
+    celebration.classList.toggle("hidden", !(oralDone && mistakesDone));
+  }
+}
+
+export function initChecklistListeners() {
+  if (checklistInitialized) return;
+  checklistInitialized = true;
+
+  $("chkOralCard")?.addEventListener("click", () => openOralFocusIndex());
+  $("chkMistakesCard")?.addEventListener("click", () => selectLibraryShelf("mistakes"));
+}
+
 export function renderHome() {
   const stats = state.stats || {};
   const today = stats.today ? new Date(`${stats.today}T00:00:00`) : new Date();
@@ -270,6 +350,10 @@ export function renderHome() {
   $("homeReviewMeta").textContent = pending ? `${reviewDateLabel(pending.date)} · ${formatInteger(pending.activity_count)} 条待整理` : "整理最近学习";
 
   initGoalsListeners();
+  initChecklistListeners();
   fetchDailyGoals();
+  updateChecklistUI();
   refreshIcons();
 }
+
+window.updateChecklistUI = updateChecklistUI;

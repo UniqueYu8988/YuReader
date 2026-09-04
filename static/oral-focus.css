@@ -1,57 +1,30 @@
 .oral-focus-shell { width: min(100%, 940px); margin: 0 auto; padding: 34px 32px 100px; }
-.oral-focus-directory, .oral-focus-question { display: grid; gap: 26px; }
-.oral-focus-lead { display: grid; gap: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-lead > div { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
-.oral-focus-lead h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(24px, 3vw, 32px); font-weight: 500; letter-spacing: -.02em; }
-.oral-focus-lead #oralFocusSummary { color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
-
-.oral-focus-subject-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-block: 1px solid var(--line); }
-.oral-focus-subject-tabs button { display: grid; min-height: 58px; gap: 4px; place-content: center; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary); background: transparent; cursor: pointer; transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
-.oral-focus-subject-tabs button:hover { color: var(--text); }
-.oral-focus-subject-tabs button strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 15px; font-weight: 500; }
-.oral-focus-subject-tabs button small { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
-.oral-focus-subject-tabs button.active { color: var(--primary-strong); border-bottom-color: var(--primary); }
-
+.oral-focus-directory { display: grid; gap: 26px; }
+.oral-focus-lead { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line-strong); }
+.oral-focus-lead > div { display: flex; align-items: baseline; gap: 14px; }
+.oral-focus-lead h2 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(28px, 3.6vw, 40px); font-weight: 500; letter-spacing: -.02em; }
+.oral-focus-lead span { color: var(--text-soft); font-size: 13px; }
+.oral-focus-subject-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.oral-focus-subject-tabs button { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 160ms var(--ease-out); }
+.oral-focus-subject-tabs button:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.oral-focus-subject-tabs button.active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); color: var(--primary-strong); }
+.oral-focus-subject-tabs button strong { font-size: 14px; font-weight: 600; }
+.oral-focus-subject-tabs button span { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
 .oral-focus-question-list { border-top: 1px solid var(--line-strong); }
-.oral-focus-item-row { display: grid; width: 100%; min-height: 70px; grid-template-columns: 38px minmax(0, 1fr) auto 18px; gap: 16px; align-items: center; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
-.oral-focus-item-row:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
-.oral-focus-item-index { color: var(--primary); font-size: 11px; font-variant-numeric: tabular-nums; }
-.oral-focus-item-copy { display: grid; min-width: 0; gap: 6px; }
-.oral-focus-item-copy strong { overflow: hidden; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
-.oral-focus-item-copy small { overflow: hidden; color: var(--text-soft); font-size: 11px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
-.oral-focus-item-complete { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-size: 11px; white-space: nowrap; }
-.oral-focus-item-complete svg { width: 11px; }
-.oral-focus-item-row > svg { width: 14px; color: var(--text-soft); }
-
-.oral-focus-list-pagination, .oral-focus-pagination { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; padding-top: 4px; }
-.oral-focus-list-pagination button, .oral-focus-pagination button { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; border: 0; color: var(--text-secondary); font-size: 12px; background: transparent; cursor: pointer; }
-.oral-focus-list-pagination button:last-child, .oral-focus-pagination button:last-child { justify-self: end; }
-.oral-focus-list-pagination button:disabled, .oral-focus-pagination button:disabled { opacity: .3; cursor: default; }
+.oral-focus-item-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 18px; align-items: center; gap: 16px; width: 100%; padding: 18px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+.oral-focus-item-row:hover .oral-focus-item-copy strong { color: var(--primary-strong); }
+.oral-focus-item-order { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.oral-focus-item-copy { display: grid; gap: 4px; }
+.oral-focus-item-copy strong { font-size: 16px; font-weight: 500; line-height: 1.4; color: var(--text); transition: color 160ms var(--ease-out); }
+.oral-focus-item-copy span { color: var(--text-soft); font-size: 12px; }
+.oral-focus-item-complete { width: 16px; height: 16px; color: var(--primary); opacity: 0; transition: opacity 160ms var(--ease-out); }
+.oral-focus-item-row.is-complete .oral-focus-item-complete { opacity: 1; }
+.oral-focus-item-chevron { color: var(--text-soft); }
+.oral-focus-list-pagination, .oral-focus-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 24px; }
+.oral-focus-list-pagination button, .oral-focus-pagination button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text-secondary); padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.oral-focus-list-pagination button:disabled, .oral-focus-pagination button:disabled { opacity: .4; cursor: not-allowed; }
 .oral-focus-list-pagination > span, .oral-focus-pagination > span { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
 .oral-focus-list-pagination svg, .oral-focus-pagination svg { width: 14px; }
-
-.oral-focus-question { width: min(100%, 760px); margin: 0 auto; }
-.oral-focus-question-head { display: grid; gap: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-question-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
-.oral-focus-question-meta span { color: var(--text-soft); font-size: 12px; }
-.oral-focus-question-meta span:first-child { color: var(--primary-strong); }
-.oral-focus-card { padding: 20px 0 30px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-card h2 { max-width: 22em; margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(24px, 3.2vw, 34px); font-weight: 500; line-height: 1.55; letter-spacing: -.015em; }
-
-.oral-focus-reference { display: grid; gap: 22px; padding: 4px 0 28px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-reference > header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.oral-focus-reference h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; }
-.oral-focus-answer-toggle { display: inline-flex; align-items: center; gap: 9px; border: 0; color: var(--text-secondary); background: transparent; font-size: 12px; cursor: pointer; }
-.oral-focus-answer-toggle > i { position: relative; width: 31px; height: 18px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface-soft); transition: background 160ms var(--ease-out); }
-.oral-focus-answer-toggle > i::after { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-soft); content: ""; transition: transform 160ms var(--ease-out), background 160ms var(--ease-out); }
-.oral-focus-answer-toggle[aria-checked="true"] { color: var(--primary-strong); }
-.oral-focus-answer-toggle[aria-checked="true"] > i { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
-.oral-focus-answer-toggle[aria-checked="true"] > i::after { background: var(--primary); transform: translateX(13px); }
-.oral-focus-reference .knowledge-article { padding-top: 4px; }
-.oral-focus-note-content { display: grid; gap: 18px; padding: 2px 0 28px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-note-content h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; }
-.oral-focus-note-content .knowledge-article { padding-top: 2px; }
-.oral-focus-pagination { padding-top: 18px; border-top: 0; }
 
 .oral-focus-note-float { z-index: 55; }
 .oral-focus-note-float .section-note-popover textarea { min-height: 280px; }
@@ -66,9 +39,6 @@
   .oral-focus-item-row { grid-template-columns: 28px minmax(0, 1fr) 14px; gap: 10px; }
   .oral-focus-item-copy strong { font-size: 15px; }
   .oral-focus-item-complete { display: none; }
-  .oral-focus-question-head { gap: 14px; }
-  .oral-focus-card { padding-top: 14px; }
-  .oral-focus-reference > header { align-items: center; }
 }
 
 /* Chapter-first card workspace */
@@ -77,65 +47,783 @@
 .oral-focus-lead { gap: 14px; padding-bottom: 16px; }
 .oral-focus-lead h2 { font-size: clamp(22px, 2.4vw, 27px); }
 
-.oral-focus-chapter-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 34px; border-top: 1px solid var(--line-strong); }
-.oral-focus-chapter-entry { display: grid; min-height: 84px; grid-template-columns: 34px minmax(0, 1fr) 18px; gap: 14px; align-items: center; padding: 15px 12px 15px 4px; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--text); background: transparent; text-align: left; cursor: pointer; }
-.oral-focus-chapter-entry:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
-.oral-focus-chapter-entry > span:nth-child(2) { display: grid; min-width: 0; gap: 7px; }
-.oral-focus-chapter-entry strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 16px; font-weight: 500; line-height: 1.45; }
-.oral-focus-chapter-entry small, .oral-focus-chapter-number { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
-.oral-focus-chapter-entry > svg { width: 14px; color: var(--text-soft); }
+/* Chapter Directory (Single Column, High-Information Density) */
+.oral-focus-chapter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 860px);
+  margin: 0 auto;
+  border-top: 1px solid var(--line-strong);
+  padding-top: 16px;
+}
+.oral-focus-chapter-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.oral-focus-chapter-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--line));
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.of-chapter-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+.of-chapter-order {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.of-chapter-meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.of-chapter-meta strong {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+.of-chapter-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.of-chapter-progress-track {
+  width: 120px;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.of-chapter-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 240ms ease;
+}
+.of-chapter-progress-row small {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.of-chapter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.of-chapter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 160ms var(--ease-out);
+}
+.of-chapter-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.of-chapter-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.of-chapter-btn.is-study:hover {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+.of-chapter-btn.is-card:hover {
+  border-color: #8b5cf6;
+  color: #7c3aed;
+  background: color-mix(in srgb, #8b5cf6 8%, transparent);
+}
+[data-theme="dark"] .of-chapter-btn.is-card:hover {
+  color: #c4b5fd;
+  border-color: #a78bfa;
+}
 
-.oral-focus-chapter-panel { display: grid; gap: 22px; }
-.oral-focus-chapter-head { display: grid; grid-template-columns: 1fr auto; gap: 14px 24px; align-items: end; padding-bottom: 16px; border-bottom: 1px solid var(--line-strong); }
-.oral-focus-chapter-head > .review-back-link { grid-column: 1 / -1; }
-.oral-focus-chapter-head > div { display: flex; min-width: 0; align-items: baseline; gap: 16px; }
-.oral-focus-chapter-head h3 { margin: 0; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: clamp(20px, 2.3vw, 26px); font-weight: 500; line-height: 1.4; }
-.oral-focus-chapter-head #oralFocusChapterSummary { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Chapter Study Panel (Single Reading Flow - Eliminates Nested Scrollbars) */
+.oral-focus-chapter-panel {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 840px);
+  margin: 0 auto;
+}
+.oral-focus-chapter-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px 24px;
+  align-items: end;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.oral-focus-chapter-head > .review-back-link {
+  grid-column: 1 / -1;
+}
+.oral-focus-chapter-head > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 16px;
+}
+.oral-focus-chapter-head h3 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: clamp(20px, 2.3vw, 26px);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.oral-focus-chapter-head #oralFocusChapterSummary {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
-.oral-focus-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.oral-focus-card-grid.answers-visible { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.oral-focus-study-card { min-width: 0; border: 1px solid var(--line); border-radius: 2px; background: color-mix(in srgb, var(--surface) 74%, transparent); transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
-.oral-focus-study-card:hover, .oral-focus-study-card.is-focused { border-color: color-mix(in srgb, var(--primary) 42%, var(--line)); background: color-mix(in srgb, var(--surface) 88%, transparent); }
-.oral-focus-study-card > header { display: grid; min-height: 92px; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 18px 16px 16px; }
-.oral-focus-study-card > header > span { padding-top: 4px; color: var(--primary); font-size: 11px; font-variant-numeric: tabular-nums; }
-.oral-focus-study-card > header > div:nth-child(2) { display: grid; gap: 7px; }
-.oral-focus-study-card h4 { margin: 0; overflow-wrap: anywhere; font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 18px; font-weight: 500; line-height: 1.5; }
-.oral-focus-study-card h4:first-letter { text-transform: none; }
-.oral-focus-study-card > header small { color: var(--text-soft); font-size: 11px; line-height: 1.5; }
-.oral-focus-card-tools { display: flex; align-items: center; gap: 9px; }
-.oral-focus-card-stars { color: var(--primary); font-size: 11px; letter-spacing: .08em; white-space: nowrap; }
-.oral-focus-card-tools button { display: grid; width: 24px; height: 24px; place-items: center; padding: 0; border: 0; color: var(--text-soft); background: transparent; cursor: pointer; }
-.oral-focus-card-tools button:hover { color: var(--primary-strong); }
-.oral-focus-card-tools img { width: 15px; height: 15px; }
-.oral-focus-card-body { display: grid; gap: 18px; padding: 0 16px 20px 54px; border-top: 1px solid var(--line); }
-.oral-focus-card-tabs { display: flex; gap: 22px; padding-top: 13px; }
-.oral-focus-card-tabs button { padding: 0 0 6px; border: 0; border-bottom: 1px solid transparent; color: var(--text-soft); background: transparent; font-size: 12px; cursor: pointer; }
-.oral-focus-card-tabs button.active { border-bottom-color: var(--primary); color: var(--primary-strong); }
-.oral-focus-card-tabs button:disabled { opacity: .38; cursor: default; }
-.oral-focus-translation { display: grid; gap: 5px; margin-bottom: 18px; }
-.oral-focus-translation small { color: var(--text-soft); font-size: 11px; }
-.oral-focus-translation strong { font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif; font-size: 21px; font-weight: 500; }
-.oral-focus-answer-copy, .oral-focus-card-note .knowledge-article { color: var(--text-secondary); font-size: 16px; line-height: 1.9; }
-.oral-focus-answer-copy p, .oral-focus-card-note .knowledge-article p { margin-block: 0 13px; }
-.oral-focus-answer-copy .oral-focus-structured-point { display: grid; grid-template-columns: 27px minmax(0, 1fr); gap: 8px; }
-.oral-focus-point-marker { padding-top: .12em; color: var(--primary); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-variant-numeric: tabular-nums; }
-.oral-focus-source-separator { padding-inline: .28em; color: var(--text-soft); }
-.oral-focus-card-note > p { margin: 0; color: var(--text-soft); font-size: 12px; }
+/* Single Column Study Flow */
+.oral-focus-card-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px;
+  width: 100%;
+  margin: 0 auto;
+  overflow: visible !important;
+}
+.oral-focus-study-card {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  overflow: visible;
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.oral-focus-study-card:hover, .oral-focus-study-card.is-focused {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--line));
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+.oral-focus-study-card > header {
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 20px 22px 18px;
+}
+.oral-card-index {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary-strong);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+}
+.oral-card-header-main {
+  display: grid;
+  gap: 8px;
+}
+.oral-card-header-main h4 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text);
+}
+.of-bilingual-hint-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  width: fit-content;
+}
+.of-bilingual-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-strong);
+}
+.of-bilingual-hint-box small {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.oral-card-note-btn {
+  position: relative;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 160ms var(--ease-out);
+}
+.oral-card-note-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.oral-card-note-btn.has-note {
+  border-color: color-mix(in srgb, #c96442 45%, var(--line));
+  background: color-mix(in srgb, #c96442 12%, transparent);
+}
+.oral-card-note-btn img {
+  width: 16px;
+  height: 16px;
+}
+.oral-note-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c96442;
+  border: 1.5px solid var(--surface);
+}
+.oral-focus-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.oral-focus-card-stars {
+  color: var(--primary);
+  font-size: 11px;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.oral-focus-card-body {
+  display: grid;
+  gap: 16px;
+  padding: 0 24px 22px 70px;
+  border-top: 1px solid var(--line);
+  overflow: visible;
+}
+.oral-focus-card-tabs {
+  display: flex;
+  gap: 22px;
+  padding-top: 13px;
+}
+.oral-focus-card-tabs button {
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-soft);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.oral-focus-card-tabs button.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-strong);
+}
+.oral-focus-card-tabs button:disabled {
+  opacity: .38;
+  cursor: default;
+}
+.oral-focus-translation {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.oral-focus-translation small {
+  color: var(--text-soft);
+  font-size: 11px;
+}
+.oral-focus-translation strong {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--primary-strong);
+}
+.oral-focus-answer-copy, .oral-focus-card-note .knowledge-article {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.9;
+}
+.oral-focus-answer-copy p, .oral-focus-card-note .knowledge-article p {
+  margin-block: 0 14px;
+}
 
-@media (max-width: 980px) {
-  .oral-focus-card-grid, .oral-focus-card-grid.answers-visible { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* L1 Section Header (Major Examination/Topic Modules) */
+.of-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border-left: 3.5px solid var(--primary);
+}
+.of-section-header:first-child {
+  margin-top: 4px;
+}
+.of-section-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: #fff;
+  font-family: "Georgia", "Noto Serif SC", serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(201, 100, 66, 0.25);
+}
+.of-section-title {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* L2 Observation Items (with artistic circled seals) */
+.oral-focus-structured-point.of-level-2 {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1.5px solid color-mix(in srgb, var(--line-strong) 40%, transparent);
+  margin-bottom: 12px;
+  line-height: 1.85;
+}
+.of-art-circle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary-strong);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  font-family: "Georgia", serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-style: italic;
+  margin-top: 3px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+[data-theme="dark"] .of-art-circle {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  color: #fdba74;
+}
+
+/* L3 Sub-items & Methods (NO "步骤", purely artistic calligraphic badges) */
+.of-sub-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: 28px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  line-height: 1.75;
+}
+.of-art-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  color: var(--primary-strong);
+  font-family: "Georgia", "Noto Serif SC", serif;
+  font-size: 13px;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+[data-theme="dark"] .of-art-num-badge {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  color: #fdba74;
+}
+.of-sub-item-text {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 14.5px;
+}
+
+/* L4 Alpha Sub-items (a., b.) */
+.of-alpha-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: 48px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+  border-left: 1.5px dashed color-mix(in srgb, var(--primary) 28%, transparent);
+  line-height: 1.65;
+}
+.of-art-alpha {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary-strong);
+  font-family: "Georgia", serif;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  flex-shrink: 0;
+}
+[data-theme="dark"] .of-art-alpha {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: #fdba74;
+}
+.of-alpha-text {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Clinical Target Scope Prefix (e.g. 口外：, 口内：, 髁突动度检查：) */
+.of-target-scope {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 1px 7px;
+  border-radius: 4px;
+  margin-right: 6px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  font-size: 13.5px;
+  line-height: 1.4;
+  vertical-align: 1px;
+}
+[data-theme="dark"] .of-target-scope {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  color: #fdba74;
+}
+
+/* Medical Metrics & Numbers (Ratios, Units, Percentages, Intervals) */
+.of-metric-num {
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  padding: 0 4px;
+  margin: 0 1px;
+  border-radius: 3px;
+  letter-spacing: -0.01em;
+}
+[data-theme="dark"] .of-metric-num {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: #fca5a5;
+}
+
+/* Medical English Acronyms & Academic Terms (TMJ, MRI, CT, ICU, DNA, Bcl-2, X线) */
+.of-term-en {
+  display: inline-block;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 0.92em;
+  letter-spacing: 0.03em;
+  color: #4338ca;
+  background: color-mix(in srgb, #6366f1 10%, transparent);
+  padding: 0 5px;
+  margin: 0 2px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, #6366f1 20%, transparent);
+}
+[data-theme="dark"] .of-term-en {
+  color: #a5b4fc;
+  background: color-mix(in srgb, #818cf8 14%, transparent);
+  border-color: color-mix(in srgb, #818cf8 28%, transparent);
+}
+
+/* Structured Outline Points & Thematic Badges (Resolves Numbering Catastrophe) */
+.oral-focus-structured-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  line-height: 1.85;
+}
+.oral-focus-structured-point.no-marker {
+  gap: 0;
+}
+.oral-focus-point-marker {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--line-strong) 45%, transparent);
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.oral-focus-point-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.of-point-body {
+  display: inline;
+}
+.of-outline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+.of-badge-indication {
+  background: color-mix(in srgb, #1e6b52 12%, var(--surface));
+  color: #1e6b52;
+  border: 1px solid color-mix(in srgb, #1e6b52 28%, transparent);
+}
+[data-theme="dark"] .of-badge-indication {
+  background: color-mix(in srgb, #34d399 15%, var(--surface));
+  color: #6ee7b7;
+  border-color: color-mix(in srgb, #34d399 35%, transparent);
+}
+.of-badge-contraindication {
+  background: color-mix(in srgb, #c44343 12%, var(--surface));
+  color: #c44343;
+  border: 1px solid color-mix(in srgb, #c44343 28%, transparent);
+}
+[data-theme="dark"] .of-badge-contraindication {
+  background: color-mix(in srgb, #f87171 15%, var(--surface));
+  color: #fca5a5;
+  border-color: color-mix(in srgb, #f87171 35%, transparent);
+}
+.of-badge-feature {
+  background: color-mix(in srgb, #50618a 12%, var(--surface));
+  color: #3b4c73;
+  border: 1px solid color-mix(in srgb, #50618a 28%, transparent);
+}
+[data-theme="dark"] .of-badge-feature {
+  background: color-mix(in srgb, #818cf8 15%, var(--surface));
+  color: #a5b4fc;
+  border-color: color-mix(in srgb, #818cf8 35%, transparent);
+}
+.of-badge-method {
+  background: color-mix(in srgb, #c96442 12%, var(--surface));
+  color: #a34827;
+  border: 1px solid color-mix(in srgb, #c96442 28%, transparent);
+}
+[data-theme="dark"] .of-badge-method {
+  background: color-mix(in srgb, #fb923c 15%, var(--surface));
+  color: #fdba74;
+  border-color: color-mix(in srgb, #fb923c 35%, transparent);
+}
+.of-badge-principle {
+  background: color-mix(in srgb, #1b687a 12%, var(--surface));
+  color: #125565;
+  border: 1px solid color-mix(in srgb, #1b687a 28%, transparent);
+}
+[data-theme="dark"] .of-badge-principle {
+  background: color-mix(in srgb, #22d3ee 15%, var(--surface));
+  color: #67e8f9;
+  border-color: color-mix(in srgb, #22d3ee 35%, transparent);
+}
+.of-badge-warning {
+  background: color-mix(in srgb, #bd6d1b 12%, var(--surface));
+  color: #9c550e;
+  border: 1px solid color-mix(in srgb, #bd6d1b 28%, transparent);
+}
+[data-theme="dark"] .of-badge-warning {
+  background: color-mix(in srgb, #fbbf24 15%, var(--surface));
+  color: #fde68a;
+  border-color: color-mix(in srgb, #fbbf24 35%, transparent);
+}
+.of-badge-definition {
+  background: color-mix(in srgb, #2d6b9e 12%, var(--surface));
+  color: #1c5380;
+  border: 1px solid color-mix(in srgb, #2d6b9e 28%, transparent);
+}
+[data-theme="dark"] .of-badge-definition {
+  background: color-mix(in srgb, #38bdf8 15%, var(--surface));
+  color: #7dd3fc;
+  border-color: color-mix(in srgb, #38bdf8 35%, transparent);
+}
+.of-badge-taxonomy {
+  background: color-mix(in srgb, #6b5876 12%, var(--surface));
+  color: #554460;
+  border: 1px solid color-mix(in srgb, #6b5876 28%, transparent);
+}
+[data-theme="dark"] .of-badge-taxonomy {
+  background: color-mix(in srgb, #c084fc 15%, var(--surface));
+  color: #e9d5ff;
+  border-color: color-mix(in srgb, #c084fc 35%, transparent);
+}
+
+/* Sub-points Checklist */
+.of-sub-points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 6px;
+  padding-left: 2px;
+}
+.of-sub-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border-left: 2.5px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  line-height: 1.7;
+}
+.of-sub-num {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary-strong);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.of-sub-text {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+.of-point-intro {
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.oral-focus-source-separator {
+  display: inline-block;
+  padding: 0 4px;
+  color: var(--primary);
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* Saved Note inside card */
+.of-saved-note {
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--line));
+}
+.of-note-empty-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+  border: 1px dashed var(--line);
+}
+.of-note-empty-hint p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+.of-add-note-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary-strong);
+  font-size: 12px;
+  cursor: pointer;
+  width: fit-content;
+}
+.of-add-note-inline-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 @media (max-width: 720px) {
-  .oral-focus-shell { padding-top: 2px; }
-  .oral-focus-chapter-list, .oral-focus-card-grid, .oral-focus-card-grid.answers-visible { grid-template-columns: 1fr; }
-  .oral-focus-chapter-entry:nth-child(odd), .oral-focus-chapter-entry:nth-child(even) { padding-inline: 4px 10px; border-left: 0; }
-  .oral-focus-chapter-head { grid-template-columns: 1fr; align-items: start; }
-  .oral-focus-chapter-head > div { align-items: flex-start; flex-direction: column; gap: 5px; }
-  .oral-focus-chapter-head > .oral-focus-answer-toggle { justify-self: start; }
-  .oral-focus-study-card > header { min-height: 82px; padding: 15px 13px; }
-  .oral-focus-card-body { padding: 0 14px 18px 51px; }
-  .oral-focus-answer-copy, .oral-focus-card-note .knowledge-article { font-size: 16px; line-height: 1.86; }
+  .oral-focus-shell { padding: 18px 14px 100px; }
+  .oral-focus-chapter-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .of-chapter-actions { width: 100%; justify-content: flex-end; }
+  .oral-focus-study-card > header { grid-template-columns: 28px minmax(0, 1fr) auto; padding: 14px 12px; }
+  .oral-focus-card-body { padding: 0 12px 16px 42px; }
 }
 
 /* Enhanced Type Filter, Source Tags, Missing State, and Knowledge Images */
@@ -287,5 +975,145 @@
   font-size: 12px;
   margin-top: 4px;
   margin-bottom: 14px;
+}
+
+/* Active Recall Cloze Mode & Outline Stream */
+.oral-focus-head-toggles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oral-focus-cloze-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 160ms var(--ease-standard);
+}
+.oral-focus-cloze-toggle svg {
+  width: 13px;
+  height: 13px;
+  color: var(--text-soft);
+  transition: color 160ms var(--ease-standard);
+}
+.oral-focus-cloze-toggle:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--line));
+  background: var(--surface-hover);
+}
+.oral-focus-cloze-toggle.active {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  color: var(--primary-strong);
+}
+.oral-focus-cloze-toggle.active svg {
+  color: var(--primary);
+}
+
+/* Cloze Masking for Active Recall */
+.cloze-mode-active .of-cloze-item {
+  position: relative;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-strong)) !important;
+  color: transparent !important;
+  border: 1px dashed color-mix(in srgb, var(--primary) 45%, transparent) !important;
+  border-radius: 4px;
+  user-select: none;
+  box-shadow: none;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cloze-mode-active .of-cloze-item::after {
+  content: "···";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--primary-strong);
+  opacity: 0.7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.cloze-mode-active .of-cloze-item:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-strong)) !important;
+  border-color: var(--primary) !important;
+}
+.cloze-mode-active .of-cloze-item.is-revealed {
+  color: inherit !important;
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  user-select: auto;
+}
+.cloze-mode-active .of-cloze-item.is-revealed::after {
+  display: none;
+}
+
+/* Outline Stream (提纲骨架徽章流) */
+.of-outline-stream {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+}
+.of-stream-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+.of-stream-title svg {
+  width: 13px;
+  height: 13px;
+  color: var(--primary);
+}
+.of-stream-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.of-stream-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: all 160ms ease;
+}
+.of-stream-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+.is-highlight-target {
+  animation: ofHighlightPulse 1.4s ease-out;
+}
+@keyframes ofHighlightPulse {
+  0% { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+  100% { background: transparent; }
 }
 

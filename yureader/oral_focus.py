@@ -641,3 +641,73 @@ def save_oral_focus_progress(item_id: str, answer: str, memory_note: str, master
     return {"saved": bool(answer or memory_note or mastery != "unseen"), "progress": payload["items"][item_id], "path": str(target), "storage": storage, "obsidian_uri": uri}
 
 
+def oral_focus_due_items(limit: int = 100) -> dict:
+    dataset, items = load_oral_focus()
+    progress_payload = load_oral_focus_progress()
+    progress_items = progress_payload.get("items", {}) if isinstance(progress_payload, dict) else {}
+    now_iso = datetime.now().astimezone().isoformat()
+
+    due_list: list[tuple[str, dict, dict]] = []
+    by_subject: dict[str, int] = {}
+    definitions_count = 0
+    essays_count = 0
+
+    for item_id, p in progress_items.items():
+        if not isinstance(p, dict):
+            continue
+        mastery = p.get("mastery")
+        if not mastery or mastery == "unseen":
+            continue
+        next_review = str(p.get("next_review_at") or "")
+        is_due = False
+        if not next_review:
+            is_due = True
+        elif next_review <= now_iso:
+            is_due = True
+        elif mastery in {"learning", "fuzzy"} and next_review <= (datetime.now().astimezone() + timedelta(hours=2)).isoformat():
+            is_due = True
+
+        if is_due:
+            rec = items.get(item_id)
+            if not rec:
+                continue
+            subj_id = rec.get("subject", {}).get("id") or "other"
+            by_subject[subj_id] = by_subject.get(subj_id, 0) + 1
+            if rec.get("type") == "definition":
+                definitions_count += 1
+            else:
+                essays_count += 1
+            due_list.append((item_id, rec, p))
+
+    def sort_key(entry):
+        _, _, prog = entry
+        m = prog.get("mastery")
+        m_priority = 0 if m == "learning" else (1 if m == "fuzzy" else 2)
+        return (m_priority, prog.get("next_review_at") or "")
+
+    due_list.sort(key=sort_key)
+    selected = due_list[:limit]
+    public_items = [_oral_focus_public_record(rec, prog, reveal=True) for _, rec, prog in selected]
+
+    return {
+        "total_due": len(due_list),
+        "definitions_due": definitions_count,
+        "essays_due": essays_count,
+        "by_subject": by_subject,
+        "items": public_items,
+        "limit": limit,
+    }
+
+
+def oral_focus_due_session(limit: int = 50) -> dict:
+    due_data = oral_focus_due_items(limit=limit)
+    return {
+        "subject": {"id": "due-today", "short_title": "今日", "title": "今日到期复习池", "book_id": ""},
+        "chapter": {"id": "due-session", "order": 0, "title": "艾宾浩斯今日抗遗忘", "type": "all"},
+        "is_due_session": True,
+        "total_due": due_data["total_due"],
+        "items": due_data["items"],
+        "item_count": len(due_data["items"]),
+    }
+
+

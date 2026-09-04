@@ -27,6 +27,7 @@ export const READING_FLUSH_SECONDS = 15;
 export const ROUTE_ALIASES = {
   today: "home", home: "home", dashboard: "home",
   library: "library", books: "library", bookshelf: "library", shelf: "library",
+  "library/english": "library-english", "library/medicine": "library-medicine", "library/politics": "library-politics",
   "oral-focus": "oralFocus", "library/oral-focus": "oralFocus",
   review: "review", reviews: "review", "yesterday-review": "review",
   records: "logs", record: "logs", logs: "logs", log: "logs",
@@ -51,7 +52,8 @@ export const state = {
   workspaceFlushSequence: 0, workspaceFlushKey: "", homeResizeTimer: null,
   practice: null, practiceIndex: 0, practiceReturn: "reader",
   practiceOverviewBankId: "", practiceAnalysisSaveTimer: null,
-  practiceReadingItems: [], practiceReadingToken: 0, subjectivePractice: null,
+  practiceReadingItems: [], practiceReadingToken: 0, practiceFlagged: new Set(),
+  practiceEliminated: new Map(), subjectivePractice: null,
   subjectiveReturn: "exam-overview", subjectiveSaveTimer: null, oralFocus: null,
   oralFocusSubjectId: "", oralFocusTypeFilter: "", oralFocusChapterId: "",
   oralFocusChapter: null, oralFocusItem: null, oralFocusFlatItems: [],
@@ -63,4 +65,7 @@ export const state = {
 };
 
 export const $ = (id) => document.getElementById(id);
-if (typeof window !== 'undefined') window.$ = $;
+if (typeof window !== 'undefined') {
+  window.$ = $;
+  window.state = state;
+}

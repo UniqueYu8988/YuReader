@@ -48,6 +48,10 @@
           <i data-lucide="chart-pie"></i>
           <span>统计</span>
         </button>
+        <button class="nav-item" id="guideNav" type="button" title="功能使用说明书 (?)">
+          <i data-lucide="compass"></i>
+          <span>说明</span>
+        </button>
         <button class="nav-item theme-toggle" id="themeToggle" type="button" aria-label="切换夜间模式" title="切换夜间模式" aria-pressed="false">
           <i data-lucide="moon"></i>
           <span>切换主题</span>
@@ -89,11 +93,14 @@
             <button type="button" id="homeOpenPolitics"><i data-lucide="landmark"></i><span><strong>政治</strong><small>讲义与对应练习</small></span></button>
             <button type="button" id="homeOpenReview"><i data-lucide="history"></i><span><strong>回顾</strong><small id="homeReviewMeta">整理最近学习</small></span></button>
           </nav>
-          <section class="reader-home-goals" id="homeGoalsPanel" aria-label="今日目标">
+          <section class="reader-home-goals" id="homeGoalsPanel" aria-label="今日学习目标与攻坚">
             <header class="reader-home-goals-header">
-              <div>
-                <p class="eyebrow">TODAY'S TARGETS</p>
-                <h3>今日目标</h3>
+              <div class="reader-home-goals-title-wrap">
+                <p class="eyebrow">TODAY'S TARGETS & ACTIONS</p>
+                <h3>今日学习目标</h3>
+              </div>
+              <div class="home-checklist-celebration hidden" id="homeChecklistCelebration">
+                <i data-lucide="award"></i><span>今日背诵与错题攻坚达成！</span>
               </div>
               <button class="reader-home-goals-toggle" id="homeGoalsEditToggle" type="button">
                 <i data-lucide="edit-3"></i>
@@ -101,22 +108,51 @@
               </button>
             </header>
 
-            <div class="reader-home-total-card">
-              <div class="reader-home-total-header">
-                <div class="reader-home-total-label">
-                  <span>总学习时长目标</span>
-                  <div class="reader-home-total-meta">
-                    <span id="homeGoalTotalStatus">0 / 8.0 小时</span>
-                    <strong id="homeGoalTotalPercent">0%</strong>
+            <!-- 总学习时长目标与攻坚入口并排呈现 -->
+            <div class="reader-home-summary-row">
+              <div class="reader-home-total-card">
+                <div class="reader-home-total-header">
+                  <div class="reader-home-total-label">
+                    <span>总学习时长目标</span>
+                    <div class="reader-home-total-meta">
+                      <span id="homeGoalTotalStatus">0 / 8.0 小时</span>
+                      <strong id="homeGoalTotalPercent">0%</strong>
+                    </div>
+                  </div>
+                  <div class="reader-home-total-input-wrap hidden" id="homeGoalTotalInputWrap">
+                    <input type="number" id="homeGoalTotalInput" min="0.5" max="24" step="0.5" value="8.0" aria-label="今日学习时长目标（小时）">
+                    <label for="homeGoalTotalInput">小时</label>
                   </div>
                 </div>
-                <div class="reader-home-total-input-wrap hidden" id="homeGoalTotalInputWrap">
-                  <input type="number" id="homeGoalTotalInput" min="0.5" max="24" step="0.5" value="8.0" aria-label="今日学习时长目标（小时）">
-                  <label for="homeGoalTotalInput">小时</label>
+                <div class="reader-home-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div class="reader-home-progress-fill" id="homeGoalTotalFill" style="width: 0%;"></div>
                 </div>
               </div>
-              <div class="reader-home-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                <div class="reader-home-progress-fill" id="homeGoalTotalFill" style="width: 0%;"></div>
+
+              <div class="reader-home-clearance-actions">
+                <button type="button" class="home-clearance-item" id="chkOralCard" data-chk="oral" title="进入口腔重点背诵（艾宾浩斯复习）">
+                  <i data-lucide="flame" class="hci-icon is-oral"></i>
+                  <div class="hci-body">
+                    <div class="hci-headline">
+                      <strong>口腔背诵</strong>
+                      <span class="hci-status" id="chkOralBadge">检查中…</span>
+                    </div>
+                    <span class="hci-note" id="chkOralDesc">艾宾浩斯抗遗忘</span>
+                  </div>
+                  <i data-lucide="arrow-right" class="hci-arrow"></i>
+                </button>
+
+                <button type="button" class="home-clearance-item" id="chkMistakesCard" data-chk="mistakes" title="进入客观错题攻坚（错题集训）">
+                  <i data-lucide="swords" class="hci-icon is-mistakes"></i>
+                  <div class="hci-body">
+                    <div class="hci-headline">
+                      <strong>错题攻坚</strong>
+                      <span class="hci-status" id="chkMistakesBadge">检查中…</span>
+                    </div>
+                    <span class="hci-note" id="chkMistakesDesc">错题二刷攻坚</span>
+                  </div>
+                  <i data-lucide="arrow-right" class="hci-arrow"></i>
+                </button>
               </div>
             </div>
 
@@ -277,6 +313,11 @@
                   <button type="button" class="mf-tab" data-mistake-filter="pending">仅待攻坚</button>
                   <button type="button" class="mf-tab" data-mistake-filter="resolved">已斩杀</button>
                 </div>
+                <div class="mistakes-actions-bar">
+                  <button type="button" class="mistakes-batch-btn" id="mistakesBatchTrainBtn" title="将当前分类下所有待攻坚错题一键组卷二刷">
+                    <i data-lucide="swords"></i><span>开启错题专项集训</span>
+                  </button>
+                </div>
               </div>
               <div class="mistakes-card-list" id="mistakesCardList">
                 <div class="mistakes-empty-box" id="mistakesEmptyBox">
@@ -325,6 +366,9 @@
                   <button class="icon-button" id="readerPreviousSection" type="button" title="上一节" aria-label="上一节"><i data-lucide="chevron-left"></i></button>
                   <button class="icon-button" id="readerNextSection" type="button" title="下一节" aria-label="下一节"><i data-lucide="chevron-right"></i></button>
                 </div>
+                <button class="reader-toolbar-finish" id="readerToolbarFinish" type="button" title="结束本次阅读并保存学时">
+                  <i data-lucide="check"></i><span>结束阅读</span>
+                </button>
                 <nav class="reader-crumb-menu hidden" id="readerCrumbMenu" aria-label="同书章节"></nav>
               </div>
 
@@ -335,7 +379,34 @@
 
               <nav class="section-guide hidden" id="sectionGuide" aria-label="本节内容导航"></nav>
               <div class="knowledge-article" id="knowledgeArticle"></div>
-              <nav class="reader-pagination" aria-label="章节翻页"><button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button><button class="reader-session-exit" id="readerFinishSession" type="button" title="结束本次阅读" aria-label="结束本次阅读"><i data-lucide="check"></i></button><button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button></nav>
+
+              <!-- 本节研读完成与打卡结算 (Anthropic Claude 风格静默结语) -->
+              <section class="reader-section-end-colophon" id="readerSectionEndCard" aria-label="本节研读小结">
+                <div class="rse-colophon-inner">
+                  <div class="rse-colophon-main">
+                    <i data-lucide="check" class="rse-colophon-icon"></i>
+                    <div class="rse-colophon-text">
+                      <h4 id="rseSectionTitle">本节研读已完成</h4>
+                      <p>研读学时已自动记入学业档案，可打卡保存退出，或继续下一节。</p>
+                    </div>
+                  </div>
+                  <div class="rse-colophon-actions">
+                    <button type="button" class="rse-btn secondary" id="readerFinishSession" title="打卡并结束本次阅读">
+                      <i data-lucide="bookmark-check"></i>
+                      <span>结束本次研读</span>
+                    </button>
+                    <button type="button" class="rse-btn primary" id="readerEndNextSection" title="继续研读下一节">
+                      <span>进入下一节</span>
+                      <i data-lucide="arrow-right"></i>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <nav class="reader-pagination" aria-label="章节翻页">
+                <button class="secondary-button" id="previousSection" type="button"><i data-lucide="arrow-left"></i><span>上一节</span></button>
+                <button class="secondary-button" id="nextSectionLink" type="button"><span>下一节</span><i data-lucide="arrow-right"></i></button>
+              </nav>
             </div>
           </article>
         </div>
@@ -349,6 +420,7 @@
               <div><h2 id="oralFocusDirectoryTitle">口腔重点</h2><span id="oralFocusSummary">0 / 0</span></div>
             </header>
             <nav class="oral-focus-subject-tabs" id="oralFocusSubjectTabs" aria-label="口腔重点学科"></nav>
+            <div class="oral-focus-due-banner hidden" id="oralFocusDueBanner" aria-label="今日到期复习池"></div>
             <div class="oral-focus-type-filter-bar" id="oralFocusTypeFilterBar" role="tablist" aria-label="题型筛选">
               <button type="button" class="oft-tab active" data-oral-filter-type="definition" role="tab" aria-selected="true">
                 <i data-lucide="sparkles"></i>
@@ -370,7 +442,10 @@
                   <button type="button" class="ov-mode-btn active" id="oralModeListBtn" title="列表研读模式"><i data-lucide="list"></i> 目录列表</button>
                   <button type="button" class="ov-mode-btn" id="oralModeCardBtn" title="Anki翻转背诵卡模式"><i data-lucide="sparkles"></i> 翻转背诵卡</button>
                 </div>
-                <button class="oral-focus-answer-toggle" id="oralFocusChapterAnswerToggle" type="button" role="switch" aria-checked="false"><span>只看题目</span><i aria-hidden="true"></i></button>
+                <div class="oral-focus-head-toggles">
+                  <button class="oral-focus-cloze-toggle" id="oralFocusClozeToggle" type="button" role="switch" aria-checked="false" title="开启主动回忆背诵遮罩（遮蔽关键数值、英文术语与采分点）"><i data-lucide="eye-off"></i><span>背诵遮罩</span></button>
+                  <button class="oral-focus-answer-toggle" id="oralFocusChapterAnswerToggle" type="button" role="switch" aria-checked="false"><span>只看题目</span><i aria-hidden="true"></i></button>
+                </div>
               </header>
               <div class="oral-focus-card-grid" id="oralFocusItems"></div>
               <div class="oral-flashcard-deck hidden" id="oralFocusFlashcardDeck">
@@ -423,29 +498,6 @@
               </div>
             </section>
           </section>
-
-          <section class="oral-focus-question hidden" id="oralFocusQuestion" aria-label="口腔重点单题学习">
-            <header class="oral-focus-question-head">
-              <button class="review-back-link" id="oralFocusBackToDirectory" type="button"><i data-lucide="arrow-left"></i> 返回目录</button>
-              <div class="oral-focus-question-meta"><span id="oralFocusQuestionType">名词解释</span><span id="oralFocusQuestionStars"></span><span id="oralFocusQuestionLocation"></span></div>
-            </header>
-            <article class="oral-focus-card">
-              <h2 id="oralFocusQuestionTitle"></h2>
-            </article>
-            <section class="oral-focus-reference" id="oralFocusReference">
-              <header><h3>标准答案</h3><button class="oral-focus-answer-toggle" id="oralFocusReferenceToggle" type="button" role="switch" aria-checked="false"><span>显示答案</span><i aria-hidden="true"></i></button></header>
-              <article class="knowledge-article hidden" id="oralFocusReferenceBody"></article>
-            </section>
-            <section class="oral-focus-note-content hidden" id="oralFocusNoteContent">
-              <h3>学习笔记</h3>
-              <article class="knowledge-article" id="oralFocusNoteBody"></article>
-            </section>
-            <nav class="oral-focus-pagination" aria-label="题目切换">
-              <button type="button" id="oralFocusPrevious"><i data-lucide="arrow-left"></i><span>上一题</span></button>
-              <span id="oralFocusPosition">1 / 1</span>
-              <button type="button" id="oralFocusNext"><span>下一题</span><i data-lucide="arrow-right"></i></button>
-            </nav>
-          </section>
         </div>
       </section>
 
@@ -473,7 +525,16 @@
             <div class="practice-unit-map" id="practiceUnitMap"></div>
           </section>
           <article class="practice-question-surface" id="practiceQuestionSurface">
-            <div class="practice-question-meta"><span id="practiceQuestionType"></span><i aria-hidden="true"></i><strong id="practiceQuestionNumber"></strong><span class="practice-source" id="practiceTitle">练习</span></div>
+            <div class="practice-question-meta">
+              <span id="practiceQuestionType"></span>
+              <i aria-hidden="true"></i>
+              <strong id="practiceQuestionNumber"></strong>
+              <button class="practice-flag-button" id="practiceFlagBtn" type="button" title="标记存疑 (快捷键 F)" aria-label="标记存疑">
+                <i data-lucide="flag"></i>
+                <span>标记存疑</span>
+              </button>
+              <span class="practice-source" id="practiceTitle">练习</span>
+            </div>
             <p class="practice-bank-meta" id="practiceMeta">正在读取题目…</p>
             <div class="practice-reading-layout hidden" id="practiceReadingLayout" aria-label="阅读理解工作台">
               <section class="practice-reading-pane">
@@ -493,10 +554,14 @@
             </details>
             <div class="knowledge-article practice-stem" id="practiceStem"></div>
             <form class="practice-options" id="practiceOptions"></form>
-            <div class="practice-answer-controls"><button class="primary-button practice-submit" id="practiceSubmit" type="button" disabled><span>确认答案</span><i data-lucide="arrow-right"></i></button></div>
+            <div class="practice-answer-controls">
+              <span class="practice-shortcut-hint" id="practiceShortcutHint">按 <code>A</code>-<code>D</code> 选答案 · <code>Enter</code> 提交 · 右键排除</span>
+              <button class="primary-button practice-submit" id="practiceSubmit" type="button" disabled><span>确认答案</span><i data-lucide="arrow-right"></i></button>
+            </div>
           </article>
           <section class="practice-result hidden" id="practiceResult" aria-live="polite">
             <header class="practice-feedback-head"><span class="practice-result-icon" id="practiceResultIcon"><i data-lucide="check"></i></span><div><strong id="practiceResultTitle"></strong><span id="practiceCorrectAnswer"></span></div></header>
+            <div class="practice-error-tags-wrap hidden" id="practiceErrorTagsWrap"></div>
             <section class="practice-analysis"><h3>原书解析</h3><article class="knowledge-article note-stream" id="practiceSourceAnalysis"></article></section>
             <div class="practice-personal-analysis-entry">
               <button type="button" class="practice-open-note-btn" id="practiceOpenNoteBtn">
@@ -532,9 +597,13 @@
           </div>
           <nav class="practice-pagination" id="practicePagination" aria-label="题目切换"><button class="practice-page-button" id="practicePrevious" type="button"><i data-lucide="arrow-left"></i><span>上一题</span></button><button class="practice-page-button next" id="practiceNext" type="button"><span>下一题</span><i data-lucide="arrow-right"></i></button></nav>
           <section class="practice-session-summary hidden" id="practiceSessionSummary" aria-live="polite">
-            <h2>本组结果</h2><p class="hidden" id="practiceSummaryLead"></p>
+            <h2>本组结果</h2>
             <div class="practice-summary-facts" id="practiceSummaryFacts"></div>
-            <div class="practice-summary-actions"><button class="secondary-button hidden" id="practiceReviewWrong" type="button"><i data-lucide="rotate-ccw"></i><span>查看错题</span></button><button class="primary-button" id="practiceLeaveSession" type="button"><span>返回学习资料</span><i data-lucide="arrow-right"></i></button></div>
+            <div class="practice-summary-actions">
+              <button class="secondary-button hidden" id="practiceReviewFlagged" type="button"><i data-lucide="flag"></i><span>复查存疑题目</span></button>
+              <button class="secondary-button hidden" id="practiceReviewWrong" type="button"><i data-lucide="rotate-ccw"></i><span>查看错题</span></button>
+              <button class="primary-button" id="practiceLeaveSession" type="button"><span>返回学习资料</span><i data-lucide="arrow-right"></i></button>
+            </div>
           </section>
         </div>
         <section class="subjective-practice-workspace hidden" id="subjectivePracticeWorkspace" aria-label="翻译与写作练习">
@@ -983,16 +1052,26 @@
   </div>
 
   <div class="section-note-float hidden" id="sectionNoteFloat">
-    <nav class="reader-material-float" aria-label="阅读内容切换">
-      <button class="reader-material-tab active" type="button" data-section-material="cleaned" title="原文" aria-label="原文" aria-pressed="true"><i data-lucide="align-left"></i></button>
-      <button class="reader-material-tab" type="button" data-section-material="note" title="笔记" aria-label="笔记" aria-pressed="false"><i data-lucide="notebook"></i></button>
+    <nav class="reader-dock-capsule" aria-label="阅读与笔记快捷工具">
+      <button class="reader-dock-btn active" type="button" data-section-material="cleaned" title="正文阅读 (清洗译文)" aria-label="正文阅读" aria-pressed="true">
+        <i data-lucide="align-left"></i>
+        <span class="dock-tooltip">正文</span>
+      </button>
+      <button class="reader-dock-btn" type="button" data-section-material="note" title="整节笔记 (全屏研读)" aria-label="整节笔记" aria-pressed="false">
+        <i data-lucide="notebook"></i>
+        <span class="dock-tooltip">笔记流</span>
+      </button>
+      <span class="reader-dock-sep" aria-hidden="true"></span>
+      <button class="reader-dock-btn reader-dock-obsidian" id="toggleSectionNoteDock" type="button" aria-label="打开本节笔记" aria-controls="sectionNotePopover" aria-expanded="false" title="浮窗速记 (Obsidian)">
+        <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+        <span class="dock-tooltip">浮窗笔记</span>
+      </button>
     </nav>
     <section class="section-note-popover" id="sectionNotePopover" role="dialog" aria-hidden="true" aria-label="本节笔记">
       <header class="section-note-heading"><div><p class="eyebrow">本节笔记</p><span id="noteSavedText">输入后自动保存</span></div><div class="section-note-actions"><a class="note-icon-button" id="openObsidian" href="obsidian://open" title="打开 Obsidian" aria-label="打开 Obsidian"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></a><button class="note-icon-button" id="closeSectionNote" type="button" title="收起笔记" aria-label="收起笔记"><i data-lucide="x"></i></button></div></header>
       <textarea id="sectionNote" rows="9" placeholder="粘贴侧边栏 AI 的整理结果，或记录自己的理解"></textarea>
       <footer class="section-note-footer"><span>Markdown · 自动保存</span></footer>
     </section>
-    <button class="section-note-launcher" id="toggleSectionNoteDock" type="button" aria-label="打开本节笔记" aria-controls="sectionNotePopover" aria-expanded="false" title="本节笔记"><img src="/assets/obsidian.svg" alt="" aria-hidden="true"></button>
   </div>
 
   <!-- 全局穿透秒搜命令面板 (Ctrl + K) -->
@@ -1017,6 +1096,35 @@
         <span><kbd>↵</kbd> 跳转内容</span>
         <span><kbd>ESC</kbd> 退出</span>
       </footer>
+    </div>
+  </div>
+
+  <!-- 全局悬浮使用说明书启动器 -->
+  <div class="app-guide-float" id="appGuideFloat">
+    <button class="app-guide-launcher" id="appGuideLauncher" type="button" aria-label="功能使用说明书 (快捷键 ?)" title="功能使用说明书 (快捷键 ?)">
+      <i data-lucide="compass"></i>
+      <span class="guide-launcher-tooltip">使用说明书 <kbd>?</kbd></span>
+    </button>
+  </div>
+
+  <!-- 功能使用说明书全景交互弹窗 -->
+  <div class="app-guide-modal hidden" id="appGuideModal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="功能使用说明书">
+    <div class="app-guide-backdrop" id="appGuideBackdrop"></div>
+    <div class="app-guide-dialog">
+      <header class="app-guide-dialog-header">
+        <div class="guide-dialog-title-group">
+          <span class="guide-dialog-eyebrow">YUREADER MANUAL · 极简指南</span>
+          <h2 class="guide-dialog-title">系统功能使用说明书</h2>
+        </div>
+        <div class="guide-dialog-actions">
+          <span class="guide-esc-hint"><kbd>ESC</kbd> 关闭</span>
+          <button type="button" class="guide-close-btn" id="appGuideClose" aria-label="关闭说明书"><i data-lucide="x"></i></button>
+        </div>
+      </header>
+      <div class="app-guide-dialog-body">
+        <nav class="app-guide-nav" id="appGuideNav" role="tablist" aria-label="功能模块索引"></nav>
+        <main class="app-guide-content" id="appGuideContent" role="tabpanel" tabindex="0"></main>
+      </div>
     </div>
   </div>
 

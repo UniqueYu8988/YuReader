@@ -161,5 +161,13 @@ export function bindMistakesEvents() {
       renderMistakes();
     });
   });
+
+  $("mistakesBatchTrainBtn")?.addEventListener("click", () => {
+    let domainParam = "";
+    if (mistakesFilter === "politics") domainParam = "politics";
+    else if (mistakesFilter === "english") domainParam = "english";
+    openPractice({ bank_id: "mistakes-session", knowledge_id: "mistakes", match_level: "mistakes", is_mistakes_session: true, domain: domainParam }, "mistakes", 0);
+  });
+
   mistakesEventsBound = true;
 }

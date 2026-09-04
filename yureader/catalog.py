@@ -249,13 +249,13 @@ def build_catalog() -> tuple[list[dict], dict[str, dict]]:
 
     package_roots: set[Path] = set()
     for manifest_path in sorted(CONTENT_DIR.glob("*/manifest.json")):
+        package_roots.add(manifest_path.parent.resolve())
         loaded = manifest_book(manifest_path)
         if not loaded:
             continue
         book, package_sections = loaded
         books[book["id"]] = book
         sections.update(package_sections)
-        package_roots.add(manifest_path.parent.resolve())
 
     for path in sorted(CONTENT_DIR.rglob("*.md")):
         if path.name.lower() == "readme.md":

@@ -3,19 +3,85 @@ import { $, state } from "../core/state.js";
 import { stopReadingTimer } from "../core/timer.js";
 import { escapeHtml, formatInteger, refreshIcons } from "../core/utils.js";
 import { openPractice, openSubjectivePractice } from "../modules/practice.js";
-import { closeNotePopover, learningBookCard, learningRailHtml, learningSectionHeader, recentFirstBooks, renderLearningCenterOverview } from "../views/reader.js";
+import { closeNotePopover, learningRailHtml, learningSectionHeader, renderLearningCenterOverview } from "../views/reader.js";
+
+export const ENGLISH_BOOK_METADATA = {
+  "english-grammar-long-sentences": {
+    role: "method",
+    typeLabel: "方法课",
+    shortType: "方法课",
+    defaultOrder: 1,
+  },
+  "english-58-basic-reading": {
+    role: "basic-reading",
+    typeLabel: "基础阅读",
+    shortType: "基础阅读",
+    defaultOrder: 2,
+  },
+  "english-vocab-redbook": {
+    role: "core-vocab",
+    typeLabel: "核心词表",
+    shortType: "核心词表",
+    defaultOrder: 3,
+  },
+  "english-method-wordbook": {
+    role: "vocab-method",
+    typeLabel: "词汇方法",
+    shortType: "词汇方法",
+    defaultOrder: 4,
+  },
+  "english-method-88-sentences": {
+    role: "workbook",
+    typeLabel: "练习册",
+    shortType: "练习册",
+    defaultOrder: 5,
+  },
+};
 
 export function englishShelfBooks() {
-  return state.books.filter((book) => {
+  const readyBooks = state.books.filter((book) => {
     if ((book.domain || "medicine") !== "english") return false;
-    // Translation/writing reference pages belong to the year-specific true-paper
-    // companion, not to the method-and-vocabulary shelf.
-    return !/subjective|翻译与写作/i.test(`${book.id} ${book.title} ${book.resource_type || ""}`);
+    if (book.status && book.status !== "ready") return false;
+    if (book.quality?.status === "blocked") return false;
+    if (/subjective|翻译与写作/i.test(`${book.id} ${book.title} ${book.resource_type || ""}`)) return false;
+    return Boolean(ENGLISH_BOOK_METADATA[book.id]);
+  });
+
+  const recent = (state.stats?.recent_resources || []).filter((entry) => entry.domain === "english").map((entry) => entry.resource_id);
+  const rank = new Map(recent.map((id, index) => [id, index]));
+
+  return [...readyBooks].sort((a, b) => {
+    const aRank = rank.has(a.id) ? rank.get(a.id) : Number.MAX_SAFE_INTEGER;
+    const bRank = rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER;
+    if (aRank !== bRank) return aRank - bRank;
+    const orderA = ENGLISH_BOOK_METADATA[a.id]?.defaultOrder ?? 99;
+    const orderB = ENGLISH_BOOK_METADATA[b.id]?.defaultOrder ?? 99;
+    return orderA - orderB;
   });
 }
 
+export function englishBookCard(book, recentId = "") {
+  const meta = ENGLISH_BOOK_METADATA[book.id] || { shortType: "资料", typeLabel: "资料", defaultOrder: 99 };
+  const progressInfo = state.stats?.book_progress?.[book.id];
+  const learned = progressInfo ? progressInfo.learned_sections : 0;
+  const total = progressInfo?.total_sections || book.sections?.length || 0;
+  const progressText = learned > 0 ? `${learned} / ${total} 节` : `0 / ${total} 节`;
+
+  return `<button class="learning-book-card english-shelf-card${book.id === recentId ? " recent" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="《${escapeHtml(book.title)}》" aria-label="打开《${escapeHtml(book.title)}》">
+    <span class="reader-book-cover english-cover" aria-hidden="true" data-english-role="${escapeHtml(meta.role || '')}">
+      <span class="english-cover-spine"></span>
+      <span class="english-cover-badge">${escapeHtml(meta.shortType)}</span>
+    </span>
+    <span class="english-card-caption">
+      <strong class="english-card-title">${escapeHtml(book.title)}</strong>
+      <span class="english-card-sub"><span class="english-card-type">${escapeHtml(meta.shortType)}</span><span class="english-card-dot">·</span><span class="english-card-progress">${progressText}</span></span>
+    </span>
+  </button>`;
+}
+
 export function englishPanel(mode = "") {
-  const isExams = mode === "exams"; const isExamOverview = mode === "exam-overview";
+  const isExams = mode === "exams";
+  const isExamOverview = mode === "exam-overview";
   $("englishExams")?.classList.toggle("hidden", !isExams);
   $("englishExamOverview")?.classList.toggle("hidden", !isExamOverview);
   $("bookTree")?.classList.toggle("hidden", isExams || isExamOverview);
@@ -77,25 +143,39 @@ export function renderEnglishExamOverview() {
   $("englishExamOverviewCompanion").classList.remove("hidden");
   $("englishExamOverviewCompanion").innerHTML = `<header><div><p class="eyebrow">SECTION III / IV</p><h4>翻译与写作</h4></div><span>${subjective.available ? "主观题练习" : "原卷题型"}</span></header><div class="english-paper-companion-list">${englishPaperSubjectiveRows(subjective)}</div>`;
   $("englishExamOverviewSections").querySelectorAll("[data-paper-start]").forEach((button) => button.addEventListener("click", () => {
-    const startIndex = Number(button.dataset.paperStart || 0); const group = groups.find((item) => Number(item.start_index) === startIndex);
+    const startIndex = Number(button.dataset.paperStart || 0);
+    const group = groups.find((item) => Number(item.start_index) === startIndex);
     openPractice({ bank_id: button.dataset.paperBank, knowledge_id: button.dataset.paperKnowledge, match_level: "comprehensive", question_count: Number(group?.question_count || 0), label: group?.label || "" }, "english-exam-overview", startIndex);
   }));
-  $("englishExamOverviewCompanion").querySelectorAll("[data-paper-resource]").forEach((button) => button.addEventListener("click", () => { state.subjectiveReturn = "exam-overview"; openSubjectivePractice(button.dataset.paperResource, button.dataset.paperResourceSection); }));
+  $("englishExamOverviewCompanion").querySelectorAll("[data-paper-resource]").forEach((button) => button.addEventListener("click", () => {
+    state.subjectiveReturn = "exam-overview";
+    openSubjectivePractice(button.dataset.paperResource, button.dataset.paperResourceSection);
+  }));
   refreshIcons();
 }
 
 export async function openEnglishExamOverview(bankId) {
   if (!bankId) return;
-  state.openRequest += 1; stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden");
-  state.englishExamOverview = null; state.englishExamOverviewBankId = bankId; state.resourceBookId = null; state.resource = null;
-  $("libraryWorkspace").classList.remove("reader-open", "resource-open"); $("readerContent").classList.add("hidden");
-  setActiveView("library"); renderEnglishExamOverview(); window.scrollTo({ top: 0, behavior: "auto" });
+  state.openRequest += 1;
+  stopReadingTimer();
+  closeNotePopover();
+  $("sectionNoteFloat").classList.add("hidden");
+  state.englishExamOverview = null;
+  state.englishExamOverviewBankId = bankId;
+  state.resourceBookId = null;
+  state.resource = null;
+  $("libraryWorkspace").classList.remove("reader-open", "resource-open");
+  $("readerContent").classList.add("hidden");
+  setActiveView("library");
+  renderEnglishExamOverview();
+  window.scrollTo({ top: 0, behavior: "auto" });
   try {
     const response = await fetch(`/api/practice/overview?bank_id=${encodeURIComponent(bankId)}`, { cache: "no-store" });
     if (!response.ok) throw new Error("overview unavailable");
     const payload = await response.json();
     if (state.englishExamOverviewBankId !== bankId) return;
-    state.englishExamOverview = payload; renderEnglishExamOverview();
+    state.englishExamOverview = payload;
+    renderEnglishExamOverview();
   } catch {
     if (state.englishExamOverviewBankId !== bankId) return;
     $("englishExamOverviewTitle").textContent = "暂时无法读取试卷";
@@ -114,14 +194,16 @@ export function englishBankInfo(bank) {
 export function selectedEnglishBank() {
   const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack).sort((a, b) => b.year - a.year);
   if (!candidates.length) return null;
-  if (state.englishCenterYear && !candidates.some((entry) => String(entry.year) === String(state.englishCenterYear))) {
-    state.englishCenterYear = "";
+  if (state.englishCenterYear && state.englishCenterYear !== "all" && !candidates.some((entry) => String(entry.year) === String(state.englishCenterYear))) {
+    state.englishCenterYear = String(candidates[0].year);
   }
-  return state.englishCenterYear ? candidates.find((entry) => String(entry.year) === String(state.englishCenterYear)) : null;
+  return state.englishCenterYear && state.englishCenterYear !== "all" ? candidates.find((entry) => String(entry.year) === String(state.englishCenterYear)) : candidates[0];
 }
 
 export function englishSelectionHtml(years) {
-  const curType = state.englishCenterType || "all";
+  const curType = state.englishCenterType || "reading";
+  const selectedYear = state.englishCenterYear || (years.length ? String(years[0]) : "");
+
   return `<div class="english-unified-filter-bar">
     <div class="filter-group track-group" role="group" aria-label="卷别">
       <button type="button" class="filter-btn${state.englishCenterTrack === 1 ? " active" : ""}" data-english-track="1">英语一</button>
@@ -132,30 +214,52 @@ export function englishSelectionHtml(years) {
       <label class="filter-select-label">
         <span>年份</span>
         <select id="englishCenterYear" aria-label="选择真题年份">
-          <option value="" ${!state.englishCenterYear ? "selected" : ""}>全部年份</option>
-          ${years.map((y) => `<option value="${y}" ${String(state.englishCenterYear) === String(y) ? "selected" : ""}>${y} 年</option>`).join("")}
+          ${years.map((y) => `<option value="${y}" ${String(selectedYear) === String(y) ? "selected" : ""}>${y} 年</option>`).join("")}
+          <option value="all" ${selectedYear === "all" ? "selected" : ""}>全部年份</option>
         </select>
       </label>
     </div>
     <div class="filter-divider"></div>
     <div class="filter-group type-group" role="group" aria-label="题型">
-      <button type="button" class="filter-btn${curType === "all" ? " active" : ""}" data-english-type="all">全部题型</button>
-      <button type="button" class="filter-btn${curType === "cloze" ? " active" : ""}" data-english-type="cloze">完形填空</button>
       <button type="button" class="filter-btn${curType === "reading" ? " active" : ""}" data-english-type="reading">阅读理解</button>
+      <button type="button" class="filter-btn${curType === "cloze" ? " active" : ""}" data-english-type="cloze">完形填空</button>
       <button type="button" class="filter-btn${curType === "new" ? " active" : ""}" data-english-type="new">新题型</button>
       <button type="button" class="filter-btn${curType === "subjective" ? " active" : ""}" data-english-type="subjective">翻译与写作</button>
+      <button type="button" class="filter-btn${curType === "all" ? " active" : ""}" data-english-type="all">全部题型</button>
     </div>
   </div>`;
 }
 
+export function englishRailSize() {
+  if (window.innerWidth <= 560) return 2;
+  if (window.innerWidth <= 960) return 4;
+  return 5;
+}
+
 export function renderEnglishCenter() {
-  const books = recentFirstBooks(englishShelfBooks(), "english");
+  const books = englishShelfBooks();
   const recentId = books[0]?.id || "";
   const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack && entry.year).sort((a, b) => b.year - a.year);
   const years = candidates.map((c) => c.year);
 
-  return `<section class="learning-center-section">${learningSectionHeader(1, "书架", `${books.length} 本方法、阅读与词汇资料 · 最近阅读自动置前`, "english-books", "book-marked")}${learningRailHtml("english-books", books, (book) => learningBookCard(book, recentId))}</section>
-    <section class="learning-center-section english-training-section">${learningSectionHeader(2, "真题训练", "历年真题与解析 · 客观题逐题训练，翻译与写作独立作答", "", "scroll")}${englishSelectionHtml(years)}<div class="english-center-groups unified" id="englishUnifiedExamList"><div class="learning-loading">正在读取真题列表…</div></div></section>`;
+  if (!state.englishCenterYear && years.length) {
+    state.englishCenterYear = String(years[0]);
+  }
+  if (!state.englishCenterType) {
+    state.englishCenterType = "reading";
+  }
+
+  return `<section class="learning-center-section english-shelf-section">
+    ${learningSectionHeader(1, "书架", `${books.length} 本精选方法、阅读与词汇资料`, "english-books", "book-marked")}
+    ${learningRailHtml("english-books", books, (book) => englishBookCard(book, recentId), englishRailSize())}
+  </section>
+  <section class="learning-center-section english-training-section">
+    ${learningSectionHeader(2, "真题训练", "历年真题与解析 · 客观题逐题训练，翻译与写作独立作答", "", "scroll")}
+    ${englishSelectionHtml(years)}
+    <div class="english-center-groups unified" id="englishUnifiedExamList">
+      <div class="learning-loading">正在读取真题列表…</div>
+    </div>
+  </section>`;
 }
 
 export async function loadEnglishCenterOverview() {
@@ -163,33 +267,33 @@ export async function loadEnglishCenterOverview() {
   if (!container) return;
   const candidates = state.questionBanks.map(englishBankInfo).filter((entry) => entry.bank.domain === "english" && entry.paper === state.englishCenterTrack && entry.year).sort((a, b) => b.year - a.year);
 
+  if (!candidates.length) {
+    container.innerHTML = `<div class="learning-empty"><strong>暂无真题数据</strong></div>`;
+    return;
+  }
+
+  // Default to latest year if unset
   if (!state.englishCenterYear) {
-    const type = state.englishCenterType || "all";
-    if (!candidates.length) {
-      container.innerHTML = `<div class="learning-empty"><strong>暂无真题数据</strong></div>`;
-      return;
-    }
-    const rows = candidates.map((entry) => {
-      const year = entry.year;
-      const trackName = entry.paper === 2 ? "英语二" : "英语一";
-      if (type === "all") {
-        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · 考研${trackName}</small><strong>${year} 年全国硕士研究生招生考试${trackName}真题</strong><em>客观题 45 题 + 翻译与写作 · 整卷导读</em></span><i data-lucide="arrow-right"></i></button>`;
-      }
-      if (type === "cloze") {
-        return `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(entry.bank.id)}" data-english-objective-knowledge="" data-english-objective-start="0"><span class="english-paper-row-index">${year}</span><span class="english-paper-row-copy"><small>${year} · SECTION I</small><strong>${trackName} · 完形填空</strong><em>第 1–20 题 · 20 题</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`;
-      }
-      if (type === "reading") {
-        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · SECTION II PART A</small><strong>${trackName} · 阅读理解（共 4 篇）</strong><em>第 21–40 题 · 20 题 · 点击进入文章列表</em></span><i data-lucide="arrow-right"></i></button>`;
-      }
-      if (type === "new") {
-        return `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(entry.bank.id)}" data-english-objective-knowledge="" data-english-objective-start="40"><span class="english-paper-row-index">${year}</span><span class="english-paper-row-copy"><small>${year} · SECTION II PART B</small><strong>${trackName} · 新题型</strong><em>第 41–45 题 · 5 题</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`;
-      }
-      if (type === "subjective") {
-        return `<button class="english-exam-row unified" type="button" data-open-exam-overview="${escapeHtml(entry.bank.id)}"><span><small>${year} · SECTION III / IV</small><strong>${trackName} · 翻译与写作</strong><em>独立作答与批改 · 点击查看</em></span><i data-lucide="arrow-right"></i></button>`;
-      }
-      return "";
+    state.englishCenterYear = String(candidates[0].year);
+  }
+
+  // If user selected "all", display compact year index chips instead of 16 huge duplicate cards
+  if (state.englishCenterYear === "all") {
+    const trackName = state.englishCenterTrack === 2 ? "英语二" : "英语一";
+    const yearChips = candidates.map((entry) => {
+      return `<button class="english-compact-year-chip" type="button" data-select-year="${entry.year}">
+        <strong>${entry.year}</strong>
+        <span>${trackName}</span>
+      </button>`;
     }).join("");
-    container.innerHTML = rows;
+
+    container.innerHTML = `<div class="english-compact-year-index-card">
+      <header class="english-compact-year-header">
+        <i data-lucide="layers"></i>
+        <span><strong>全部年份索引</strong> · 点击年份直接聚焦该年度实际任务</span>
+      </header>
+      <div class="english-compact-year-grid">${yearChips}</div>
+    </div>`;
     bindEnglishCenterGroups();
     refreshIcons();
     return;
@@ -197,6 +301,7 @@ export async function loadEnglishCenterOverview() {
 
   const selected = candidates.find((c) => String(c.year) === String(state.englishCenterYear)) || candidates[0];
   if (!selected) return;
+
   try {
     let payload = state.englishCenterOverviewCache.get(selected.bank.id);
     if (!payload) {
@@ -216,6 +321,15 @@ export function bindEnglishCenterGroups() {
   if (!tree) return;
   tree.querySelectorAll("[data-open-exam-overview]").forEach((button) => {
     button.addEventListener("click", () => openEnglishExamOverview(button.dataset.openExamOverview));
+  });
+  tree.querySelectorAll("[data-select-year]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const yr = button.dataset.selectYear;
+      state.englishCenterYear = yr;
+      const select = $("englishCenterYear");
+      if (select) select.value = yr;
+      loadEnglishCenterOverview();
+    });
   });
   tree.querySelectorAll("[data-english-objective-bank]").forEach((button) => {
     button.addEventListener("click", () => {

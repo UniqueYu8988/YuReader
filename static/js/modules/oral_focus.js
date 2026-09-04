@@ -4,12 +4,71 @@ import { startWorkspaceTimer, stopReadingTimer } from "../core/timer.js";
 import { escapeHtml, formatInteger, refreshIcons, renderMarkdown, showToast } from "../core/utils.js";
 import { closeNotePopover } from "../views/reader.js";
 
+export const ORAL_CLOZE_STORAGE_KEY = "yureader-oral-cloze-mode";
+if (typeof state.oralFocusClozeMode === "undefined") {
+  try {
+    state.oralFocusClozeMode = localStorage.getItem(ORAL_CLOZE_STORAGE_KEY) === "true";
+  } catch {
+    state.oralFocusClozeMode = false;
+  }
+}
+
 export function selectedOralFocusSubject() {
   const subjects = state.oralFocus?.subjects || [];
   return subjects.find((item) => item.id === state.oralFocusSubjectId) || subjects[0] || null;
 }
 
+export async function renderOralFocusDueBanner() {
+  const banner = $("oralFocusDueBanner");
+  if (!banner) return;
+  try {
+    const res = await fetch("/api/oral-focus/due", { cache: "no-store" });
+    if (!res.ok) throw new Error("due fetch failed");
+    const data = await res.json();
+    state.oralDueData = data;
+    state.oralDueCount = data.total_due || 0;
+
+    banner.classList.remove("hidden");
+    if (data.total_due > 0) {
+      const subjCount = Object.keys(data.by_subject || {}).length;
+      banner.innerHTML = `
+        <div class="oral-due-banner-content">
+          <div class="oral-due-info">
+            <div class="oral-due-tag"><i data-lucide="flame"></i><span>艾宾浩斯抗遗忘</span></div>
+            <div class="oral-due-text">
+              <strong>今日到期待复习 <span class="oral-due-count-badge">${formatInteger(data.total_due)}</span> 题</strong>
+              <span class="oral-due-subtext">名解 ${data.definitions_due} · 论述 ${data.essays_due} · 覆盖 ${subjCount} 门专科</span>
+            </div>
+          </div>
+          <button type="button" class="oral-due-start-btn" id="oralDueStartBtn">
+            <i data-lucide="sparkles"></i><span>一键开启今日复习</span>
+          </button>
+        </div>
+      `;
+      $("oralDueStartBtn")?.addEventListener("click", () => {
+        openOralFocusChapter("due-session", "", "card");
+      });
+    } else {
+      banner.innerHTML = `
+        <div class="oral-due-banner-content is-cleared">
+          <div class="oral-due-info">
+            <div class="oral-due-tag is-cleared"><i data-lucide="check-circle-2"></i><span>今日已清空</span></div>
+            <div class="oral-due-text">
+              <strong>今日抗遗忘复习任务已全部清空！</strong>
+              <span class="oral-due-subtext">当前暂无到期卡片，可前往各专科章节继续开启新一轮背诵。</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    refreshIcons();
+  } catch {
+    banner.classList.add("hidden");
+  }
+}
+
 export function renderOralFocusDirectory() {
+  renderOralFocusDueBanner();
   const subjects = state.oralFocus?.subjects || [];
   const subject = selectedOralFocusSubject();
   if (!subject) {
@@ -66,10 +125,39 @@ export function renderOralFocusDirectory() {
 
   $("oralFocusChapterPanel").classList.add("hidden");
   $("oralFocusChapterList").classList.remove("hidden");
-  $("oralFocusChapterList").innerHTML = chapters.length ? chapters.map((chapter) => `<button class="oral-focus-chapter-entry" type="button" data-oral-chapter="${escapeHtml(chapter.id)}"><span class="oral-focus-chapter-number">${String(chapter.order || 0).padStart(2, "0")}</span><span><strong>${escapeHtml(chapter.title || "未分章")}</strong><small>${formatInteger(chapter.completed)} / ${formatInteger(chapter.filtered_items.length)}</small></span><i data-lucide="arrow-right"></i></button>`).join("") : `<div class="knowledge-index-empty"><strong>本科暂无${typeLabel}</strong><span>切换其他学科，或返回医学学习选择另一类资料。</span></div>`;
+  $("oralFocusChapterList").innerHTML = chapters.length ? chapters.map((chapter) => {
+    const pct = chapter.filtered_items.length ? Math.round((chapter.completed / chapter.filtered_items.length) * 100) : 0;
+    return `<div class="oral-focus-chapter-card" data-oral-chapter="${escapeHtml(chapter.id)}">
+      <div class="of-chapter-main" data-oral-open-chapter="${escapeHtml(chapter.id)}" data-mode="list">
+        <span class="of-chapter-order">${String(chapter.order || 0).padStart(2, "0")}</span>
+        <div class="of-chapter-meta">
+          <strong>${escapeHtml(chapter.title || "未分章")}</strong>
+          <div class="of-chapter-progress-row">
+            <div class="of-chapter-progress-track">
+              <div class="of-chapter-progress-bar" style="width: ${pct}%"></div>
+            </div>
+            <small>${formatInteger(chapter.completed)} / ${formatInteger(chapter.filtered_items.length)} 题 · ${pct}%</small>
+          </div>
+        </div>
+      </div>
+      <div class="of-chapter-actions">
+        <button class="of-chapter-btn is-study" type="button" data-oral-open-chapter="${escapeHtml(chapter.id)}" data-mode="list" title="进入题目列表研读">
+          <i data-lucide="book-open"></i><span>研读列表</span>
+        </button>
+        <button class="of-chapter-btn is-card" type="button" data-oral-open-chapter="${escapeHtml(chapter.id)}" data-mode="card" title="进入艾宾浩斯翻转记忆卡">
+          <i data-lucide="sparkles"></i><span>背诵卡</span>
+        </button>
+      </div>
+    </div>`;
+  }).join("") : `<div class="knowledge-index-empty"><strong>本科暂无${typeLabel}</strong><span>切换其他学科，或返回医学学习选择另一类资料。</span></div>`;
 
   $("oralFocusSubjectTabs").querySelectorAll("[data-oral-subject]").forEach((button) => button.addEventListener("click", () => { state.oralFocusSubjectId = button.dataset.oralSubject; state.oralFocusChapterId = ""; state.oralFocusChapter = null; renderOralFocusDirectory(); window.scrollTo({ top: 0, behavior: "auto" }); }));
-  $("oralFocusChapterList").querySelectorAll("[data-oral-chapter]").forEach((button) => button.addEventListener("click", () => openOralFocusChapter(button.dataset.oralChapter)));
+  $("oralFocusChapterList").querySelectorAll("[data-oral-open-chapter]").forEach((el) => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const chId = el.dataset.oralOpenChapter;
+    const mode = el.dataset.mode || "list";
+    openOralFocusChapter(chId, "", mode);
+  }));
   $("oralFocusTypeFilterBar")?.querySelectorAll("[data-oral-filter-type]").forEach((btn) => btn.addEventListener("click", () => {
     state.oralFocusTypeFilter = btn.dataset.oralFilterType;
     try { localStorage.setItem(ORAL_FOCUS_TYPE_STORAGE_KEY, state.oralFocusTypeFilter); } catch {}
@@ -98,33 +186,277 @@ export function oralFocusAnswerHtml(item) {
   return `${tagsHtml}${translation}<article class="knowledge-article oral-focus-answer-copy">${renderMarkdown(item.answer_markdown || "暂无可识别的标准答案。")}</article>`;
 }
 
+export const OUTLINE_CATEGORY_MAP = [
+  { type: "indication", label: "适应证", re: /^(?:【(?:适应[证症]|适用范围|适用)】|(?:适应[证症]|适用范围|适用)\s*[:：])/ },
+  { type: "contraindication", label: "禁忌证", re: /^(?:【(?:禁忌[证症]|禁忌)】|(?:禁忌[证症]|禁忌)\s*[:：])/ },
+  { type: "feature", label: "特点表现", re: /^(?:【(?:(?:临床|局麻|病理|主要)?特点|临床表现|病理表现|主要表现|表现)】|(?:(?:临床|局麻|病理|主要)?特点|临床表现|病理表现|主要表现|表现)\s*[:：])/ },
+  { type: "method", label: "方法药物", re: /^(?:【(?:常用(?:药物|方法)|使用药物|治疗方法|操作要点|注意事项|取材|麻醉|给药途径)】|(?:常用(?:药物|方法)|使用药物|治疗方法|操作要点|注意事项|取材|麻醉|给药途径)\s*[:：])/ },
+  { type: "principle", label: "原则机制", re: /^(?:【(?:(?:治疗|操作)?原则|(?:发病)?机制|病因|临床意义)】|(?:(?:治疗|操作)?原则|(?:发病)?机制|病因|临床意义)\s*[:：])/ },
+  { type: "warning", label: "局限并发", re: /^(?:【(?:局限性|主要并发症|并发症|优缺点|优点|缺点)】|(?:局限性|主要并发症|并发症|优缺点|优点|缺点)\s*[:：])/ },
+  { type: "definition", label: "概念定义", re: /^(?:【(?:定义|概念|确切含义)】|(?:定义|概念|确切含义)\s*[:：])/ },
+  { type: "taxonomy", label: "分型诊断", re: /^(?:【(?:分类|分型|分期|诊断标准|诊断|鉴别诊断)】|(?:分类|分型|分期|诊断标准|诊断|鉴别诊断)\s*[:：])/ },
+];
+
 export function enhanceOralFocusSource(root) {
-  const circledNumbers = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
-  root.querySelectorAll("p").forEach((paragraph) => {
-    const firstText = [...paragraph.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-    const source = firstText?.textContent || "";
-    const markerMatch = source.match(/^\s*[（(](\d{1,2})[）)]\s*/);
-    const circledMatch = source.match(new RegExp(`^\\s*([${circledNumbers}])\\s*`));
-    const markerValue = markerMatch?.[1] || (circledMatch ? String(circledNumbers.indexOf(circledMatch[1]) + 1) : "");
-    const markerLength = markerMatch?.[0].length || circledMatch?.[0].length || 0;
-    if (markerValue) {
-      firstText.textContent = firstText.textContent.slice(markerLength);
-      const content = document.createElement("span");
-      while (paragraph.firstChild) content.appendChild(paragraph.firstChild);
-      const marker = document.createElement("span"); marker.className = "oral-focus-point-marker"; marker.textContent = markerValue.padStart(2, "0");
-      paragraph.classList.add("oral-focus-structured-point"); paragraph.append(marker, content);
+  const circledChars = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
+  const paragraphs = [...root.querySelectorAll("p")];
+
+  // Pass 1: Structural Hierarchy Recognition (L1 Section, L2 Item, L3 Step, or Standard)
+  paragraphs.forEach((paragraph, idx) => {
+    if (paragraph.classList.contains("oral-focus-structured-point") || paragraph.closest(".oral-focus-structured-point, .of-section-header, .of-step-item")) return;
+
+    const rawText = paragraph.textContent || "";
+    const trimText = rawText.trim();
+    if (!trimText) return;
+
+    // Check if L1 Section: e.g. （1）面形及关节动度检查 or 一、面形及关节动度检查
+    const mSec = trimText.match(/^(?:[（(](\d{1,2})[）)]|([一二三四五六七八九十]+)[、.])\s*(.+)$/);
+    const nextP = paragraphs[idx + 1];
+    const nextText = nextP?.textContent?.trim() || "";
+    const nextHasCircle = new RegExp(`^[${circledChars}]`).test(nextText);
+    const isShortTitle = mSec && mSec[3].length <= 26 && !mSec[3].endsWith("。") && !mSec[3].endsWith("；") && !/^[是为指]/.test(mSec[3]);
+
+    if (mSec && (nextHasCircle || isShortTitle)) {
+      const secNum = mSec[1] ? String(mSec[1]).padStart(2, "0") : mSec[2];
+      const secTitle = mSec[3].trim();
+      const secDiv = document.createElement("div");
+      secDiv.className = "of-section-header";
+      secDiv.innerHTML = `<span class="of-section-badge">${escapeHtml(secNum)}</span><span class="of-section-title">${escapeHtml(secTitle)}</span>`;
+      paragraph.replaceWith(secDiv);
+      return;
+    }
+
+    // Check if L3 Sub-item (NO "步骤", purely artistic numbers)
+    const mStep = trimText.match(/^(\d{1,2})[）)]\s*(.+)$/) || trimText.match(/^步骤\s*(\d{1,2})[：:、.]\s*(.+)$/);
+    if (mStep) {
+      const num = mStep[1];
+      const content = mStep[2].trim();
+      const div = document.createElement("div");
+      div.className = "of-sub-item-row";
+      div.innerHTML = `<span class="of-art-num-badge">${escapeHtml(num)})</span><div class="of-sub-item-text">${escapeHtml(content)}</div>`;
+      paragraph.replaceWith(div);
+      return;
+    }
+
+    // Check if L4 Alpha item: e.g. a.关节源性的疼痛... or b.非关节源性疼痛...
+    const mAlpha = trimText.match(/^([a-zA-Z])[\.、)]\s*(.+)$/);
+    if (mAlpha) {
+      const alphaLetter = mAlpha[1].toLowerCase();
+      const alphaContent = mAlpha[2].trim();
+      const alphaDiv = document.createElement("div");
+      alphaDiv.className = "of-alpha-row";
+      alphaDiv.innerHTML = `<span class="of-art-alpha">${escapeHtml(alphaLetter)}</span><div class="of-alpha-text">${escapeHtml(alphaContent)}</div>`;
+      paragraph.replaceWith(alphaDiv);
+      return;
+    }
+
+    // Check if L2 Item: starts with ①, ②, ③ ...
+    const mCircle = trimText.match(new RegExp(`^([${circledChars}])\\s*(.*)$`));
+    if (mCircle) {
+      const cChar = mCircle[1];
+      const cIndex = circledChars.indexOf(cChar) + 1;
+      let bodyText = mCircle[2].trim();
+
+      // Check outline keyword
+      let outlineBadge = null;
+      for (const cat of OUTLINE_CATEGORY_MAP) {
+        const om = bodyText.trimStart().match(cat.re);
+        if (om) {
+          outlineBadge = { type: cat.type, label: cat.label };
+          bodyText = bodyText.slice(bodyText.indexOf(om[0]) + om[0].length).trim();
+          break;
+        }
+      }
+
+      // Check target scope colon (e.g. 口外：, 口内：, 髁突动度检查：)
+      let targetScope = null;
+      const tm = bodyText.trimStart().match(/^([\u4e00-\u9fa5A-Za-z0-9／]{2,8}[：:])/);
+      if (tm && !outlineBadge) {
+        targetScope = tm[1];
+        bodyText = bodyText.slice(bodyText.indexOf(tm[0]) + tm[0].length).trim();
+      }
+
+      const pDiv = document.createElement("div");
+      pDiv.className = "oral-focus-structured-point of-level-2";
+
+      let innerHtml = `<span class="of-art-circle">${cIndex}</span><div class="oral-focus-point-content">`;
+      if (outlineBadge) {
+        innerHtml += `<span class="of-outline-badge of-badge-${outlineBadge.type}">${outlineBadge.label}</span>`;
+      }
+      innerHtml += `<div class="of-point-body">${targetScope ? `<span class="of-target-scope">${escapeHtml(targetScope)}</span>` : ""}${escapeHtml(bodyText)}</div></div>`;
+      pDiv.innerHTML = innerHtml;
+      paragraph.replaceWith(pDiv);
+      return;
+    }
+
+    // Standard definition point: starts with （1）, 1., etc.
+    const mStd = trimText.match(/^\s*(?:[（(](\d{1,2})[）)]|(\d{1,2})[\.、])\s*(.*)$/);
+    if (mStd) {
+      const markerVal = (mStd[1] || mStd[2]).padStart(2, "0");
+      let bodyText = mStd[3].trim();
+
+      // Nested circled sub-points check (e.g. （4）特点 ①... ②...)
+      const hasCircled = new RegExp(`[${circledChars}]`).test(bodyText);
+      if (hasCircled) {
+        const subParts = bodyText.split(new RegExp(`([${circledChars}])`));
+        if (subParts.length > 2) {
+          const leadIntro = subParts[0].trim();
+          let subItemsHtml = "";
+          for (let i = 1; i < subParts.length; i += 2) {
+            const cChar = subParts[i];
+            const cIndex = circledChars.indexOf(cChar) + 1;
+            const cText = (subParts[i + 1] || "").trim();
+            if (!cText) continue;
+            subItemsHtml += `<div class="of-sub-item"><span class="of-sub-num">${cIndex}</span><span class="of-sub-text">${escapeHtml(cText)}</span></div>`;
+          }
+
+          let outlineBadge = null;
+          for (const cat of OUTLINE_CATEGORY_MAP) {
+            const om = leadIntro.match(cat.re);
+            if (om) {
+              outlineBadge = { type: cat.type, label: cat.label };
+              break;
+            }
+          }
+
+          const pDiv = document.createElement("div");
+          pDiv.className = "oral-focus-structured-point has-sub-points";
+          let innerHtml = `<span class="oral-focus-point-marker">${escapeHtml(markerVal)}</span><div class="oral-focus-point-content">`;
+          if (outlineBadge) innerHtml += `<span class="of-outline-badge of-badge-${outlineBadge.type}">${outlineBadge.label}</span>`;
+          if (leadIntro) innerHtml += `<div class="of-point-intro">${escapeHtml(leadIntro)}</div>`;
+          innerHtml += `<div class="of-sub-points-list">${subItemsHtml}</div></div>`;
+          pDiv.innerHTML = innerHtml;
+          paragraph.replaceWith(pDiv);
+          return;
+        }
+      }
+
+      // Check outline badge
+      let outlineBadge = null;
+      for (const cat of OUTLINE_CATEGORY_MAP) {
+        const om = bodyText.trimStart().match(cat.re);
+        if (om) {
+          outlineBadge = { type: cat.type, label: cat.label };
+          bodyText = bodyText.slice(bodyText.indexOf(om[0]) + om[0].length).trim();
+          break;
+        }
+      }
+
+      // Check target scope colon
+      let targetScope = null;
+      const tm = bodyText.trimStart().match(/^([\u4e00-\u9fa5A-Za-z0-9／]{2,8}[：:])/);
+      if (tm && !outlineBadge) {
+        targetScope = tm[1];
+        bodyText = bodyText.slice(bodyText.indexOf(tm[0]) + tm[0].length).trim();
+      }
+
+      const pDiv = document.createElement("div");
+      pDiv.className = "oral-focus-structured-point of-level-standard";
+      let innerHtml = `<span class="oral-focus-point-marker">${escapeHtml(markerVal)}</span><div class="oral-focus-point-content">`;
+      if (outlineBadge) innerHtml += `<span class="of-outline-badge of-badge-${outlineBadge.type}">${outlineBadge.label}</span>`;
+      innerHtml += `<div class="of-point-body">${targetScope ? `<span class="of-target-scope">${escapeHtml(targetScope)}</span>` : ""}${escapeHtml(bodyText)}</div></div>`;
+      pDiv.innerHTML = innerHtml;
+      paragraph.replaceWith(pDiv);
+      return;
     }
   });
+
+  // Pass 2: Content-level Inline Markup (Metrics, English, Slashes)
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const textNodes = [];
-  while (walker.nextNode()) if (walker.currentNode.textContent.includes("／")) textNodes.push(walker.currentNode);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.parentElement?.closest("code, pre, a, .oral-focus-point-marker, .of-section-badge, .of-circle-marker, .of-step-num, .of-sub-num, .of-outline-badge, .of-target-scope, .of-metric-num, .of-term-en")) {
+      continue;
+    }
+    const val = node.textContent;
+    if (/[／\dA-Za-z]/.test(val)) {
+      textNodes.push(node);
+    }
+  }
+
+  const metricRe = /(\d+\/\d+|\d+(?:\.\d+)?\s*[:：]\s*\d+|\d+(?:\.\d+)?\s*[~～\-—]\s*\d+(?:\.\d+)?\s*(?:mm|cm|ml|mg|kg|min|周|月|年|岁|倍|度|%|‰|℃|m|g|h|s)?|\d+(?:\.\d+)?\s*(?:mm|cm|ml|mg|kg|min|周|月|年|岁|倍|度|%|‰|℃))/g;
+  const enRe = /(?<![A-Za-z0-9])([A-Z]{2,}(?:[-–][0-9A-Za-z]+)?|[A-Z][a-z0-9]+(?:[-–][A-Za-z0-9]+)+|X线)(?![A-Za-z0-9])/g;
+
   textNodes.forEach((node) => {
-    if (node.parentElement?.closest("code, pre, a, .oral-focus-point-marker")) return;
-    const parts = node.textContent.split("／"); if (parts.length < 2) return;
-    const fragment = document.createDocumentFragment();
-    parts.forEach((part, index) => { if (index) { const separator = document.createElement("span"); separator.className = "oral-focus-source-separator"; separator.textContent = "／"; fragment.appendChild(separator); } fragment.appendChild(document.createTextNode(part)); });
-    node.replaceWith(fragment);
+    const raw = node.textContent;
+    if (!raw) return;
+
+    const hasSlash = raw.includes("／");
+    const hasMetric = metricRe.test(raw);
+    metricRe.lastIndex = 0;
+    const hasEn = enRe.test(raw);
+    enRe.lastIndex = 0;
+
+    if (!hasSlash && !hasMetric && !hasEn) return;
+
+    let html = escapeHtml(raw);
+
+    if (hasSlash) {
+      html = html.replace(/／/g, '<span class="oral-focus-source-separator">／</span>');
+    }
+
+    if (hasMetric) {
+      html = html.replace(metricRe, '<span class="of-metric-num of-cloze-item" title="点击遮罩/翻开">$1</span>');
+    }
+
+    if (hasEn) {
+      html = html.replace(enRe, '<span class="of-term-en of-cloze-item" title="点击遮罩/翻开">$1</span>');
+    }
+
+    const span = document.createElement("span");
+    span.innerHTML = html;
+    node.replaceWith(span);
   });
+
+  // Wire up cloze item click events
+  root.querySelectorAll(".of-cloze-item").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      el.classList.toggle("is-revealed");
+    });
+  });
+
+  // Pass 3: Extract Outline Stream (提纲骨架徽章流) for multi-point questions
+  const badges = [...root.querySelectorAll(".of-outline-badge")];
+  if (badges.length >= 2 && !root.querySelector(".of-outline-stream")) {
+    const streamEl = document.createElement("div");
+    streamEl.className = "of-outline-stream";
+    streamEl.setAttribute("role", "navigation");
+    streamEl.setAttribute("aria-label", "考点提纲速览");
+
+    const titleEl = document.createElement("span");
+    titleEl.className = "of-stream-title";
+    titleEl.innerHTML = `<i data-lucide="compass"></i> 提纲骨架`;
+    streamEl.appendChild(titleEl);
+
+    const chipsContainer = document.createElement("div");
+    chipsContainer.className = "of-stream-chips";
+
+    badges.forEach((badge, bIdx) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      const badgeClass = [...badge.classList].find((c) => c.startsWith("of-badge-")) || "";
+      chip.className = `of-stream-chip ${badgeClass}`;
+      chip.textContent = badge.textContent.trim();
+
+      const targetParent = badge.closest(".oral-focus-structured-point, .of-section-header") || badge;
+      if (!targetParent.id) {
+        targetParent.id = `of-point-${Math.random().toString(36).slice(2, 7)}-${bIdx}`;
+      }
+
+      chip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        targetParent.scrollIntoView({ behavior: "smooth", block: "center" });
+        targetParent.classList.add("is-highlight-target");
+        window.setTimeout(() => targetParent.classList.remove("is-highlight-target"), 1400);
+      });
+      chipsContainer.appendChild(chip);
+    });
+
+    streamEl.appendChild(chipsContainer);
+    root.prepend(streamEl);
+  }
 }
 
 export function renderOralFocusChapterCards(focusItemId = "") {
@@ -135,12 +467,21 @@ export function renderOralFocusChapterCards(focusItemId = "") {
   $("oralFocusChapterSummary").textContent = `${formatInteger(completed)} / ${formatInteger(items.length)}`;
   $("oralFocusChapterAnswerToggle").setAttribute("aria-checked", String(state.oralFocusReferenceVisible));
   $("oralFocusChapterAnswerToggle").querySelector("span").textContent = state.oralFocusReferenceVisible ? "完整答案" : "只看题目";
+  const clozeToggle = $("oralFocusClozeToggle");
+  if (clozeToggle) {
+    clozeToggle.setAttribute("aria-checked", String(state.oralFocusClozeMode));
+    clozeToggle.classList.toggle("active", Boolean(state.oralFocusClozeMode));
+    const span = clozeToggle.querySelector("span");
+    if (span) span.textContent = state.oralFocusClozeMode ? "遮罩已开" : "背诵遮罩";
+  }
   $("oralFocusItems").classList.toggle("answers-visible", state.oralFocusReferenceVisible);
+  $("oralFocusItems").classList.toggle("cloze-mode-active", Boolean(state.oralFocusClozeMode));
   $("oralFocusItems").innerHTML = items.map((item, index) => {
     const mode = state.oralFocusCardModes.get(item.id) || "answer";
     const noteExpanded = state.oralFocusExpandedNotes.has(item.id);
     const showBody = state.oralFocusReferenceVisible || noteExpanded;
     const note = item.progress?.memory_note || "";
+    const hasNote = Boolean(note.trim());
     const star = item.star_level ? `<span class="oral-focus-card-stars" aria-label="${item.star_level} 星">${"★".repeat(item.star_level)}</span>` : "";
     const tags = (item.source_tags && item.source_tags.length)
       ? `<div class="oral-focus-card-tags">${item.source_tags.map((t) => `<span class="of-tag">${escapeHtml(t)}</span>`).join("")}</div>`
@@ -149,10 +490,38 @@ export function renderOralFocusChapterCards(focusItemId = "") {
       ? `<span class="of-badge-missing" title="原资料未提供参考答案">原资料无答案</span>`
       : "";
     const bilingualHint = item.type === "definition" && /^[A-Za-z]/.test(item.title || "")
-      ? `<small class="of-bilingual-hint">先说出中文译名，再解释</small>`
+      ? `<div class="of-bilingual-hint-box"><span class="of-bilingual-tag">英文名解</span><small>先回忆中文译名，再阐述核心定义</small></div>`
       : "";
-    const body = !showBody ? "" : `<div class="oral-focus-card-body"><nav class="oral-focus-card-tabs" aria-label="答案与笔记"><button type="button" data-oral-card-mode="answer" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "answer" ? "active" : ""}" ${state.oralFocusReferenceVisible ? "" : "disabled"}>答案</button><button type="button" data-oral-card-mode="note" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "note" ? "active" : ""}">笔记</button></nav><section class="${mode === "answer" ? "" : "hidden"}" data-oral-card-answer>${state.oralFocusReferenceVisible ? oralFocusAnswerHtml(item) : ""}</section><section class="oral-focus-card-note ${mode === "note" ? "" : "hidden"}" data-oral-card-note>${note.trim() ? `<article class="knowledge-article">${renderMarkdown(note)}</article>` : `<p>这道题还没有补充笔记。</p>`}</section></div>`;
-    return `<article class="oral-focus-study-card${focusItemId === item.id ? " is-focused" : ""}" data-oral-card="${escapeHtml(item.id)}"><header><span>${String(index + 1).padStart(2, "0")}</span><div><h4>${escapeHtml(item.title)}</h4>${bilingualHint}${tags}</div><div class="oral-focus-card-tools">${missingBadge}${star}<button type="button" data-oral-note-open="${escapeHtml(item.id)}" aria-label="编辑《${escapeHtml(item.title)}》的 Obsidian 笔记" title="补充笔记"><img src="/assets/obsidian.svg" alt=""></button></div></header>${body}</article>`;
+    const body = !showBody ? "" : `<div class="oral-focus-card-body">
+      <nav class="oral-focus-card-tabs" aria-label="答案与笔记">
+        <button type="button" data-oral-card-mode="answer" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "answer" ? "active" : ""}" ${state.oralFocusReferenceVisible ? "" : "disabled"}>权威解析</button>
+        <button type="button" data-oral-card-mode="note" data-oral-card-id="${escapeHtml(item.id)}" class="${mode === "note" ? "active" : ""}">学习笔记 ${hasNote ? "•" : ""}</button>
+      </nav>
+      <section class="${mode === "answer" ? "" : "hidden"}" data-oral-card-answer>${state.oralFocusReferenceVisible ? oralFocusAnswerHtml(item) : ""}</section>
+      <section class="oral-focus-card-note ${mode === "note" ? "" : "hidden"}" data-oral-card-note>
+        ${hasNote ? `<article class="knowledge-article of-saved-note">${renderMarkdown(note)}</article>` : `<div class="of-note-empty-hint"><p>这道题还没有补充笔记。</p><button type="button" class="of-add-note-inline-btn" data-oral-note-open="${escapeHtml(item.id)}"><i data-lucide="edit-3"></i> 立即记录笔记</button></div>`}
+      </section>
+    </div>`;
+
+    return `<article class="oral-focus-study-card${focusItemId === item.id ? " is-focused" : ""}" data-oral-card="${escapeHtml(item.id)}">
+      <header>
+        <span class="oral-card-index">${String(index + 1).padStart(2, "0")}</span>
+        <div class="oral-card-header-main">
+          <h4>${escapeHtml(item.title)}</h4>
+          ${bilingualHint}
+          ${tags}
+        </div>
+        <div class="oral-focus-card-tools">
+          ${missingBadge}
+          ${star}
+          <button type="button" class="oral-card-note-btn${hasNote ? " has-note" : ""}" data-oral-note-open="${escapeHtml(item.id)}" aria-label="编辑《${escapeHtml(item.title)}》的 Obsidian 笔记" title="${hasNote ? "已记录笔记 · 点击查看或编辑" : "补充笔记"}">
+            <img src="/assets/obsidian.svg" alt="" aria-hidden="true">
+            ${hasNote ? '<span class="oral-note-dot" title="已有笔记"></span>' : ""}
+          </button>
+        </div>
+      </header>
+      ${body}
+    </article>`;
   }).join("");
   $("oralFocusItems").querySelectorAll("[data-oral-card-mode]").forEach((button) => button.addEventListener("click", () => { state.oralFocusCardModes.set(button.dataset.oralCardId, button.dataset.oralCardMode); renderOralFocusChapterCards(button.dataset.oralCardId); }));
   $("oralFocusItems").querySelectorAll("[data-oral-note-open]").forEach((button) => button.addEventListener("click", () => openOralFocusCardNote(button.dataset.oralNoteOpen)));
@@ -161,19 +530,34 @@ export function renderOralFocusChapterCards(focusItemId = "") {
   if (focusItemId) window.setTimeout(() => $("oralFocusItems").querySelector(`[data-oral-card="${focusItemId}"]`)?.scrollIntoView({ block: "center", behavior: "auto" }), 0);
 }
 
-export async function openOralFocusChapter(chapterId, focusItemId = "") {
+export async function openOralFocusChapter(chapterId, focusItemId = "", initialMode = "list") {
   if (!chapterId) return;
   state.oralFocusChapterId = chapterId;
   $("oralFocusChapterList").classList.add("hidden");
   $("oralFocusChapterPanel").classList.remove("hidden");
   $("oralFocusItems").innerHTML = `<div class="practice-reading-loading">正在读取章节题目…</div>`;
   try {
-    const typeQuery = state.oralFocusTypeFilter ? `&type=${encodeURIComponent(state.oralFocusTypeFilter)}` : "";
-    const revealQuery = state.oralFocusReferenceVisible ? "&reveal=1" : "";
-    const response = await fetch(`/api/oral-focus/chapter?subject_id=${encodeURIComponent(state.oralFocusSubjectId)}&chapter_id=${encodeURIComponent(chapterId)}${typeQuery}${revealQuery}`, { cache: "no-store" });
-    if (!response.ok) throw new Error("chapter unavailable");
-    state.oralFocusChapter = await response.json();
+    if (chapterId === "due-session") {
+      const response = await fetch("/api/oral-focus/due-session", { cache: "no-store" });
+      if (!response.ok) throw new Error("due session unavailable");
+      state.oralFocusChapter = await response.json();
+    } else {
+      const typeQuery = state.oralFocusTypeFilter ? `&type=${encodeURIComponent(state.oralFocusTypeFilter)}` : "";
+      const revealQuery = state.oralFocusReferenceVisible ? "&reveal=1" : "";
+      const response = await fetch(`/api/oral-focus/chapter?subject_id=${encodeURIComponent(state.oralFocusSubjectId)}&chapter_id=${encodeURIComponent(chapterId)}${typeQuery}${revealQuery}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("chapter unavailable");
+      state.oralFocusChapter = await response.json();
+    }
+    setOralFocusViewMode(initialMode || (chapterId === "due-session" ? "card" : "list"));
     renderOralFocusChapterCards(focusItemId);
+    const firstItem = (state.oralFocusChapter.items || []).find((it) => it.id === focusItemId) || state.oralFocusChapter.items?.[0] || null;
+    if (firstItem) {
+      state.oralFocusItem = firstItem;
+      $("oralFocusNote").value = firstItem.progress?.memory_note || "";
+      $("oralFocusObsidian").href = firstItem.obsidian_uri || "obsidian://open";
+      $("oralFocusNoteSaved").textContent = firstItem.progress?.memory_note?.trim() ? (firstItem.progress?.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存";
+    }
+    $("oralFocusNoteFloat")?.classList.remove("hidden");
     const subject = state.oralFocusChapter.subject || {};
     startWorkspaceTimer({ activity_type: "subjective_practice", domain: "medicine", subject_id: subject.title || subject.id, resource_id: `oral-focus:${subject.id}`, item_id: focusItemId || `chapter:${chapterId}`, resume_target: { view: "oral_focus", resource_id: `oral-focus:${subject.id}`, item_id: focusItemId || "" } });
   } catch {
@@ -188,6 +572,12 @@ export async function toggleOralFocusChapterAnswers() {
     await openOralFocusChapter(state.oralFocusChapterId);
     return;
   }
+  renderOralFocusChapterCards();
+}
+
+export function toggleOralFocusClozeMode() {
+  state.oralFocusClozeMode = !state.oralFocusClozeMode;
+  try { localStorage.setItem(ORAL_CLOZE_STORAGE_KEY, String(state.oralFocusClozeMode)); } catch {}
   renderOralFocusChapterCards();
 }
 
@@ -221,7 +611,7 @@ export async function loadOralFocus() {
 export async function openOralFocusIndex(subjectId = "", type = null) {
   setRouteHash("library/oral-focus"); stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); setActiveView("oralFocus");
   setOralFocusNoteOpen(false); $("oralFocusNoteFloat").classList.add("hidden");
-  $("oralFocusQuestion").classList.add("hidden"); $("oralFocusDirectory").classList.remove("hidden");
+  $("oralFocusDirectory").classList.remove("hidden");
   try {
     if (!state.oralFocus?.available) await loadOralFocus();
     if (type !== null) {
@@ -251,7 +641,7 @@ export async function openOralFocusIndex(subjectId = "", type = null) {
 export async function openOralFocusItem(itemId) {
   if (!itemId) return;
   setRouteHash("library/oral-focus"); stopReadingTimer(); closeNotePopover(); $("sectionNoteFloat").classList.add("hidden"); setActiveView("oralFocus");
-  $("oralFocusQuestion").classList.add("hidden"); $("oralFocusDirectory").classList.remove("hidden");
+  $("oralFocusDirectory").classList.remove("hidden");
   try {
     if (!state.oralFocus?.available) await loadOralFocus();
     const response = await fetch(`/api/oral-focus/item?item_id=${encodeURIComponent(itemId)}`, { cache: "no-store" });
@@ -290,6 +680,19 @@ export async function saveOralFocusNote() {
     if (chapterItem) chapterItem.progress = result.progress;
     $("oralFocusObsidian").href = result.obsidian_uri || item.obsidian_uri || "obsidian://open";
     $("oralFocusNoteSaved").textContent = memoryNote.trim() ? (result.storage === "obsidian" ? "已保存到 Obsidian" : "已自动保存") : "输入后自动保存";
+    const cardEl = $("oralFocusItems")?.querySelector(`[data-oral-card="${item.id}"]`);
+    if (cardEl) {
+      const noteBtn = cardEl.querySelector(".oral-card-note-btn");
+      const hasNote = Boolean(memoryNote.trim());
+      noteBtn?.classList.toggle("has-note", hasNote);
+      if (!noteBtn?.querySelector(".oral-note-dot") && hasNote) {
+        const dot = document.createElement("span");
+        dot.className = "oral-note-dot";
+        noteBtn?.appendChild(dot);
+      } else if (noteBtn?.querySelector(".oral-note-dot") && !hasNote) {
+        noteBtn?.querySelector(".oral-note-dot")?.remove();
+      }
+    }
   } catch { $("oralFocusNoteSaved").textContent = "保存失败，请稍后重试"; }
 }
 
@@ -303,11 +706,21 @@ export function scheduleOralFocusNoteSave() {
 
 export function setOralFocusNoteOpen(open) {
   state.oralFocusNoteOpen = open;
-  $("oralFocusNoteFloat").classList.toggle("note-is-open", open);
-  $("oralFocusNotePopover").classList.toggle("is-open", open);
-  $("oralFocusNotePopover").setAttribute("aria-hidden", String(!open));
-  $("toggleOralFocusNote").setAttribute("aria-expanded", String(open));
-  if (open) window.setTimeout(() => $("oralFocusNote").focus(), 120);
+  const floatEl = $("oralFocusNoteFloat");
+  const popover = $("oralFocusNotePopover");
+  if (open) {
+    floatEl?.classList.remove("hidden");
+    floatEl?.classList.add("note-is-open");
+    popover?.classList.add("is-open");
+    popover?.setAttribute("aria-hidden", "false");
+    $("toggleOralFocusNote")?.setAttribute("aria-expanded", "true");
+    window.setTimeout(() => $("oralFocusNote")?.focus(), 120);
+  } else {
+    floatEl?.classList.remove("note-is-open");
+    popover?.classList.remove("is-open");
+    popover?.setAttribute("aria-hidden", "true");
+    $("toggleOralFocusNote")?.setAttribute("aria-expanded", "false");
+  }
 }
 
 export async function navigateOralFocus(step) {
@@ -480,3 +893,6 @@ export function bindFlashcardEvents() {
 
   flashcardEventsBound = true;
 }
+
+window.openOralFocusIndex = openOralFocusIndex;
+window.renderOralFocusDueBanner = renderOralFocusDueBanner;

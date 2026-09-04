@@ -65,8 +65,8 @@ export function learningBookCard(book, recentId = "") {
   return `<button class="learning-book-card${book.id === recentId ? " recent" : ""}" type="button" data-library-book="${escapeHtml(book.id)}" title="《${escapeHtml(book.title)}》" aria-label="打开《${escapeHtml(book.title)}》"><span class="reader-book-cover" aria-hidden="true"><strong>${shortTitle}</strong></span><span class="learning-book-short-name">${shortTitle}</span></button>`;
 }
 
-export function learningRailHtml(railId, items, renderItem) {
-  const size = learningRailSize(); const pageCount = Math.max(1, Math.ceil(items.length / size));
+export function learningRailHtml(railId, items, renderItem, customSize = null) {
+  const size = customSize || learningRailSize(); const pageCount = Math.max(1, Math.ceil(items.length / size));
   const page = Math.min(pageCount - 1, Math.max(0, Number(state.libraryRailPages[railId] || 0)));
   state.libraryRailPages[railId] = page;
   const visible = items.slice(page * size, page * size + size);
@@ -76,7 +76,7 @@ export function learningRailHtml(railId, items, renderItem) {
 export function renderLearningCenterOverview(payload, bankInfo) {
   const container = $("englishUnifiedExamList");
   if (!container || state.libraryDomain !== "english") return;
-  const curType = state.englishCenterType || "all";
+  const curType = state.englishCenterType || "reading";
   const groups = (payload.groups || []).filter((group) => {
     const start = Number(group.start_number || 0);
     if (!curType || curType === "all") return true;
@@ -87,10 +87,15 @@ export function renderLearningCenterOverview(payload, bankInfo) {
 
   let html = "";
   if (curType !== "subjective" && groups.length) {
-    html += groups.map((group) => `<button class="english-paper-row" type="button" data-english-objective-bank="${escapeHtml(bankInfo.bank.id)}" data-english-objective-knowledge="${escapeHtml(group.knowledge_id || "")}" data-english-objective-start="${Number(group.start_index || 0)}"><span class="english-paper-row-index">${String(group.start_number).padStart(2, "0")}</span><span class="english-paper-row-copy"><small>${escapeHtml(group.part || "真题训练")}</small><strong>${escapeHtml(group.label)}</strong><em>第 ${group.start_number}–${group.end_number} 题 · ${group.answered_count || 0}/${group.question_count} 已答</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`).join("");
+    html += groups.map((group) => {
+      const isReadingText = group.start_number >= 21 && group.end_number <= 40;
+      const readingIndex = isReadingText ? `T${Math.floor((group.start_number - 21) / 5) + 1}` : String(group.start_number).padStart(2, "0");
+      const range = `第 ${group.start_number}–${group.end_number} 题 · ${group.question_count} 题 · ${group.answered_count || 0}/${group.question_count} 已答`;
+      return `<button class="english-paper-row${isReadingText ? " is-reading-text" : ""}" type="button" data-english-objective-bank="${escapeHtml(bankInfo.bank.id)}" data-english-objective-knowledge="${escapeHtml(group.knowledge_id || "")}" data-english-objective-start="${Number(group.start_index || 0)}"><span class="english-paper-row-index">${escapeHtml(readingIndex)}</span><span class="english-paper-row-copy"><small>${escapeHtml(group.part || "真题训练")}</small><strong>${escapeHtml(group.label)}</strong><em>${escapeHtml(range)}</em></span><span class="english-paper-row-status"><strong>进入答题</strong></span><i data-lucide="arrow-right"></i></button>`;
+    }).join("");
   }
   if (subjectiveItems.length) {
-    html += subjectiveItems.map((item, idx) => `<button class="english-paper-row" type="button" data-english-subjective-book="${escapeHtml(item.book_id)}" data-english-subjective-section="${escapeHtml(item.section_id)}" data-english-subjective-bank="${escapeHtml(bankInfo.bank.id)}"><span class="english-paper-row-index">${String(idx + 5).padStart(2, "0")}</span><span class="english-paper-row-copy"><small>${bankInfo.year} · SECTION III / IV</small><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.range || "独立作答")}</em></span><span class="english-paper-row-status"><strong>进入作答</strong></span><i data-lucide="arrow-up-right"></i></button>`).join("");
+    html += subjectiveItems.map((item, idx) => `<button class="english-paper-row is-subjective" type="button" data-english-subjective-book="${escapeHtml(item.book_id)}" data-english-subjective-section="${escapeHtml(item.section_id)}" data-english-subjective-bank="${escapeHtml(bankInfo.bank.id)}"><span class="english-paper-row-index">${String(idx + 5).padStart(2, "0")}</span><span class="english-paper-row-copy"><small>${bankInfo.year} · SECTION III / IV</small><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.range || "独立作答")}</em></span><span class="english-paper-row-status"><strong>进入作答</strong></span><i data-lucide="arrow-up-right"></i></button>`).join("");
   }
   if (!html) {
     html = `<div class="learning-empty"><strong>该题型暂无可用题目</strong><span>切换其他年份或题型。</span></div>`;
@@ -249,10 +254,196 @@ export async function openSection(sectionId) {
   const index = book?.sections.findIndex((entry) => entry.id === section.id) ?? 0;
   const chapter = bookToc(book).find((item) => item.id === section.chapter_id); const chapterSectionCount = chapter?.sections.length || 1;
   $("readerBook").textContent = section.book_title; $("readerChapter").textContent = section.chapter_title || "目录"; $("readerTitle").textContent = section.title; $("readerLocation").textContent = section.title; $("readerSectionNumber").textContent = `${String(section.chapter_order || 1).padStart(2, "0")} 章 · ${section.section_order || 1} / ${chapterSectionCount} 节`;
-  const materialLabel = section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown";
+  const isWorkbook = book?.id === "english-method-88-sentences";
+  const isWordMethod = book?.id === "english-method-wordbook";
+  const materialLabel = isWorkbook ? "练习册 · 原书练习模板" : isWordMethod ? "词汇方法补充 · 辅助方法书" : (section.material_kind === "cleaned" ? "清洗正文" : "原始 Markdown");
   const lengthLabel = formatCharacters(section.character_count); $("readerBookMeta").textContent = `${materialLabel}${lengthLabel ? ` · ${lengthLabel}` : ""}`; $("readerBookMeta").title = section.path || materialLabel; $("readerNoteMeta").textContent = section.note?.trim() ? "已有笔记" : "暂无笔记";
-  $("sectionNote").value = section.note || ""; $("noteSavedText").textContent = section.note?.trim() ? "已保存到本节" : "输入后自动保存"; $("openObsidian").href = section.obsidian_uri || "obsidian://open";
-  state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks(); loadSectionPractice(); window.scrollTo({ top: 0, behavior: "smooth" });
+  state.material = "cleaned"; closeSectionMenu(); closeNotePopover(); renderSectionMenu(); renderMaterial(); setNavigationState(); renderBooks(); loadSectionPractice();
+  const savedScroll = Number(localStorage.getItem(`yureader_scroll_${section.id}`) || 0);
+  if (savedScroll > 80) {
+    window.setTimeout(() => {
+      window.scrollTo({ top: savedScroll, behavior: "smooth" });
+      showToast("已恢复上次阅读位置");
+    }, 120);
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+let readerScrollTimer = null;
+window.addEventListener("scroll", () => {
+  if (state.activeView !== "reader" || !state.current?.id) return;
+  window.clearTimeout(readerScrollTimer);
+  readerScrollTimer = window.setTimeout(() => {
+    if (state.activeView === "reader" && state.current?.id) {
+      if (window.scrollY > 80) {
+        localStorage.setItem(`yureader_scroll_${state.current.id}`, Math.round(window.scrollY));
+      } else {
+        localStorage.removeItem(`yureader_scroll_${state.current.id}`);
+      }
+    }
+  }, 250);
+}, { passive: true });
+
+export function enhanceEnglishReadingLayout(article, bookId) {
+  if (!article || !bookId) return;
+  if (bookId === "english-method-88-sentences" || bookId === "english-grammar-long-sentences") {
+    const templateKeywords = ["结构分析", "谓语", "主干", "词汇梳理", "翻译", "自己翻译", "参考翻译", "写作应用", "总结与反思"];
+    article.querySelectorAll("p, h2, h3, h4, h5").forEach((el) => {
+      const text = el.textContent.trim().replace(/^[\s·•]+/g, "");
+      if (templateKeywords.some((kw) => text === kw || text.startsWith(kw))) {
+        el.classList.add("workbook-template-field");
+      }
+      if (text.startsWith("主干") || text.startsWith("主句")) {
+        el.classList.add("syntax-clause", "is-main");
+      } else if (text.startsWith("谓语")) {
+        el.classList.add("syntax-clause", "is-verb");
+      } else if (/^(?:定语从句|状语从句|宾语从句|主语从句|表语从句|同位语从句|从句)/.test(text)) {
+        el.classList.add("syntax-clause", "is-sub");
+      } else if (/^(?:插入语|伴随状语|独立主格)/.test(text)) {
+        el.classList.add("syntax-clause", "is-mod");
+      }
+    });
+  } else if (bookId === "english-method-wordbook") {
+    article.querySelectorAll("p").forEach((el) => {
+      const text = el.textContent.trim();
+      if (!text) return;
+      if (/^[a-zA-Z\s-]+\s+(\/[^/]+\/|\[[^\]]+\])/.test(text)) {
+        el.classList.add("wordbook-head-block");
+      } else if (/^(?:n|v|adj|adv|prep|conj|pron|art|num)\./.test(text)) {
+        el.classList.add("wordbook-pos-def");
+      } else if (text.startsWith("千方百计记单词")) {
+        el.classList.add("wordbook-mnemonic-block");
+      } else if (text.startsWith("例")) {
+        el.classList.add("wordbook-example-block");
+      } else if (text.startsWith("真题")) {
+        el.classList.add("wordbook-exam-block");
+      } else if (text.startsWith("派生")) {
+        el.classList.add("wordbook-derivatives-block");
+      }
+    });
+  }
+}
+
+export function enhancePoliticsReadingLayout(article, bookId) {
+  if (!article || !bookId || !bookId.startsWith("politics-")) return;
+  const assertionRe = /(【(?:核心考点|根本标志|本质属性|本质特征|基本前提|根本立足点|主要矛盾|根本保证|出发点和落脚点|重要转折点|根本动力|第一要务|核心概念|历史意义|基本矛盾|根本矛盾|关键所在)】|(?:根本标志|本质属性|本质特征|基本前提|根本立足点|主要矛盾|根本矛盾|根本保证|出发点和落脚点|重要转折点|根本动力|第一要务|核心概念|关键所在)(?:\s*(?:是|在于|为|贯穿|决定))?|(?:本质上(?:是|属于|统一)|根本上(?:是|讲|属于)|本质就在于))/g;
+
+  const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.parentElement?.closest("code, pre, a, h1, h2, h3, .politics-core-assertion, .politics-callout-capsule")) continue;
+    if (assertionRe.test(node.textContent)) {
+      textNodes.push(node);
+    }
+    assertionRe.lastIndex = 0;
+  }
+
+  textNodes.forEach((node) => {
+    const raw = node.textContent;
+    assertionRe.lastIndex = 0;
+    const html = escapeHtml(raw).replace(assertionRe, '<mark class="politics-core-assertion">$1</mark>');
+    const span = document.createElement("span");
+    span.innerHTML = html;
+    node.replaceWith(span);
+  });
+
+  article.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent.trim();
+    if (/^【(?:核心考点|根本标志|本质属性|基本前提|重点提示|易混辨析|历史意义)】/.test(text)) {
+      p.classList.add("politics-callout-capsule");
+    }
+  });
+}
+
+export async function loadSectionPracticeBridge(article, currentSection) {
+  if (!article || !currentSection?.book_id || !currentSection?.id) return;
+  const existing = document.getElementById("sectionPracticeBridge");
+  if (existing) existing.remove();
+
+  try {
+    const response = await fetch(`/api/practice/availability?book_id=${encodeURIComponent(currentSection.book_id)}&section_id=${encodeURIComponent(currentSection.id)}`, { cache: "no-store" });
+    if (!response.ok || state.current?.id !== currentSection.id) return;
+    const payload = await response.json();
+    const entry = payload.entries?.[0];
+    if (!entry) return;
+
+    const bridgeEl = document.createElement("div");
+    bridgeEl.id = "sectionPracticeBridge";
+    bridgeEl.className = "section-practice-bridge";
+    bridgeEl.innerHTML = `
+      <div class="spb-content">
+        <span class="spb-badge"><i data-lucide="sparkles"></i> 考点即时测验</span>
+        <h4>${escapeHtml(entry.unit_label || entry.label || "本节配套巩固练习")}</h4>
+        <p>已通读本节讲义？立即通过配套题库检测掌握程度（共 ${entry.question_count} 题）</p>
+      </div>
+      <button type="button" class="spb-start-btn" id="spbStartBtn">
+        <span>进入测验</span>
+        <i data-lucide="arrow-right"></i>
+      </button>
+    `;
+    article.appendChild(bridgeEl);
+    bridgeEl.querySelector("#spbStartBtn")?.addEventListener("click", () => openPractice(entry, "reader"));
+    refreshIcons();
+  } catch {}
+}
+
+let lookupPopoverEl = null;
+export function initEnglishReadingLookup(article) {
+  if (!article || !state.current?.book_id?.startsWith("english-")) return;
+  if (!lookupPopoverEl) {
+    lookupPopoverEl = document.createElement("div");
+    lookupPopoverEl.className = "reading-word-popover hidden";
+    document.body.appendChild(lookupPopoverEl);
+
+    document.addEventListener("click", (e) => {
+      if (!lookupPopoverEl.contains(e.target) && !lookupPopoverEl.classList.contains("hidden")) {
+        lookupPopoverEl.classList.add("hidden");
+      }
+    });
+  }
+
+  article.addEventListener("dblclick", (e) => {
+    const sel = window.getSelection();
+    const word = sel?.toString()?.trim()?.toLowerCase()?.replace(/[^a-z-]/g, "") || "";
+    if (word.length >= 3) {
+      showWordPopover(word, e.pageX, e.pageY);
+    }
+  });
+}
+
+function showWordPopover(word, x, y) {
+  if (!lookupPopoverEl) return;
+  lookupPopoverEl.innerHTML = `
+    <div class="rwp-head">
+      <strong class="rwp-word">${escapeHtml(word)}</strong>
+      <span class="rwp-tag">考研重点词</span>
+    </div>
+    <div class="rwp-actions">
+      <button type="button" class="rwp-note-btn" id="rwpAddNote">
+        <i data-lucide="bookmark-plus"></i>
+        <span>收录至生词笔记</span>
+      </button>
+    </div>
+  `;
+  lookupPopoverEl.style.left = `${Math.min(window.innerWidth - 220, Math.max(10, x - 50))}px`;
+  lookupPopoverEl.style.top = `${y + 16}px`;
+  lookupPopoverEl.classList.remove("hidden");
+  refreshIcons();
+
+  lookupPopoverEl.querySelector("#rwpAddNote")?.addEventListener("click", () => {
+    const existing = $("sectionNote").value || "";
+    const noteEntry = `- **${word}**: [考研重点词，待复习巩固]`;
+    if (!existing.includes(`**${word}**`)) {
+      $("sectionNote").value = existing ? `${existing.trim()}\n${noteEntry}` : noteEntry;
+      scheduleNoteSave();
+      showToast(`已将 "${word}" 收录至本节生词笔记`);
+    } else {
+      showToast(`"${word}" 已在生词笔记中`);
+    }
+    lookupPopoverEl.classList.add("hidden");
+  });
 }
 
 export function renderSectionMenu() {
@@ -266,7 +457,8 @@ export function setNavigationState() {
   const book = state.books.find((item) => item.id === state.current?.book_id); const index = book?.sections.findIndex((section) => section.id === state.current.id) ?? -1;
   const previous = index > 0; const next = index >= 0 && index < book.sections.length - 1;
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => { if (button) button.disabled = !previous; });
-  [$("readerNextSection"), $("nextSectionLink")].forEach((button) => { if (button) button.disabled = !next; });
+  [$("readerNextSection"), $("nextSectionLink"), $("readerEndNextSection")].forEach((button) => { if (button) button.disabled = !next; });
+  if ($("rseSectionTitle")) $("rseSectionTitle").textContent = state.current?.title ? `“${state.current.title}” 研读达成` : "本节研读已完成";
 }
 
 export function returnFromResource() {
@@ -285,6 +477,7 @@ export function returnFromReader() {
 }
 
 export function finishReaderSession() {
+  showToast("本次研读已归档，学时已记入今日画像！");
   const bookId = state.current?.book_id;
   if (bookId) openResource(bookId);
   else setLibraryMode();
@@ -302,6 +495,10 @@ export function renderMaterial() {
     const prepared = prepareSectionMarkdown(source || "暂无内容", state.current?.title || "");
     article.innerHTML = renderMarkdown(prepared.markdown, imageBase);
     renderSectionGuide(article, guide, prepared.guide, prepared.kind);
+    enhanceEnglishReadingLayout(article, state.current?.book_id);
+    enhancePoliticsReadingLayout(article, state.current?.book_id);
+    loadSectionPracticeBridge(article, state.current);
+    initEnglishReadingLookup(article);
   }
   document.querySelectorAll("[data-section-material]").forEach((button) => { const active = button.dataset.sectionMaterial === state.material; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); }); refreshIcons();
 }
@@ -345,3 +542,6 @@ export function scheduleNoteSave() {
     } catch { if (state.current?.id === sectionId) $("noteSavedText").textContent = "保存失败，请稍后重试"; }
   }, 420);
 }
+
+window.openSection = openSection;
+window.showWordPopover = showWordPopover;

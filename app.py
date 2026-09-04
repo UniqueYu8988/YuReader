@@ -137,6 +137,7 @@ from yureader.practice import (
     write_practice_notes,
     mistakes_overview,
     resolve_mistake,
+    create_mistakes_practice_session,
 )
 
 from yureader.search import global_search
@@ -201,6 +202,8 @@ from yureader.oral_focus import (
     oral_focus_notes_target,
     write_oral_focus_notes,
     save_oral_focus_progress,
+    oral_focus_due_items,
+    oral_focus_due_session,
 )
 
 from yureader.goals import (
@@ -311,6 +314,22 @@ class ReaderHandler(BaseHTTPRequestHandler):
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
+        if path == "/api/oral-focus/due":
+            try:
+                query = parse_qs(parsed.query)
+                limit = int(query.get("limit", ["100"])[0])
+                self.send_json(oral_focus_due_items(limit=limit))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/oral-focus/due-session":
+            try:
+                query = parse_qs(parsed.query)
+                limit = int(query.get("limit", ["50"])[0])
+                self.send_json(oral_focus_due_session(limit=limit))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
         books, sections = catalog()
         if path == "/api/bootstrap":
             question_banks = question_bank_catalog()
@@ -372,11 +391,19 @@ class ReaderHandler(BaseHTTPRequestHandler):
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
-        if path == "/api/practice/mistakes":
+        if path.rstrip("/") == "/api/practice/mistakes":
             try:
                 query = parse_qs(parsed.query)
                 domain = query.get("domain", [""])[0]
                 self.send_json(mistakes_overview(domain))
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/practice/mistakes/session":
+            try:
+                query = parse_qs(parsed.query)
+                domain = query.get("domain", [""])[0]
+                self.send_json(create_mistakes_practice_session(domain))
             except (ValueError, OSError, json.JSONDecodeError) as error:
                 self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
@@ -584,7 +611,22 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 selected = body.get("selected_answers")
                 if not isinstance(selected, list) or not selected:
                     raise ValueError("select at least one answer")
-                question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                question = None
+                if bank_id and bank_id != "mistakes-session":
+                    try:
+                        question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                    except Exception:
+                        question = None
+                if not question:
+                    for candidate_bank in question_bank_catalog():
+                        try:
+                            found = next((item for item in load_bank_questions(candidate_bank["id"]) if item["question_id"] == question_id), None)
+                            if found:
+                                question = found
+                                bank_id = candidate_bank["id"]
+                                break
+                        except Exception:
+                            continue
                 if not question:
                     raise ValueError("question not found")
                 labels = {str(option.get("label")) for option in question.get("options") or [] if isinstance(option, dict)}
@@ -630,7 +672,22 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 bank_id = str(body.get("bank_id") or "")
                 question_id = str(body.get("question_id") or "")
                 content = str(body.get("content") or "").replace("\r\n", "\n").strip()
-                question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                question = None
+                if bank_id and bank_id != "mistakes-session":
+                    try:
+                        question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+                    except Exception:
+                        question = None
+                if not question:
+                    for candidate_bank in question_bank_catalog():
+                        try:
+                            found = next((item for item in load_bank_questions(candidate_bank["id"]) if item["question_id"] == question_id), None)
+                            if found:
+                                question = found
+                                bank_id = candidate_bank["id"]
+                                break
+                        except Exception:
+                            continue
                 if not question:
                     raise ValueError("question not found")
                 with PRACTICE_LOCK:

@@ -20,6 +20,7 @@ export function hashRoute() {
 }
 
 export function setActiveView(mode) {
+  state.activeView = mode;
   const viewMode = mode === "reader" ? "library" : mode;
   ["home", "library", "oralFocus", "practice", "review", "logs", "stats"].forEach((view) => $(`${view}View`).classList.toggle("active", view === viewMode));
   const primaryMode = mode === "home" ? "home" : ["library", "reader", "oralFocus", "practice"].includes(mode) ? "library" : mode === "review" ? "review" : mode === "stats" ? "stats" : "logs";
@@ -71,6 +72,9 @@ export function selectLibraryShelf(shelf) {
   stopReadingTimer();
   closeNotePopover();
   state.libraryDomain = shelf;
+  if (shelf === "english") {
+    state.englishCenterYear = "";
+  }
   state.resourceBookId = null;
   state.resource = null;
   $("libraryWorkspace").classList.remove("reader-open", "resource-open");
@@ -123,8 +127,16 @@ export function applyRouteHash() {
   const route = hashRoute();
   if (route === "home") setHomeMode();
   else if (route === "library") setLibraryMode();
+  else if (route === "library-english") selectLibraryShelf("english");
+  else if (route === "library-medicine") selectLibraryShelf("medicine");
+  else if (route === "library-politics") selectLibraryShelf("politics");
   else if (route === "oralFocus") openOralFocusIndex();
   else if (route === "review") openReview();
   else if (route === "logs") openLogs();
   else if (route === "stats") openStats();
 }
+
+window.selectLibraryShelf = selectLibraryShelf;
+window.setLibraryMode = setLibraryMode;
+window.setHomeMode = setHomeMode;
+window.setActiveView = setActiveView;

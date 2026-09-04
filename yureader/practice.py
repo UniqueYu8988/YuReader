@@ -534,7 +534,21 @@ def practice_overview(bank_id: str) -> dict:
 def practice_question(bank_id: str, question_id: str) -> dict:
     if not re.fullmatch(r"[a-z0-9-]{3,160}", question_id):
         raise ValueError("invalid question id")
-    question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+    question = None
+    if bank_id and bank_id != "mistakes-session":
+        try:
+            question = next((item for item in load_bank_questions(bank_id) if item["question_id"] == question_id), None)
+        except Exception:
+            question = None
+    if not question:
+        for bank in question_bank_catalog():
+            try:
+                found = next((item for item in load_bank_questions(bank["id"]) if item["question_id"] == question_id), None)
+                if found:
+                    question = found
+                    break
+            except Exception:
+                continue
     if not question:
         raise ValueError("question not found")
     attempts = load_practice_store("attempts").get("items", {})
@@ -698,5 +712,56 @@ def resolve_mistake(question_id: str, resolved: bool = True) -> dict:
         items[question_id]["resolved_at"] = datetime.now().astimezone().isoformat(timespec="seconds") if resolved else ""
         save_practice_store("attempts", payload)
     return {"ok": True, "question_id": question_id, "resolved": resolved}
+
+
+def create_mistakes_practice_session(domain: str = "") -> dict:
+    overview = mistakes_overview(domain_filter=domain)
+    pending = [m for m in overview.get("items", []) if not m.get("resolved")]
+    domain_label = DOMAIN_LABELS.get(domain, "全科") if domain else "全科"
+    if not pending:
+        return {
+            "available": False,
+            "bank": {
+                "id": "mistakes-session",
+                "title": f"错题攻坚专项集训 · {domain_label}",
+                "subject": "二刷攻坚",
+                "domain": domain or "politics",
+            },
+            "knowledge_id": "mistakes",
+            "match_level": "mistakes",
+            "is_mistakes_session": True,
+            "questions": [],
+            "question_count": 0,
+            "answered_count": 0,
+        }
+
+    questions = []
+    for idx, m in enumerate(pending):
+        questions.append({
+            "question_id": m["question_id"],
+            "bank_id": m["bank_id"],
+            "local_number": idx + 1,
+            "question_type": "single_choice" if len(m.get("correct_answers") or []) <= 1 else "multiple_choice",
+            "unit": m.get("bank_title") or "错题集训",
+            "unit_label": m.get("domain_label") or "错题",
+            "answered": False,
+            "correct": None,
+        })
+
+    return {
+        "available": True,
+        "bank": {
+            "id": "mistakes-session",
+            "title": f"错题攻坚专项集训 · {domain_label}（共 {len(questions)} 题）",
+            "subject": "二刷攻坚",
+            "domain": domain or "politics",
+        },
+        "knowledge_id": "mistakes",
+        "match_level": "mistakes",
+        "is_mistakes_session": True,
+        "questions": questions,
+        "question_count": len(questions),
+        "answered_count": 0,
+    }
 
 

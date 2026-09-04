@@ -984,6 +984,7 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         domain: {"key": domain, "label": DOMAIN_LABELS[domain], "reading_seconds": 0, "section_ids": set(), "note_count": 0, "note_characters": 0}
         for domain in ("medicine", "politics", "english")
     }
+    book_learned_sections: dict[str, set[str]] = {}
     for value in days.values():
         for section_id, seconds in value.get("section_reading_seconds", {}).items():
             book = section_to_book.get(section_id)
@@ -992,10 +993,19 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
             domain = safe_domain(book.get("domain"))
             effort_domains[domain]["reading_seconds"] += max(0, int(seconds or 0))
             effort_domains[domain]["section_ids"].add(section_id)
+            book_learned_sections.setdefault(book["id"], set()).add(section_id)
         for section_id in value.get("sections", set()):
             book = section_to_book.get(section_id)
             if book:
                 effort_domains[safe_domain(book.get("domain"))]["section_ids"].add(section_id)
+                book_learned_sections.setdefault(book["id"], set()).add(section_id)
+    book_progress = {
+        book["id"]: {
+            "learned_sections": len(book_learned_sections.get(book["id"], set())),
+            "total_sections": len(book.get("sections", [])),
+        }
+        for book in books
+    }
     for section_id, (_, markdown) in note_files.items():
         book = section_to_book.get(section_id)
         if not book:
@@ -1205,6 +1215,7 @@ def learning_stats(books: list[dict], sections: dict[str, dict], weeks: int = 12
         "today_review_saved": bool(today_value["review_saved"]),
         "last_section": last_section,
         "book_distribution": book_distribution,
+        "book_progress": book_progress,
         "effort_summary": effort_summary,
     }
 
