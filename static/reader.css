@@ -242,6 +242,18 @@
   color: var(--text-secondary);
 }
 
+.rq-item.has-note {
+  border-left: 3px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+.rq-item.has-note:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+}
+.rq-item.has-note .rq-item-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
 .rq-item-lead {
   display: flex;
   align-items: center;
@@ -276,7 +288,15 @@
   user-select: text;
 }
 
-.rq-item-copy-btn {
+.rq-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rq-item-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -290,19 +310,65 @@
   cursor: pointer;
   opacity: 0.65;
   transition: all 120ms ease;
-  margin-top: 1px;
+  text-decoration: none;
 }
-.rq-item:hover .rq-item-copy-btn {
+
+.rq-item:hover .rq-item-action-btn {
   opacity: 1;
 }
-.rq-item-copy-btn:hover {
+
+.rq-item-action-btn:hover {
   background: var(--surface);
   border-color: var(--line-strong);
   color: var(--primary-strong);
 }
-.rq-item-copy-btn svg {
+
+.rq-item-action-btn.rq-obsidian-btn {
+  opacity: 0.85;
+}
+
+.rq-item-action-btn.rq-obsidian-btn img {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.rq-item-action-btn.rq-obsidian-btn:hover {
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+  border-color: color-mix(in srgb, #7c3aed 35%, transparent);
+}
+
+.rq-item-action-btn.rq-paste-btn:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.rq-item-action-btn svg {
   width: 13px;
   height: 13px;
+}
+
+.note-card-pulse-highlight {
+  animation: noteCardPulse 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes noteCardPulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 65%, transparent);
+    border-color: var(--primary) !important;
+    transform: scale(1.015);
+  }
+  25% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 35%, transparent);
+    border-color: var(--primary) !important;
+    transform: scale(1.015);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    border-color: var(--line);
+    transform: scale(1);
+  }
 }
 
 /* 本节研读完成与打卡结算 (Anthropic Claude 风格静默结语) */

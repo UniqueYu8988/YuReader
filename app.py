@@ -578,11 +578,14 @@ class ReaderHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/oral-focus/progress":
                 item_id = str(body.get("item_id") or "").strip()
-                answer = str(body.get("answer") or "")
-                memory_note = str(body.get("memory_note") or "")
-                mastery = str(body.get("mastery") or "unseen").strip()
-                eb_interval = int(body.get("eb_interval_days") or 1)
                 item = oral_focus_item_payload(item_id)
+                current_prog = item.get("progress") if isinstance(item.get("progress"), dict) else {}
+                answer = str(body["answer"]) if "answer" in body else str(current_prog.get("answer") or "")
+                memory_note = str(body["memory_note"]) if "memory_note" in body else str(current_prog.get("memory_note") or "")
+                mastery = str(body["mastery"]).strip() if "mastery" in body else str(current_prog.get("mastery") or "learning").strip()
+                if mastery == "unseen" and (answer.strip() or memory_note.strip()):
+                    mastery = "learning"
+                eb_interval = int(body.get("eb_interval_days") or current_prog.get("eb_interval_days") or 1)
                 saved = save_oral_focus_progress(item_id, answer, memory_note, mastery, eb_interval)
                 subject = item.get("subject") if isinstance(item.get("subject"), dict) else {}
                 resource_id = f"oral-focus:{subject.get('id')}"

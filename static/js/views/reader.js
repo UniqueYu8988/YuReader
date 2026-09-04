@@ -909,6 +909,121 @@ export function setChapterQuestionsFilter(filter) {
   renderQuestionsList();
 }
 
+export function checkSectionHasQuestionNote(item) {
+  if (!item) return false;
+  const note = state.current?.note || $("sectionNote")?.value || "";
+  if (!note) return false;
+  const prompt = item.prompt || item.source_title_raw || "";
+  return prompt ? note.includes(prompt) : false;
+}
+
+export async function pasteQuestionNote(item, text) {
+  if (!item || !text?.trim()) return;
+  const trimmed = text.trim();
+
+  // 1. Sync to Oral Focus progress backend (automatically updating 重点背诵.md in Obsidian)
+  try {
+    const res = await fetch("/api/oral-focus/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item_id: item.id,
+        memory_note: trimmed,
+        mastery: "learning",
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.obsidian_uri) item.obsidian_uri = data.obsidian_uri;
+    }
+  } catch (err) {
+    console.warn("Failed to sync oral focus note:", err);
+  }
+
+  item.memory_note = trimmed;
+  item.has_note = true;
+  viewedQuestionIds.add(item.id);
+  saveViewedQuestionIds(viewedQuestionIds);
+
+  // 2. Sync to current Reader Section Note
+  const typePrefix = item.type === "definition" ? "名词解释" : (item.type === "essay" ? "简答论述" : (item.type_label || "考点解析"));
+  const cardHeader = `### 【${typePrefix}】${item.prompt}`;
+  const newEntry = `${cardHeader}\n\n${trimmed}`;
+
+  const existingRaw = $("sectionNote")?.value || state.current?.note || "";
+  const entries = parseNoteEntries(existingRaw);
+  const existingIndex = entries.findIndex((e) =>
+    e.includes(cardHeader) ||
+    e.includes(`### ${item.prompt}`) ||
+    (item.prompt && e.includes(item.prompt))
+  );
+
+  let targetCardIndex = entries.length;
+  if (existingIndex >= 0) {
+    entries[existingIndex] = newEntry;
+    targetCardIndex = existingIndex;
+  } else {
+    entries.push(newEntry);
+  }
+
+  const newContent = serializeNoteEntries(entries);
+  if ($("sectionNote")) $("sectionNote").value = newContent;
+  if (state.current) state.current.note = newContent;
+  scheduleNoteSave();
+  renderNoteCards();
+
+  // 3. Switch to full-screen note stream view
+  if (state.material !== "note") {
+    state.material = "note";
+    renderMaterial();
+  } else {
+    renderMaterial();
+  }
+
+  // 4. Update Questions Drawer list so paste button turns into Obsidian button!
+  renderQuestionsList();
+
+  // 5. Scroll to the new/updated note card with a highlight pulse
+  window.setTimeout(() => {
+    const streamCards = document.querySelectorAll(".note-stream-card");
+    const targetCard = streamCards[targetCardIndex] ||
+      Array.from(streamCards).find((c) => c.textContent.includes(item.prompt));
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetCard.classList.add("note-card-pulse-highlight");
+      window.setTimeout(() => targetCard.classList.remove("note-card-pulse-highlight"), 2400);
+    }
+  }, 180);
+
+  showToast(`已将「${item.prompt}」同步至背诵笔记与切片流`);
+}
+
+export function jumpToQuestionNote(item) {
+  if (!item) return;
+
+  // Switch to note view
+  if (state.material !== "note") {
+    state.material = "note";
+    renderMaterial();
+  }
+
+  window.setTimeout(() => {
+    const streamCards = document.querySelectorAll(".note-stream-card");
+    const targetCard = Array.from(streamCards).find((c) =>
+      c.textContent.includes(item.prompt) ||
+      (item.source_title_raw && c.textContent.includes(item.source_title_raw))
+    );
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetCard.classList.add("note-card-pulse-highlight");
+      window.setTimeout(() => targetCard.classList.remove("note-card-pulse-highlight"), 2400);
+      showToast(`已定位至「${item.prompt}」研读笔记切片`);
+    } else {
+      showToast(`本节笔记中暂未找到此题切片，可点击右侧粘贴添加`);
+    }
+  }, 180);
+}
+
 function renderQuestionsList() {
   const listEl = $("rqListBody");
   if (!listEl) return;
@@ -937,17 +1052,29 @@ function renderQuestionsList() {
     const typePrefix = isDef ? "名词解释：" : (isEssay ? "简答论述：" : (item.type_label ? `${item.type_label}：` : ""));
     const copyText = `${typePrefix}${prompt}`;
     const isViewed = viewedQuestionIds.has(item.id);
+    const hasNote = Boolean(item.has_note || item.memory_note || checkSectionHasQuestionNote(item));
 
     return `
-      <div class="rq-item ${isViewed ? "is-viewed" : ""}" data-question-id="${escapeHtml(item.id)}" role="button" tabindex="0" title="点击标记已查看/取消">
+      <div class="rq-item ${isViewed ? "is-viewed" : ""} ${hasNote ? "has-note" : ""}" data-question-id="${escapeHtml(item.id)}" role="button" tabindex="0" title="${hasNote ? "点击定位至本节笔记卡片" : "点击标记已查看/取消"}">
         <div class="rq-item-lead">
           <span class="rq-item-num">${idx + 1}.</span>
           <span class="rq-item-stars" title="${escapeHtml(String(item.star_level || 1))}星考点">${stars}</span>
         </div>
         <div class="rq-item-title">${escapeHtml(prompt)}</div>
-        <button type="button" class="rq-item-copy-btn" data-copy-prompt="${escapeHtml(copyText)}" title="复制题目（含题型）" aria-label="复制题目">
-          <i data-lucide="copy"></i>
-        </button>
+        <div class="rq-item-actions">
+          <button type="button" class="rq-item-action-btn rq-copy-btn" data-copy-prompt="${escapeHtml(copyText)}" title="复制题目（含题型）" aria-label="复制题目">
+            <i data-lucide="copy"></i>
+          </button>
+          ${hasNote ? `
+            <a class="rq-item-action-btn rq-obsidian-btn" href="${escapeHtml(item.obsidian_uri || 'obsidian://open')}" data-obsidian-id="${escapeHtml(item.id)}" title="在 Obsidian 中打开背诵笔记" aria-label="在 Obsidian 中打开">
+              <img src="/assets/obsidian.svg" alt="Obsidian" aria-hidden="true">
+            </a>
+          ` : `
+            <button type="button" class="rq-item-action-btn rq-paste-btn" data-paste-id="${escapeHtml(item.id)}" title="粘贴剪贴板到此题笔记并同步" aria-label="粘贴笔记">
+              <i data-lucide="clipboard-paste"></i>
+            </button>
+          `}
+        </div>
       </div>
     `;
   }).join("");
@@ -957,15 +1084,22 @@ function renderQuestionsList() {
       const sel = window.getSelection()?.toString();
       if (sel && sel.trim().length > 0) return;
       const qId = row.dataset.questionId;
-      if (!qId) return;
-      if (viewedQuestionIds.has(qId)) {
-        viewedQuestionIds.delete(qId);
-        row.classList.remove("is-viewed");
+      const item = currentChapterQuestions.find((q) => q.id === qId);
+      if (!item) return;
+
+      const hasNote = Boolean(item.has_note || item.memory_note || checkSectionHasQuestionNote(item));
+      if (hasNote) {
+        jumpToQuestionNote(item);
       } else {
-        viewedQuestionIds.add(qId);
-        row.classList.add("is-viewed");
+        if (viewedQuestionIds.has(qId)) {
+          viewedQuestionIds.delete(qId);
+          row.classList.remove("is-viewed");
+        } else {
+          viewedQuestionIds.add(qId);
+          row.classList.add("is-viewed");
+        }
+        saveViewedQuestionIds(viewedQuestionIds);
       }
-      saveViewedQuestionIds(viewedQuestionIds);
     });
     row.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -985,6 +1119,37 @@ function renderQuestionsList() {
       }).catch(() => {
         showToast("复制失败");
       });
+    });
+  });
+
+  listEl.querySelectorAll("[data-paste-id]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const qId = btn.dataset.pasteId;
+      const item = currentChapterQuestions.find((q) => q.id === qId);
+      if (!item) return;
+
+      let text = "";
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+        }
+      } catch (err) {
+        console.warn("Clipboard read error:", err);
+      }
+
+      if (!text || !text.trim()) {
+        showToast("剪贴板为空或未授权，请先复制内容");
+        return;
+      }
+
+      await pasteQuestionNote(item, text.trim());
+    });
+  });
+
+  listEl.querySelectorAll(".rq-obsidian-btn").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.stopPropagation();
     });
   });
 
@@ -1030,3 +1195,6 @@ window.openSection = openSection;
 window.showWordPopover = showWordPopover;
 window.toggleChapterQuestions = toggleChapterQuestions;
 window.closeChapterQuestions = closeChapterQuestions;
+window.pasteQuestionNote = pasteQuestionNote;
+window.jumpToQuestionNote = jumpToQuestionNote;
+window.checkSectionHasQuestionNote = checkSectionHasQuestionNote;

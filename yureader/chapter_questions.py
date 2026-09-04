@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import Optional
-from yureader.oral_focus import load_oral_focus, SUBJECT_SOURCES
+from yureader.oral_focus import load_oral_focus, load_oral_focus_progress, oral_focus_notes_target, SUBJECT_SOURCES
 
 # Maps book_id to oral focus subject_id
 BOOK_TO_SUBJECT: dict[str, str] = {
@@ -39,64 +39,90 @@ def get_chapter_questions(book_id: str, chapter_title: str) -> list[dict]:
         return []
 
     cache_key = (book_id, chapter_title.strip())
-    if cache_key in _MAPPING_CACHE:
-        return _MAPPING_CACHE[cache_key]
+    matched_items = _MAPPING_CACHE.get(cache_key)
 
+    if matched_items is None:
+        subj_id = BOOK_TO_SUBJECT.get(book_id)
+        if not subj_id:
+            return []
+
+        dataset, _items = load_oral_focus()
+        subject = next((s for s in dataset.get("subjects", []) if s["id"] == subj_id), None)
+        if not subject:
+            return []
+
+        clean_title = chapter_title.strip()
+        alias_target = CHAPTER_ALIASES.get((book_id, clean_title))
+        target_norm = normalize_chapter_title(alias_target or clean_title)
+
+        if not target_norm:
+            return []
+
+        raw_items: list[dict] = []
+        for ch in subject.get("chapters", []):
+            ch_title = ch.get("title", "")
+            ch_norm = normalize_chapter_title(ch_title)
+            if not ch_norm:
+                continue
+
+            if alias_target:
+                if ch_title == alias_target or normalize_chapter_title(ch_title) == normalize_chapter_title(alias_target):
+                    raw_items.extend(ch.get("items", []))
+            elif ch_norm == target_norm or ch_norm in target_norm or target_norm in ch_norm:
+                raw_items.extend(ch.get("items", []))
+
+        seen: set[str] = set()
+        matched_items = []
+        for item in raw_items:
+            item_id = str(item.get("id") or "")
+            if not item_id or item_id in seen:
+                continue
+            seen.add(item_id)
+            matched_items.append(
+                {
+                    "id": item_id,
+                    "subject_id": subject.get("id"),
+                    "type": item.get("type", "definition"),
+                    "type_label": "名词解释" if item.get("type") == "definition" else "简答论述",
+                    "prompt": str(item.get("title") or item.get("source_title_raw") or ""),
+                    "source_title_raw": str(item.get("source_title_raw") or item.get("title") or ""),
+                    "star_level": int(item.get("star_level") or 1),
+                    "order": int(item.get("order") or len(matched_items) + 1),
+                    "answer_markdown": str(item.get("answer_markdown") or ""),
+                    "character_count": int(item.get("character_count") or len(str(item.get("answer_markdown") or ""))),
+                    "has_table": bool(item.get("has_table", False)),
+                }
+            )
+
+        _MAPPING_CACHE[cache_key] = matched_items
+
+    progress_items = load_oral_focus_progress().get("items", {})
     subj_id = BOOK_TO_SUBJECT.get(book_id)
-    if not subj_id:
-        return []
-
-    dataset, _items = load_oral_focus()
+    dataset, _ = load_oral_focus()
     subject = next((s for s in dataset.get("subjects", []) if s["id"] == subj_id), None)
-    if not subject:
-        return []
+    uri = "obsidian://open"
+    if subject:
+        try:
+            _target, _storage, uri = oral_focus_notes_target(subject)
+        except Exception:
+            uri = "obsidian://open"
 
-    clean_title = chapter_title.strip()
-    alias_target = CHAPTER_ALIASES.get((book_id, clean_title))
-    target_norm = normalize_chapter_title(alias_target or clean_title)
-
-    if not target_norm:
-        return []
-
-    matched_items: list[dict] = []
-    for ch in subject.get("chapters", []):
-        ch_title = ch.get("title", "")
-        ch_norm = normalize_chapter_title(ch_title)
-        if not ch_norm:
-            continue
-
-        if alias_target:
-            if ch_title == alias_target or normalize_chapter_title(ch_title) == normalize_chapter_title(alias_target):
-                matched_items.extend(ch.get("items", []))
-        elif ch_norm == target_norm or ch_norm in target_norm or target_norm in ch_norm:
-            matched_items.extend(ch.get("items", []))
-
-    seen: set[str] = set()
-    result: list[dict] = []
-    for item in matched_items:
-        item_id = str(item.get("id") or "")
-        if not item_id or item_id in seen:
-            continue
-        seen.add(item_id)
+    result = []
+    for q in matched_items:
+        prog = progress_items.get(q["id"], {})
+        mem_note = str(prog.get("memory_note") or "").strip()
         result.append(
             {
-                "id": item_id,
-                "type": item.get("type", "definition"),
-                "type_label": "名词解释" if item.get("type") == "definition" else "简答论述",
-                "prompt": str(item.get("title") or item.get("source_title_raw") or ""),
-                "source_title_raw": str(item.get("source_title_raw") or item.get("title") or ""),
-                "star_level": int(item.get("star_level") or 1),
-                "order": int(item.get("order") or len(result) + 1),
-                "answer_markdown": str(item.get("answer_markdown") or ""),
-                "character_count": int(item.get("character_count") or len(str(item.get("answer_markdown") or ""))),
-                "has_table": bool(item.get("has_table", False)),
+                **q,
+                "memory_note": mem_note,
+                "has_note": bool(mem_note),
+                "obsidian_uri": uri,
             }
         )
-
-    _MAPPING_CACHE[cache_key] = result
     return result
 
 
 def clear_chapter_questions_cache() -> None:
     """Clear internal mapping cache."""
     _MAPPING_CACHE.clear()
+
