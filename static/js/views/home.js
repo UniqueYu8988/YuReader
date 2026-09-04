@@ -275,16 +275,19 @@ function initGoalsListeners() {
 }
 
 export function updateExamCountdown() {
-  const dDayEl = $("ecDDayNumber");
-  const stageLabelEl = $("ecCurrentStageLabel");
-  if (!dDayEl) return;
-
   const examDate = new Date("2026-12-26T08:30:00+08:00");
   const now = new Date();
   const diffMs = examDate.getTime() - now.getTime();
   const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-  dDayEl.textContent = `D-${String(diffDays).padStart(3, "0")}`;
+  const sidebarNum = $("sidebarCountdownNum");
+  if (sidebarNum) sidebarNum.textContent = String(diffDays);
+
+  const dDayEl = $("ecDDayNumber");
+  const stageLabelEl = $("ecCurrentStageLabel");
+  if (dDayEl) {
+    dDayEl.textContent = `D-${String(diffDays).padStart(3, "0")}`;
+  }
 
   let stageNum = 1;
   let stageText = "当前：一轮知识奠基与深度精读";

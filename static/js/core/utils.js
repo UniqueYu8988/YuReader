@@ -148,6 +148,13 @@ export function searchableBook(book) {
   return `${book.title} ${book.id} ${bookToc(book).map((chapter) => `${chapter.title} ${chapter.sections.map((section) => section.title).join(" ")}`).join(" ")}`.toLowerCase();
 }
 
+export function getExamRemainingDays() {
+  const examDate = new Date("2026-12-26T08:30:00+08:00");
+  const now = new Date();
+  const diffMs = examDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
 export function applyTheme(theme, { persist = true } = {}) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
@@ -159,9 +166,10 @@ export function applyTheme(theme, { persist = true } = {}) {
   const button = $("themeToggle");
   if (button) {
     const dark = next === "dark";
-    button.innerHTML = `<i data-lucide="${dark ? "sun" : "moon"}"></i>`;
-    button.setAttribute("aria-label", dark ? "切换到日间模式" : "切换到夜间模式");
-    button.setAttribute("title", dark ? "切换到日间模式" : "切换到夜间模式");
+    const days = getExamRemainingDays();
+    button.innerHTML = `<span class="countdown-art-badge" id="sidebarCountdownBadge" data-theme-mode="${next}"><span class="countdown-art-num" id="sidebarCountdownNum">${days}</span></span>`;
+    button.setAttribute("aria-label", `考研倒计时 ${days} 天 · 点击切换${dark ? "日间" : "夜间"}模式`);
+    button.setAttribute("title", `考研倒计时 ${days} 天 · 点击切换${dark ? "日间" : "夜间"}模式`);
     button.setAttribute("aria-pressed", String(dark));
   }
   refreshIcons();
