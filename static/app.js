@@ -5,9 +5,9 @@ import { applyTheme, refreshIcons, toggleTheme } from "./js/core/utils.js";
 import { renderEnglishExams } from "./js/domains/english.js";
 import { bindFlashcardEvents, loadOralFocus, openOralFocusIndex, renderOralFocusDirectory, saveOralFocusNote, scheduleOralFocusNoteSave, setOralFocusNoteOpen, toggleOralFocusChapterAnswers, toggleOralFocusClozeMode } from "./js/modules/oral_focus.js";
 import { finishPracticeSession, handlePracticeKeydown, renderPracticeQuestion, returnFromPractice, returnFromSubjectivePractice, reviewFirstFlaggedPracticeQuestion, reviewFirstWrongPracticeQuestion, schedulePracticeAnalysisSave, scheduleSubjectiveSave, setPracticeNoteOpen, submitPracticeAnswer, togglePracticeFlag, togglePracticeSessionMap, toggleSubjectiveReference } from "./js/modules/practice.js";
-import { renderHome } from "./js/views/home.js";
+import { fetchDailyGoals, renderHome } from "./js/views/home.js";
 import { loadStats, openLogs, openStats, openWeeklyReport, renderTimelineCards, scheduleWeeklySave, setWeeklyNoteOpen } from "./js/views/logs.js";
-import { closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave } from "./js/views/reader.js";
+import { closeChapterQuestions, closeNotePopover, closeSectionMenu, finishReaderSession, navigateSection, openNotePopover, openSection, renderBooks, renderMaterial, renderSectionMenu, returnFromReader, returnFromResource, scheduleNoteSave, setChapterQuestionsFilter, toggleChapterQuestions } from "./js/views/reader.js";
 import { markReviewNoText, openReview, scheduleDailySummarySave, setReviewNoteOpen } from "./js/views/review.js";
 import { bindGlobalSearch } from "./js/modules/search.js";
 import { bindGuideEvents } from "./js/modules/guide.js";
@@ -48,8 +48,11 @@ export function bindNavigation() {
   window.addEventListener("resize", () => { window.clearTimeout(state.homeResizeTimer); state.homeResizeTimer = window.setTimeout(() => { if ($("homeView").classList.contains("active")) renderHome(); if ($("libraryView").classList.contains("active") && !$("bookTree").classList.contains("hidden") && !$("libraryWorkspace").classList.contains("resource-open") && !$("libraryWorkspace").classList.contains("reader-open")) renderBooks(); }, 120); });
   $("sidebar").addEventListener("mouseenter", () => $("sidebar").classList.add("is-expanded")); $("sidebar").addEventListener("mouseleave", () => $("sidebar").classList.remove("is-expanded"));
   $("readerBack").addEventListener("click", returnFromReader); $("readerBook").addEventListener("click", returnFromReader);
-  [$("readerFinishSession"), $("readerToolbarFinish")].forEach((btn) => btn?.addEventListener("click", finishReaderSession));
-  $("readerSectionPicker").addEventListener("click", () => { const menu = $("readerCrumbMenu"); const willOpen = menu.classList.contains("hidden"); if (willOpen) { renderSectionMenu(); menu.classList.remove("hidden"); $("readerSectionPicker").classList.add("active"); $("readerSectionPicker").setAttribute("aria-expanded", "true"); } else closeSectionMenu(); });
+  $("readerFinishSession")?.addEventListener("click", finishReaderSession);
+  $("readerToolbarQuestions")?.addEventListener("click", () => toggleChapterQuestions());
+  $("rqCloseBtn")?.addEventListener("click", () => closeChapterQuestions());
+  document.querySelectorAll("[data-rq-filter]").forEach((tab) => tab.addEventListener("click", () => setChapterQuestionsFilter(tab.dataset.rqFilter)));
+  $("readerSectionPicker").addEventListener("click", () => { const menu = $("readerCrumbMenu"); const willOpen = menu.classList.contains("hidden"); if (willOpen) { closeChapterQuestions(); renderSectionMenu(); menu.classList.remove("hidden"); $("readerSectionPicker").classList.add("active"); $("readerSectionPicker").setAttribute("aria-expanded", "true"); } else closeSectionMenu(); });
   [$("readerPreviousSection"), $("previousSection")].forEach((button) => button?.addEventListener("click", () => navigateSection(-1)));
   [$("readerNextSection"), $("nextSectionLink"), $("readerEndNextSection")].forEach((button) => button?.addEventListener("click", () => navigateSection(1)));
   $("toggleSectionNoteDock").addEventListener("click", (event) => state.noteOpen ? closeNotePopover() : openNotePopover(event.currentTarget)); $("closeSectionNote").addEventListener("click", () => closeNotePopover({ restoreFocus: true })); $("sectionNote").addEventListener("input", scheduleNoteSave);
@@ -57,8 +60,8 @@ export function bindNavigation() {
   $("statsBackToRecords")?.addEventListener("click", openLogs);
   $("englishExamsBack")?.addEventListener("click", () => selectLibraryShelf("english"));
   $("englishExamOverviewBack")?.addEventListener("click", renderEnglishExams);
-  document.querySelectorAll("[data-section-material]").forEach((button) => button.addEventListener("click", () => { state.material = button.dataset.sectionMaterial; renderMaterial(); })); document.addEventListener("click", (event) => { if (!event.target.closest(".reader-toolbar")) closeSectionMenu(); });
-  document.addEventListener("keydown", (event) => { if (event.key !== "Escape") return; if (state.oralFocusNoteOpen) { setOralFocusNoteOpen(false); return; } if (state.noteOpen) { closeNotePopover({ restoreFocus: true }); return; } closeSectionMenu(); });
+  document.querySelectorAll("[data-section-material]").forEach((button) => button.addEventListener("click", () => { state.material = button.dataset.sectionMaterial; renderMaterial(); })); document.addEventListener("click", (event) => { if (!event.target.closest(".reader-toolbar")) { closeSectionMenu(); closeChapterQuestions(); } });
+  document.addEventListener("keydown", (event) => { if (event.key !== "Escape") return; if (state.oralFocusNoteOpen) { setOralFocusNoteOpen(false); return; } if (state.noteOpen) { closeNotePopover({ restoreFocus: true }); return; } closeSectionMenu(); closeChapterQuestions(); });
   window.addEventListener("hashchange", applyRouteHash);
 }
 
@@ -66,7 +69,7 @@ export async function loadBootstrap() {
   try {
     const response = await fetch("/api/bootstrap", { cache: "no-store" }); const data = await response.json(); state.books = data.books || []; state.questionBanks = data.question_banks || [];
     try { await loadOralFocus(); } catch { state.oralFocus = { available: false, subjects: [] }; }
-    state.books.forEach((book) => book.sections.forEach((section) => state.sections.set(section.id, { ...section, book_title: book.title, book_id: book.id }))); renderBooks(); await loadStats();
+    state.books.forEach((book) => book.sections.forEach((section) => state.sections.set(section.id, { ...section, book_title: book.title, book_id: book.id }))); renderBooks(); await loadStats(); await fetchDailyGoals();
   } catch { $("bookTree").innerHTML = `<div class="knowledge-index-empty"><i data-lucide="cloud-off"></i><strong>暂时无法读取本地学习资料</strong><span>请确认 YuReader 服务正在运行。</span></div>`; refreshIcons(); }
 }
 

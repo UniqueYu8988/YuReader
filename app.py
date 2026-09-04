@@ -212,6 +212,8 @@ from yureader.goals import (
     daily_goals_payload,
 )
 
+from yureader.chapter_questions import get_chapter_questions
+
 class ReaderHandler(BaseHTTPRequestHandler):
     server_version = f"YuReader/{VERSION}"
 
@@ -458,6 +460,9 @@ class ReaderHandler(BaseHTTPRequestHandler):
             note_storage, note_uri = "local", ""
             if book:
                 _, note_storage, note_uri = ensure_section_note_mirror(book, section, current_note)
+            book_id = section.get("book_id", "") or (book["id"] if book else "")
+            chapter_title = section.get("chapter_title", "")
+            chapter_questions = get_chapter_questions(book_id, chapter_title)
             self.send_json(
                 {
                     **section,
@@ -466,6 +471,7 @@ class ReaderHandler(BaseHTTPRequestHandler):
                     "obsidian_uri": note_uri,
                     "requested_section_id": requested_section_id,
                     "resolved_from_alias": requested_section_id != section["id"],
+                    "chapter_questions": chapter_questions,
                 }
             )
             return

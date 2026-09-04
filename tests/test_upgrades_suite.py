@@ -48,5 +48,26 @@ class UpgradesSuiteTests(unittest.TestCase):
                 self.assertIsInstance(res, dict)
                 self.assertEqual(res['question']['question_id'], first_qid)
 
+    def test_markdown_nested_list_renderer(self):
+        import subprocess
+        script = """
+        const vm = require('vm');
+        const fs = require('fs');
+        const code = fs.readFileSync('static/markdown.js', 'utf8');
+        const sandbox = { window: {}, DOMParser: class { parseFromString() { return { body: { querySelector() { return null; } } }; } } };
+        vm.createContext(sandbox);
+        vm.runInContext(code, sandbox);
+        const md = sandbox.window.YuReaderMarkdown.create((s) => s);
+        const input = '* P1\\n  * C1\\n  * C2\\n* P2';
+        const html = md.renderMarkdown(input);
+        if (html !== '<ul><li>P1<ul><li>C1</li><li>C2</li></ul></li><li>P2</li></ul>') {
+            console.error('Mismatch:', html);
+            process.exit(1);
+        }
+        """
+        res = subprocess.run(['node', '-e', script], cwd=str(ROOT), capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Node markdown test failed: {res.stderr}")
+
 if __name__ == '__main__':
     unittest.main()
+

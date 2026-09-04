@@ -34,7 +34,16 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar" aria-label="主导航" aria-expanded="false">
       <button class="brand" id="brandButton" type="button" data-dashboard title="返回今日">
-        <span class="brand-mark"><img src="/assets/brand-mark.png" alt=""></span>
+        <span class="brand-mark" id="brandMark">
+          <svg class="brand-progress-ring" viewBox="0 0 40 40" aria-hidden="true">
+            <circle class="bpr-track" cx="20" cy="20" r="18" />
+            <circle class="bpr-bar" id="brandProgressBar" cx="20" cy="20" r="18" />
+          </svg>
+          <span class="brand-mark-inner">
+            <img src="/assets/brand-mark.png" alt="">
+          </span>
+          <span class="brand-timer-pulse" id="brandTimerPulse" aria-hidden="true"></span>
+        </span>
         <span><strong>YuReader</strong><small>本地阅读空间</small></span>
       </button>
       <nav class="side-nav" aria-label="主导航">
@@ -366,10 +375,33 @@
                   <button class="icon-button" id="readerPreviousSection" type="button" title="上一节" aria-label="上一节"><i data-lucide="chevron-left"></i></button>
                   <button class="icon-button" id="readerNextSection" type="button" title="下一节" aria-label="下一节"><i data-lucide="chevron-right"></i></button>
                 </div>
-                <button class="reader-toolbar-finish" id="readerToolbarFinish" type="button" title="结束本次阅读并保存学时">
-                  <i data-lucide="check"></i><span>结束阅读</span>
+                <button class="reader-toolbar-questions hidden" id="readerToolbarQuestions" type="button" title="展开本章核心思考题与考点" aria-expanded="false" aria-controls="readerQuestionsDrawer">
+                  <i data-lucide="help-circle"></i><span>带着问题读</span><em class="reader-questions-count" id="readerQuestionsCount">0</em>
                 </button>
                 <nav class="reader-crumb-menu hidden" id="readerCrumbMenu" aria-label="同书章节"></nav>
+                <div class="reader-questions-drawer hidden" id="readerQuestionsDrawer" aria-label="本章思考题与考点清单">
+                  <div class="rq-header">
+                    <div class="rq-header-main">
+                      <div class="rq-title-wrap">
+                        <i data-lucide="help-circle"></i>
+                        <strong class="rq-title">带着问题读</strong>
+                        <span class="rq-badge-sub" id="rqTotalPill">0 题</span>
+                      </div>
+                      <p class="rq-hint">带靶阅读 · 大脑信息锚点 · 展开核对参考答案</p>
+                    </div>
+                    <button class="rq-close-btn" id="rqCloseBtn" type="button" title="收起列表" aria-label="收起列表">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                  <div class="rq-filter-bar">
+                    <div class="rq-tabs" role="tablist">
+                      <button class="rq-tab active" data-rq-filter="all" type="button" role="tab" aria-selected="true">全部 <span class="rq-tab-count" id="rqCountAll">0</span></button>
+                      <button class="rq-tab" data-rq-filter="definition" type="button" role="tab" aria-selected="false">名词解释 <span class="rq-tab-count" id="rqCountDef">0</span></button>
+                      <button class="rq-tab" data-rq-filter="essay" type="button" role="tab" aria-selected="false">简答论述 <span class="rq-tab-count" id="rqCountEssay">0</span></button>
+                    </div>
+                  </div>
+                  <div class="rq-list" id="rqListBody" tabindex="0"></div>
+                </div>
               </div>
 
               <header class="reader-heading">

@@ -5,7 +5,7 @@ import { openLogs, openStats } from "../views/logs.js";
 import { closeNotePopover, openSection, renderBooks } from "../views/reader.js";
 import { openReview } from "../views/review.js";
 import { $, ROUTE_ALIASES, SHELF_ORDER, state } from "./state.js";
-import { startReadingTimer, stopReadingTimer } from "./timer.js";
+import { startReadingTimer, stopReadingTimer, syncAuraIndicator } from "./timer.js";
 import { showToast } from "./utils.js";
 
 export function setRouteHash(route) {
@@ -30,6 +30,7 @@ export function setActiveView(mode) {
   $("logsNav").classList.toggle("active", primaryMode === "logs"); $("mobileLogs").classList.toggle("active", primaryMode === "logs");
   $("statsNav")?.classList.toggle("active", primaryMode === "stats"); $("mobileStats")?.classList.toggle("active", primaryMode === "stats");
   $("pageTitle").textContent = mode === "home" ? "今日" : mode === "reader" ? "阅读" : mode === "oralFocus" ? "口腔重点" : mode === "library" ? "学习" : mode === "practice" ? "练习" : mode === "review" ? "回顾" : mode === "logs" ? "记录" : "统计";
+  syncAuraIndicator();
 }
 
 export function hideAllNoteFloats() {

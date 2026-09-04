@@ -1,6 +1,7 @@
 import { homeActivityTargetKey, resumeActivityTarget, selectLibraryShelf } from "../core/router.js";
 import { openOralFocusIndex } from "../modules/oral_focus.js";
 import { $, state } from "../core/state.js";
+import { syncAuraIndicator } from "../core/timer.js";
 import { escapeHtml, formatDuration, formatInteger, refreshIcons } from "../core/utils.js";
 import { openReview, reviewDateLabel } from "./review.js";
 
@@ -28,6 +29,7 @@ function calculatePercent(current, target) {
 export function updateGoalsUI(data) {
   if (!data) return;
   state.dailyGoalsData = data;
+  syncAuraIndicator();
   const goals = data.goals || {};
   const progress = data.progress || {};
   const readingGoals = goals.reading || {};
@@ -357,3 +359,4 @@ export function renderHome() {
 }
 
 window.updateChecklistUI = updateChecklistUI;
+window.fetchDailyGoals = fetchDailyGoals;

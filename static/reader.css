@@ -1,6 +1,7 @@
 /* Reader-specific composition on top of the YuQuiz design system. */
 .sidebar { overflow: clip; }
-.sidebar .brand, .sidebar .nav-item { min-width: 0; overflow: hidden; }
+.sidebar .brand { min-width: 0; overflow: visible; }
+.sidebar .nav-item { min-width: 0; overflow: hidden; }
 .main-content.wide-layout { width: calc(100% - var(--sidebar)); max-width: none; margin-left: var(--sidebar); padding: 28px clamp(22px, 4vw, 64px) max(112px, calc(80px + env(safe-area-inset-bottom))); }
 .topbar { width: clamp(780px, 84vw, 1120px); max-width: 100%; min-height: 28px; margin: 0 auto 22px; justify-content: flex-end; }
 .main-content:has(#homeView.active) .topbar { margin-bottom: 8px; }
@@ -57,30 +58,347 @@
 .reader-section-entry small { flex: 0 0 auto; color: var(--text-soft); font-size: 11px; }
 .reader-section-entry > svg { width: 13px; opacity: 0; transition: opacity 120ms var(--ease-standard); }
 .reader-section-entry:hover > svg, .reader-section-entry.active > svg { opacity: 1; }
-.reader-toolbar-finish {
+
+/* 带着问题读 · 顶部悬浮工具栏触发入口 (Anthropic/Claude 庄重克制风格) */
+.reader-toolbar-questions {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms var(--ease-standard);
+}
+.reader-toolbar-questions:hover {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--line-strong));
+  color: var(--primary-strong);
+}
+.reader-toolbar-questions.active,
+.reader-toolbar-questions[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border-color: var(--primary);
+  color: var(--primary-strong);
+}
+.reader-toolbar-questions svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary);
+}
+.reader-questions-count {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  color: var(--primary-strong);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* 带着问题读 · 下拉抽屉式考点速查清单 (Claude 庄重学术卡片) */
+.reader-questions-drawer {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(74vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(20, 20, 19, 0.14), 0 2px 8px rgba(20, 20, 19, 0.04);
+  backdrop-filter: blur(20px);
+  z-index: 50;
+  overflow: hidden;
+  animation: rqDrawerFadeIn 160ms var(--ease-out);
+}
+:root[data-theme="dark"] .reader-questions-drawer {
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.38), 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+@keyframes rqDrawerFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rq-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.rq-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rq-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rq-title-wrap svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.rq-title {
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+.rq-badge-sub {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary-strong);
+}
+.rq-hint {
+  font-size: 11.5px;
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.4;
+}
+.rq-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+.rq-close-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.rq-close-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.rq-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+.rq-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rq-tab {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-left: auto;
   padding: 4px 10px;
-  border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--line));
+  border: 1px solid transparent;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
-  color: var(--primary-strong);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 130ms ease;
+}
+.rq-tab:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.rq-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line-strong);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.04);
+}
+.rq-tab-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.rq-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rq-empty {
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rq-card {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.rq-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--line));
+}
+
+.rq-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rq-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rq-card-num {
   font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+.rq-card-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+.rq-card-tag.definition {
+  color: #8c531b;
+  background: rgba(184, 115, 51, 0.1);
+  border: 1px solid rgba(184, 115, 51, 0.24);
+}
+:root[data-theme="dark"] .rq-card-tag.definition {
+  color: #e09f58;
+  background: rgba(224, 159, 88, 0.12);
+  border-color: rgba(224, 159, 88, 0.28);
+}
+.rq-card-tag.essay {
+  color: #24587d;
+  background: rgba(43, 97, 138, 0.1);
+  border: 1px solid rgba(43, 97, 138, 0.24);
+}
+:root[data-theme="dark"] .rq-card-tag.essay {
+  color: #6daadc;
+  background: rgba(109, 170, 220, 0.12);
+  border-color: rgba(109, 170, 220, 0.28);
+}
+.rq-card-stars {
+  font-size: 10px;
+  color: #c48a28;
+  letter-spacing: 1px;
+}
+.rq-card-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 11px;
   cursor: pointer;
-  transition: all 160ms var(--ease-out);
+  transition: all 120ms ease;
 }
-.reader-toolbar-finish:hover {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-  transform: translateY(-1px);
+.rq-card-copy-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--line-strong);
 }
-.reader-toolbar-finish svg {
+.rq-card-copy-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.rq-card-prompt {
+  margin: 10px 0 10px;
+  font-family: "Noto Serif SC", "Source Han Serif SC", STSong, serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--text);
+  letter-spacing: 0.1px;
+}
+
+.rq-answer-collapse {
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.rq-answer-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-soft);
+  user-select: none;
+  transition: color 120ms ease;
+}
+.rq-answer-summary:hover {
+  color: var(--primary-strong);
+}
+.rq-answer-summary svg {
   width: 13px;
   height: 13px;
+  transition: transform 150ms ease;
+}
+.rq-answer-collapse[open] .rq-answer-summary svg {
+  transform: rotate(90deg);
+}
+.rq-char-hint {
+  font-size: 11px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+.rq-answer-body {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--surface-strong) 60%, var(--surface));
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.rq-answer-body p {
+  margin: 0 0 8px;
+}
+.rq-answer-body p:last-child {
+  margin-bottom: 0;
 }
 
 /* 本节研读完成与打卡结算 (Anthropic Claude 风格静默结语) */
@@ -305,6 +623,17 @@
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
+}
+
+.section-note-float .section-note-popover {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) scale(0.985);
+  transform-origin: center right;
+}
+
+.section-note-float .section-note-popover.is-open {
+  transform: translateY(-50%) scale(1);
 }
 
 #openObsidian { color: var(--memorize); }
@@ -1817,8 +2146,13 @@
 .reader-pagination .secondary-button:hover:not(:disabled),
 .review-pagination .secondary-button:hover:not(:disabled) { color: var(--primary-strong); background: transparent; box-shadow: none; }
 
-/* Leave a calm margin around the reading controls instead of pinning them to the glass edge. */
-.section-note-float { right: clamp(30px, 3.5vw, 54px); bottom: max(34px, calc(24px + env(safe-area-inset-bottom))); }
+/* Position floating dock capsule vertically centered along the right edge */
+.section-note-float {
+  right: clamp(24px, 3vw, 46px);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
 :root[data-theme="dark"] .reader-material-float::before { border-color: rgba(239, 236, 226, 0.13); background: rgba(239, 236, 226, 0.08); box-shadow: 0 5px 16px rgba(0, 0, 0, 0.22); }
 
 /* Practice reuses the mature YuQuiz question rhythm without importing its quiz machinery. */
@@ -2135,8 +2469,9 @@
   .reader-home-today > strong em { font-size: 28px; }
   .reader-home-today > div { grid-template-columns: repeat(2, auto); justify-content: start; gap: 24px; margin-top: 22px; padding-top: 14px; }
   .reader-home-portals > button { min-height: 88px; padding: 16px 12px; }
-  .section-note-float { right: 22px; bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .section-note-popover { width: min(430px, calc(100vw - 36px)); max-height: min(66dvh, 520px, var(--note-popover-space, 66dvh)); }
+  .section-note-float { right: 22px; bottom: calc(84px + env(safe-area-inset-bottom)); top: auto; transform: none; }
+  .section-note-popover { top: auto; bottom: 54px; transform: translateY(8px) scale(0.985); transform-origin: bottom right; width: min(430px, calc(100vw - 36px)); max-height: min(66dvh, 520px, var(--note-popover-space, 66dvh)); }
+  .section-note-popover.is-open { transform: translateY(0) scale(1); }
   .reader-pagination,
   .review-pagination { gap: 18px; margin-top: 28px; padding-top: 14px; }
   .reader-pagination .secondary-button,
@@ -4578,6 +4913,8 @@
   .section-note-float {
     right: 16px;
     bottom: calc(72px + env(safe-area-inset-bottom));
+    top: auto;
+    transform: none;
     z-index: 60;
   }
 }

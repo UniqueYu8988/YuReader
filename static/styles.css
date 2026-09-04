@@ -217,7 +217,8 @@ input:focus-visible {
   box-shadow: 12px 0 34px rgba(0, 0, 0, 0.24);
 }
 
-:root[data-theme="dark"] .brand-mark img {
+:root[data-theme="dark"] .brand-mark img,
+:root[data-theme="dark"] .brand-mark-inner img {
   filter: invert(0.92) sepia(0.08) saturate(0.25);
 }
 
@@ -226,11 +227,12 @@ input:focus-visible {
   width: 100%;
   align-items: center;
   gap: 10px;
-  padding: 2px;
+  padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
   cursor: pointer;
+  overflow: visible;
 }
 
 .brand > span:last-child,
@@ -252,10 +254,11 @@ input:focus-visible {
 }
 
 .brand-mark {
+  position: relative;
   display: grid;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   place-items: center;
   border: 0;
   border-radius: var(--radius-xs);
@@ -263,12 +266,97 @@ input:focus-visible {
   background: transparent;
 }
 
-.brand-mark img {
+.brand-progress-ring {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 40px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.bpr-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--line) 65%, transparent);
+  stroke-width: 1.5;
+}
+
+.bpr-bar {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 113.1;
+  stroke-dashoffset: 113.1;
+  transition: stroke-dashoffset 280ms var(--ease-out), stroke 250ms var(--ease-standard);
+}
+
+.bpr-bar.is-complete {
+  stroke: var(--success);
+}
+
+.brand-mark-inner {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.brand-mark-inner img {
   display: block;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+}
+
+.brand-timer-pulse {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-soft) 40%, transparent);
+  box-shadow: 0 0 0 1.5px var(--surface);
+  transition: background-color 260ms var(--ease-standard), box-shadow 260ms var(--ease-standard), opacity 260ms var(--ease-standard);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.brand-timer-pulse.is-timing {
+  background: var(--primary);
+  opacity: 1;
+  animation: auraPulse 3.5s ease-in-out infinite;
+}
+
+@keyframes auraPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 0 rgba(204, 120, 92, 0.45);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3.5px rgba(204, 120, 92, 0);
+  }
+}
+
+:root[data-theme="dark"] .brand-timer-pulse.is-timing {
+  animation: auraPulseDark 3.5s ease-in-out infinite;
+}
+
+@keyframes auraPulseDark {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 0 rgba(220, 139, 110, 0.55);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3.5px rgba(220, 139, 110, 0);
+  }
 }
 
 .brand strong,
@@ -4696,6 +4784,59 @@ input:focus-visible {
 
 .knowledge-article p {
   margin: 0 0 20px;
+}
+
+.knowledge-article ul,
+.knowledge-article ol {
+  margin: 12px 0 20px;
+  padding-left: 1.55em;
+}
+
+.knowledge-article li {
+  margin: 6px 0;
+  line-height: 1.8;
+}
+
+.knowledge-article li > ul,
+.knowledge-article li > ol {
+  margin: 6px 0 8px;
+  padding-left: 1.45em;
+}
+
+.knowledge-article li > ul li,
+.knowledge-article li > ol li {
+  margin: 4px 0;
+  color: var(--text-secondary);
+}
+
+.knowledge-article ul {
+  list-style-type: disc;
+}
+
+.knowledge-article ul ul {
+  list-style-type: circle;
+}
+
+.knowledge-article ul ul ul {
+  list-style-type: square;
+}
+
+.knowledge-article ol {
+  list-style-type: decimal;
+}
+
+.knowledge-article ol ol {
+  list-style-type: lower-alpha;
+}
+
+.knowledge-article ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.knowledge-article hr {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid var(--line-strong);
 }
 
 .knowledge-article .heading-continuation {
